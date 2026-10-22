@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using FriendshipWarriors.Grid;
+using FriendshipWarriors.Grid.Generation;
 using FriendshipWarriors.Grid.Props;
 using FriendshipWarriors.Grid.Validation;
 using FriendshipWarriors.Grid.View;
@@ -41,6 +42,8 @@ namespace FriendshipWarriors.Editor.Maps
         [SerializeField] private int _brushSize = 1;
         [SerializeField] private float _cellSize = 32f;
         [SerializeField] private int _referenceJump = MapValidator.DefaultReferenceJump;
+        [SerializeField] private MapGeneratorSettings _generatorSettings;
+        [SerializeField] private int _seed;
 
         private readonly HashSet<GridCoord> _strokeCells = new();
         private PropDefinition[] _props = Array.Empty<PropDefinition>();
@@ -80,6 +83,8 @@ namespace FriendshipWarriors.Editor.Maps
             wantsMouseMove = true;
             if (_palette == null)
                 _palette = ProjectAssets.DefaultPalette;
+            if (_generatorSettings == null)
+                _generatorSettings = AssetDatabase.LoadAssetAtPath<MapGeneratorSettings>(ProjectAssets.DefaultGeneratorSettingsPath);
             _props = ProjectAssets.FindAll<PropDefinition>();
             Undo.undoRedoPerformed += OnUndoRedo;
             if (_map != null)
@@ -189,6 +194,39 @@ namespace FriendshipWarriors.Editor.Maps
                         OnMapChanged();
                     }
                 }
+            }
+
+            DrawGenerateRow();
+        }
+
+        private void DrawGenerateRow()
+        {
+            using (new EditorGUILayout.HorizontalScope())
+            {
+                _generatorSettings = (MapGeneratorSettings)EditorGUILayout.ObjectField("Generator", _generatorSettings, typeof(MapGeneratorSettings), false, GUILayout.Width(360f));
+                EditorGUIUtility.labelWidth = 40f;
+                _seed = EditorGUILayout.IntField("Seed", _seed, GUILayout.Width(150f));
+                EditorGUIUtility.labelWidth = 0f;
+                if (GUILayout.Button("New Seed", GUILayout.Width(80f)))
+                    _seed = Environment.TickCount;
+                using (new EditorGUI.DisabledScope(_generatorSettings == null))
+                {
+                    if (GUILayout.Button("Generate Into This Map", GUILayout.Width(170f)) &&
+                        EditorUtility.DisplayDialog("Generate Random Map",
+                            $"Replace everything in \"{_map.name}\" with a random map from seed {_seed}? Undo restores it.", "Generate", "Cancel"))
+                    {
+                        Undo.RecordObject(_map, "Generate Random Map");
+                        var result = MapGenerator.Generate(_generatorSettings, _seed, _map);
+                        EditorUtility.SetDirty(_map);
+                        _newWidth = _map.Width;
+                        _newDepth = _map.Depth;
+                        OnMapChanged();
+                        ShowNotification(new GUIContent(result.Succeeded
+                            ? $"Generated in {result.Attempts} attempt(s)"
+                            : "Generation failed validation; see issues below"));
+                    }
+                }
+                GUILayout.FlexibleSpace();
             }
         }
 

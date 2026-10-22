@@ -13,6 +13,8 @@ namespace FriendshipWarriors.Editor
         public const string PropsFolder = "Assets/_Project/Data/Props";
         public const string MapsFolder = "Assets/_Project/Data/Maps";
         public const string BattleControlsPath = "Assets/_Project/Input/BattleControls.inputactions";
+        public const string GenerationFolder = "Assets/_Project/Data/Generation";
+        public const string DefaultGeneratorSettingsPath = GenerationFolder + "/MapGenerator_Default.asset";
 
         public static Material TerrainMaterial => AssetDatabase.LoadAssetAtPath<Material>(TerrainMaterialPath);
         public static Material HighlightMaterial => AssetDatabase.LoadAssetAtPath<Material>(HighlightMaterialPath);

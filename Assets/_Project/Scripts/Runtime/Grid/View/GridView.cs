@@ -63,6 +63,9 @@ namespace FriendshipWarriors.Grid.View
             _highlightMaterial = highlightMaterial;
         }
 
+        /// <summary>Switches to another map; call <see cref="Build"/> afterwards.</summary>
+        public void SetMap(BattleMapData map) => _map = map;
+
         /// <summary>(Re)builds everything from the map, freeing whatever a previous build generated.</summary>
         public void Build()
         {
@@ -82,17 +85,20 @@ namespace FriendshipWarriors.Grid.View
                     DestroySafe(overlay.GetComponent<MeshFilter>().sharedMesh);
             }
             _overlays.Clear();
-            if (_overlayRoot != null)
-                DestroySafe(_overlayRoot.gameObject);
-            if (_propRoot != null)
-                DestroySafe(_propRoot.gameObject);
             foreach (var material in _ownedMaterials)
                 DestroySafe(material);
             _ownedMaterials.Clear();
-            if (_terrainMesh != null)
-                DestroySafe(_terrainMesh);
-            if (_placeholderTopTexture != null)
-                DestroySafe(_placeholderTopTexture);
+
+            // In Play mode Destroy is deferred to the end of the frame, so the references must be cleared now or an
+            // immediate rebuild would reuse objects that are about to disappear.
+            DestroySafe(_overlayRoot != null ? _overlayRoot.gameObject : null);
+            DestroySafe(_propRoot != null ? _propRoot.gameObject : null);
+            DestroySafe(_terrainMesh);
+            DestroySafe(_placeholderTopTexture);
+            _overlayRoot = null;
+            _propRoot = null;
+            _terrainMesh = null;
+            _placeholderTopTexture = null;
         }
 
         /// <summary>World position a unit stands at on this tile.</summary>
