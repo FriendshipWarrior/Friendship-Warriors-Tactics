@@ -3,7 +3,8 @@
     "rootNamespace": "FriendshipWarriors.Editor",
     "references": [
         "FriendshipWarriors.Runtime",
-        "Unity.InputSystem"
+        "Unity.InputSystem",
+        "UnityEngine.UI"
     ],
     "includePlatforms": [
         "Editor"

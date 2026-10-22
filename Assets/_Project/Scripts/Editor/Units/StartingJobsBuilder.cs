@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using FriendshipWarriors.Editor.Maps;
 using FriendshipWarriors.Units;
+using FriendshipWarriors.Units.Abilities;
 using UnityEditor;
 using UnityEngine;
 
@@ -15,6 +16,7 @@ namespace FriendshipWarriors.Editor.Units
     {
         public const string JobsFolder = "Assets/_Project/Data/Jobs";
         public const string CatalogPath = JobsFolder + "/JobCatalog.asset";
+        public const string AbilitiesFolder = "Assets/_Project/Data/Abilities";
 
         [MenuItem("Friendship Warriors/Data/Create Starting Jobs")]
         public static JobCatalog CreateStartingJobs()
@@ -43,6 +45,18 @@ namespace FriendshipWarriors.Editor.Units
                 new Color(0.92f, 0.90f, 0.80f),
                 "Aether-ward specialist who mends wounds and raises protective barriers.", new JobRequirement(corpsman, 2));
 
+            // Command names and the first abilities. The two turn trades are our addition to FFT.
+            var doubleTime = Ability("Double Time", AbilityKind.Movement, 300, TurnTrade.ActForMove,
+                "Forced march: give up this turn's Act to Move a second time.");
+            var rapidFire = Ability("Rapid Fire", AbilityKind.Support, 400, TurnTrade.MoveForAct,
+                "Hold position and keep firing: give up this turn's Move to Act a second time.");
+            Teach(cadet, "Drill", doubleTime);
+            Teach(corpsman, "Field Kit");
+            Teach(vanguard, "Assault");
+            Teach(marksman, "Marksmanship", rapidFire);
+            Teach(evoker, "Evocation");
+            Teach(warder, "Warding");
+
             var catalog = AssetDatabase.LoadAssetAtPath<JobCatalog>(CatalogPath);
             if (catalog == null)
             {
@@ -52,6 +66,28 @@ namespace FriendshipWarriors.Editor.Units
             }
             AssetDatabase.SaveAssets();
             return catalog;
+        }
+
+        /// <summary>Gives a job its command name and abilities, unless it already has abilities set.</summary>
+        private static void Teach(JobDefinition job, string commandName, params AbilityDefinition[] abilities)
+        {
+            if (job.Abilities.Count > 0)
+                return;
+            job.SetAbilities(commandName, abilities);
+            EditorUtility.SetDirty(job);
+        }
+
+        private static AbilityDefinition Ability(string displayName, AbilityKind kind, int cost, TurnTrade trade, string description)
+        {
+            TestSceneBuilder.EnsureFolder(AbilitiesFolder);
+            string path = $"{AbilitiesFolder}/{displayName.Replace(" ", "")}.asset";
+            var ability = AssetDatabase.LoadAssetAtPath<AbilityDefinition>(path);
+            if (ability != null)
+                return ability;
+            ability = ScriptableObject.CreateInstance<AbilityDefinition>();
+            ability.Define(displayName, description, kind, cost, trade);
+            AssetDatabase.CreateAsset(ability, path);
+            return ability;
         }
 
         public static JobDefinition Load(string displayName) =>

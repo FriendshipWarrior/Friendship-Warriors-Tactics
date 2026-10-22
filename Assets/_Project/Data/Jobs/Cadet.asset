@@ -29,6 +29,9 @@ MonoBehaviour:
   _move: 4
   _jump: 3
   _classEvasion: 5
+  _commandName: Drill
+  _abilities:
+  - {fileID: 11400000, guid: 948892cb2cf6c4d689954a48cef866e2, type: 2}
   _requirements: []
   _placeholderColor: {r: 0.8, g: 0.65, b: 0.38, a: 1}
   _frontSprite: {fileID: 0}

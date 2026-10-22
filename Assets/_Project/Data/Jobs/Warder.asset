@@ -29,6 +29,8 @@ MonoBehaviour:
   _move: 3
   _jump: 3
   _classEvasion: 5
+  _commandName: Warding
+  _abilities: []
   _requirements:
   - _job: {fileID: 11400000, guid: b58661765412841a69212c216ad8a5a0, type: 2}
     _level: 2

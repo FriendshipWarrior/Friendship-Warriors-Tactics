@@ -1,3 +1,4 @@
+using FriendshipWarriors.Battle;
 using FriendshipWarriors.Cameras;
 using FriendshipWarriors.Controls;
 using FriendshipWarriors.Dev;
@@ -83,15 +84,39 @@ namespace FriendshipWarriors.Editor.Maps
             Set(cursor, "_cameraRig", rig);
             Set(cursor, "_camera", camera);
 
+            var hud = CreateHud();
+            var battle = new GameObject("Battle Controller").AddComponent<BattleController>();
+            Set(battle, "_input", input);
+            Set(battle, "_gridView", grid);
+            Set(battle, "_cursor", cursor);
+            Set(battle, "_cameraRig", rig);
+            Set(battle, "_hud", hud);
+
             var (playerJobs, enemyJobs) = Units.StartingJobsBuilder.TestRoster();
             var sandbox = new GameObject("Battle Sandbox").AddComponent<BattleSandbox>();
             Set(sandbox, "_input", input);
             Set(sandbox, "_gridView", grid);
-            Set(sandbox, "_cursor", cursor);
             Set(sandbox, "_cameraRig", rig);
+            Set(sandbox, "_battle", battle);
             Set(sandbox, "_generatorSettings", AssetDatabase.LoadAssetAtPath<MapGeneratorSettings>(ProjectAssets.DefaultGeneratorSettingsPath));
             SetArray(sandbox, "_playerJobs", playerJobs.ToArray());
             SetArray(sandbox, "_enemyJobs", enemyJobs.ToArray());
+        }
+
+        /// <summary>A Screen Space Overlay canvas scaled from 1920x1080, plus the EventSystem for mouse input on UI.</summary>
+        private static FriendshipWarriors.UI.BattleHud CreateHud()
+        {
+            var canvasGo = new GameObject("Battle HUD", typeof(Canvas), typeof(UnityEngine.UI.CanvasScaler), typeof(UnityEngine.UI.GraphicRaycaster));
+            canvasGo.GetComponent<Canvas>().renderMode = RenderMode.ScreenSpaceOverlay;
+            var scaler = canvasGo.GetComponent<UnityEngine.UI.CanvasScaler>();
+            scaler.uiScaleMode = UnityEngine.UI.CanvasScaler.ScaleMode.ScaleWithScreenSize;
+            scaler.referenceResolution = new Vector2(1920f, 1080f);
+            scaler.matchWidthOrHeight = 0.5f;
+            var hud = canvasGo.AddComponent<FriendshipWarriors.UI.BattleHud>();
+
+            new GameObject("EventSystem", typeof(UnityEngine.EventSystems.EventSystem),
+                typeof(UnityEngine.InputSystem.UI.InputSystemUIInputModule));
+            return hud;
         }
 
         private static void CreateGeneratorSettings(PropDefinition tree, PropDefinition rock)

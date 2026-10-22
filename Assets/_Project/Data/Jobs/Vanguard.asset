@@ -29,6 +29,8 @@ MonoBehaviour:
   _move: 3
   _jump: 3
   _classEvasion: 10
+  _commandName: Assault
+  _abilities: []
   _requirements:
   - _job: {fileID: 11400000, guid: b06acf20998d4439ea92f707821b229a, type: 2}
     _level: 2

@@ -67,11 +67,14 @@ Assets/
           Generation/     # MapGenerator, MapGeneratorSettings (seeded random maps)
           View/           # GridView, BattlefieldMeshBuilder, TerrainPalette (presentation)
         Units/            # Unit, JobDefinition, stats/EXP/Prof/Commendations, facing rules, UnitFactory
+          Abilities/      # AbilityDefinition, AbilityKind (action/reaction/support/movement), TurnTrade
           View/           # UnitView (billboard sprite), SpriteViewMath, PlaceholderSprites
+        Battle/           # TurnOrder (CT), TurnState (Move/Act/Wait), BattleController (turn flow)
+        UI/               # BattleHud (uGUI + TextMeshPro, built in code), MenuModel
         Controls/         # BattleInput, TileCursor, CursorMath (gamepad + mouse/keyboard)
         Camera/           # IsoCameraRig (namespace FriendshipWarriors.Cameras)
         Dev/              # BattleSandbox and other test-scene drivers
-        Core/ Battle/ UI/ # planned
+        Core/             # planned
       Editor/             # FriendshipWarriors.Editor.asmdef — MapEditorWindow, MapPreview, TestMapFactory, TestSceneBuilder, StartingJobsBuilder
     Data/                 # ScriptableObject assets: maps, props, terrain palette, generator settings (later jobs, abilities, items)
     Input/                # BattleControls.inputactions (control schemes: Keyboard&Mouse, Gamepad)
@@ -112,6 +115,7 @@ Root namespace: `FriendshipWarriors`; namespaces follow folders (e.g. `Friendshi
 - **Map editor:** *Friendship Warriors → Map Editor*, or double-click a Battle Map asset. Paints height (in halves), terrain, slopes, water depth, props and deployment zones on a top-down grid; live 3D preview; validation via `MapValidator` (also used by the random generator). Left-click paints, right-click copies the tile's value (erases for props/deployment), each stroke is one undo step. When testing it from scripts, work on a copy of a map: the window is on the user's screen and real clicks edit the open map.
 - **Random maps:** `MapGenerator.Generate(settings, seed, map)` fills a `BattleMapData` (works at runtime for quick play). Deterministic per seed, validated with `MapValidator`, retried on errors. Tune via `MapGeneratorSettings` assets (`Data/Generation/MapGenerator_Default.asset`). In the map editor use the Generate row; in `Battle_Test` press R / Select (the seed is logged so maps can be reproduced).
 - Rebuild the test scene and its placeholder assets from code with **Friendship Warriors → Dev → Rebuild Battle Test Scene** (`TestSceneBuilder.Rebuild()`); don't hand-wire it.
+- When scripting a virtual gamepad, each `script eval` takes long enough that a held D-pad press triggers key-repeat (cursor and menus repeat after 0.3–0.35 s). Place the cursor with `TileCursor.SetCoord` and pick menu items via `MenuModel.Select`, and use the pad only for buttons.
 - Gamepad paths can be tested without hardware: in Play mode, `InputSystem.AddDevice<Gamepad>()` and `InputSystem.QueueStateEvent(pad, new GamepadState().WithButton(...))` through `script eval`, then remove the device.
 - After code changes, confirm the project compiles with no console errors before reporting work as done. If verification wasn't possible, say so.
 
@@ -148,5 +152,10 @@ Record decisions here as they are made (date — decision — rationale).
 - 2026-10-22 — **Progression (intended departures from FFT):** EXP per level grows exponentially (`ExperienceCurve`: 100 × 1.06^(level−1); about 500k EXP to reach the level-99 cap) instead of FFT's flat 100. FFT's JP is called **Proficiency (Prof)** and uses FFT's job level thresholds (200 … 3000). Reaching max job level masters a job (until abilities exist) and awards a **Commendation**; Commendations can also come from field challenges (not defined yet).
 - 2026-10-22 — **Facing (FFT):** units face the 4 grid directions and choose a facing at the end of their turn. Facing changes evasion, not damage: front = class + shield + accessory evasion, side = shield + accessory, back = accessory only. Exact diagonals count as side (our approximation).
 - 2026-10-22 — **Timed defense/offense (intended departure):** in combat, a well-timed button press gives a *chance* to block (when attacked) or land a critical hit (when attacking). Design details come with the combat system.
+- 2026-10-22 — **Turn order (FFT CT):** every clock tick each unit's CT rises by its Speed; at 100 it takes a turn (highest CT first, ties to roster order). A turn costs 60 CT, +20 if it moved, +20 if it acted; CT after a turn is capped at 60 (recalled, unverified). Everyone starts at CT 0. Charged abilities (spells with their own CT) come with combat.
+- 2026-10-22 — **Turns (FFT):** command menu Move / Act / Wait; Move and Act once each, in either order (Move after Act allowed); Wait or using both ends the turn with a facing choice. No undoing a move once confirmed. Until enemy AI exists, the player controls every team.
+- 2026-10-22 — **Turn trades (intended departure):** abilities can let a unit give up its Move to Act twice (*Rapid Fire*, Marksman support ability) or give up its Act to Move twice (*Double Time*, Cadet movement ability). A traded turn still costs the full 100 CT. Names, jobs and Prof costs (400 / 300) are placeholders to revisit.
+- 2026-10-22 — **Ability slots (FFT):** primary action set (current job's command), secondary action set (another job with a learned action ability), reaction (the user's "defence" slot), support (passive) and movement. Abilities are learned by spending Prof earned in the job that teaches them; job level counts all Prof earned, spent or not. Job command names: Cadet *Drill*, Corpsman *Field Kit*, Vanguard *Assault*, Marksman *Marksmanship*, Evoker *Evocation*, Warder *Warding*.
+- 2026-10-22 — **Battle UI:** uGUI + TextMeshPro, built in code by `BattleHud` on a Screen Space Overlay canvas scaled from 1920x1080 (readable on Steam Deck's 1280x800). Menus are driven by `MenuModel` and the battle's own input (D-pad/stick/keys, A/B); the mouse can hover and click. Placeholder styling.
 - 2026-10-22 — **Unit visuals:** a placeholder object with a camera-facing sprite (rotates on the vertical axis only). Two drawn poses per job (front ¾ and back ¾, facing screen-right) mirrored to cover all four views. Set `FrontSprite`/`BackSprite` on a job to replace the generated placeholder.
 - Open questions: save system scope; whether to add FFT's multi-layer tiles (bridges, walking under things).
