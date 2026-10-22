@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using System.Linq;
+using FriendshipWarriors.Battle.Combat;
 using FriendshipWarriors.Cameras;
 using FriendshipWarriors.Controls;
 using FriendshipWarriors.Grid;
@@ -18,12 +19,15 @@ namespace FriendshipWarriors.Battle
     /// Runs battle turns FFT-style. <see cref="TurnOrder"/> picks whose turn it is; that unit gets the command menu
     /// (Move, Act, Wait). Move and Act may come in either order, and turn-trade abilities can swap one for a second
     /// use of the other. Wait — or using up both — ends the turn with a facing choice, and CT is spent according to
-    /// what was used. Every team is player-controlled until enemy AI exists. Act offers a placeholder Attack until
-    /// the combat system lands.
+    /// what was used. Act → Attack uses FFT's physical attack rules plus the timed press: the player presses Confirm
+    /// as the marker crosses the zone to try for a critical (attacking) or a block (an enemy attacking a player
+    /// unit). Knocked-out units count down 3 turns before they are lost. Every team is player-controlled until enemy
+    /// AI exists, but only the Player team gets timed presses.
     /// </summary>
     public sealed class BattleController : MonoBehaviour
     {
-        private enum Phase { Idle, Command, ActMenu, ChooseDestination, ChooseTarget, ChooseFacing }
+        private enum Phase { Idle, Command, ActMenu, ChooseDestination, ChooseTarget, TimedPress, ChooseFacing, BattleOver }
+        private enum PressRole { None, Offense, Defense }
 
         private const string MoveId = "move", ActId = "act", WaitId = "wait", AttackId = "attack";
 
@@ -36,6 +40,11 @@ namespace FriendshipWarriors.Battle
         [Header("Rules")]
         [Tooltip("How many h higher a unit must be to leap over an enemy.")]
         [SerializeField, Min(0)] private int _enemyLeapClearance = 2;
+
+        [Header("Combat")]
+        [SerializeField] private TimedPressRules _timedPress = TimedPressRules.Default;
+        [Tooltip("0 picks a new seed each battle (logged).")]
+        [SerializeField] private int _battleSeed;
 
         [Header("Menu Repeat")]
         [SerializeField, Min(0.05f)] private float _menuRepeatDelay = 0.35f;
@@ -54,6 +63,12 @@ namespace FriendshipWarriors.Battle
         private int _heldMenuDirection;
         private float _nextMenuRepeat;
         private GridCoord _heldFacingStep;
+        private System.Random _rng;
+        private UnitView _target;
+        private PressRole _pressRole;
+        private float _pressStart;
+        private float _resolveAt;
+        private AttackResult? _pendingResult;
 
         public Unit ActiveUnit => _active != null ? _active.Unit : null;
         public TurnState Turn => _turn;
@@ -86,6 +101,10 @@ namespace FriendshipWarriors.Battle
             foreach (var unit in Units)
                 unit.ChargeTime = 0;
             _order = new TurnOrder(Units);
+            int seed = _battleSeed != 0 ? _battleSeed : System.Environment.TickCount;
+            _rng = new System.Random(seed);
+            Debug.Log($"[Battle] Seed {seed}.", this);
+            _hud.HideTimingPrompt();
             StartNextTurn();
         }
 
@@ -100,6 +119,9 @@ namespace FriendshipWarriors.Battle
                 case Phase.ChooseFacing:
                     ReadFacingInput();
                     break;
+                case Phase.TimedPress:
+                    UpdateTimedPress();
+                    break;
             }
         }
 
@@ -107,7 +129,19 @@ namespace FriendshipWarriors.Battle
 
         private void StartNextTurn()
         {
+            if (CheckBattleOver())
+                return;
+
+            // Knocked-out units still take their place in the turn order, but only to count down (FFT).
             var next = _order.NextTurn();
+            while (next != null && next.IsKnockedOut)
+            {
+                _order.EndTurn(next, moved: false, acted: false);
+                if (next.TickDeathCounter())
+                    RemoveLostUnit(next);
+                next = _order.NextTurn();
+            }
+
             _active = _views.FirstOrDefault(v => v.Unit == next);
             if (_active == null)
             {
@@ -198,35 +232,142 @@ namespace FriendshipWarriors.Battle
             AfterAction();
         }
 
-        /// <summary>Placeholder targeting: any unit on one of the four adjacent tiles.</summary>
+        /// <summary>Targets within the equipped weapon's range and vertical reach.</summary>
         private void BeginTarget()
         {
             _targets.Clear();
-            foreach (var direction in GridCoord.CardinalDirections)
-            {
-                var coord = _active.Unit.Coord + direction;
-                if (_gridView.Grid.Contains(coord))
-                    _targets.Add(coord);
-            }
+            _targets.UnionWith(AttackRange.Targets(_gridView.Grid, _active.Unit));
             _phase = Phase.ChooseTarget;
             _hud.HideMenu();
             _cursor.DirectionalInputLocked = false;
-            _hud.SetHint("Choose an adjacent unit to attack   A / click: attack   B / Esc: back");
             Refresh();
+        }
+
+        private UnitView Attackable(GridCoord coord)
+        {
+            var view = UnitAt(coord);
+            return _targets.Contains(coord) && view != null && view != _active && !view.Unit.IsKnockedOut ? view : null;
         }
 
         private void TryTarget(GridCoord coord)
         {
-            var target = UnitAt(coord);
-            if (!_targets.Contains(coord) || target == null)
+            var target = Attackable(coord);
+            if (target == null)
                 return;
             var unit = _active.Unit;
             unit.Facing = DirectionExtensions.Toward(unit.Coord, coord);
-            var angle = FacingRules.AngleOfAttack(target.Unit.Coord, target.Unit.Facing, unit.Coord);
-            Debug.Log($"[Battle] {unit.Name} attacks {target.Unit.Name} from the {angle.ToString().ToLowerInvariant()} " +
-                      "(placeholder: combat comes next).", this);
+            _target = target;
+
+            // The player times a strike when attacking, or a block when an enemy attacks one of theirs.
+            _pressRole = unit.Team == Team.Player ? PressRole.Offense
+                : target.Unit.Team == Team.Player ? PressRole.Defense
+                : PressRole.None;
+            if (_pressRole == PressRole.None)
+            {
+                ResolveAttack(0f, pressed: false);
+                return;
+            }
+
+            _phase = Phase.TimedPress;
+            _pendingResult = null;
+            _pressStart = Time.unscaledTime;
+            _hud.ShowTimingPrompt(_pressRole == PressRole.Offense ? "Strike!" : "Brace!", _timedPress);
+            _hud.SetHint("Press A / Enter / Space as the marker crosses the zone");
+            Refresh();
+        }
+
+        private void UpdateTimedPress()
+        {
+            float elapsed = Time.unscaledTime - _pressStart;
+            if (_pendingResult == null && elapsed > _timedPress.Duration)
+                ResolveAttack(0f, pressed: false);
+            else if (_pendingResult != null && Time.unscaledTime >= _resolveAt)
+                FinishAttack();
+        }
+
+        private void ResolveAttack(float accuracy, bool pressed)
+        {
+            var attacker = _active.Unit;
+            var target = _target.Unit;
+            var result = AttackResolver.Resolve(attacker, target, _rng, _timedPress,
+                offenseAccuracy: _pressRole == PressRole.Offense ? accuracy : 0f,
+                defenseAccuracy: _pressRole == PressRole.Defense ? accuracy : 0f);
+            _pendingResult = result;
+
+            if (_pressRole != PressRole.None)
+                _hud.StopTimingPrompt(accuracy, pressed);
+            // Hold the frozen bar briefly so the player sees how the press went.
+            _resolveAt = Time.unscaledTime + (_pressRole != PressRole.None ? 0.6f : 0f);
+            if (_pressRole == PressRole.None)
+                FinishAttack();
+        }
+
+        private void FinishAttack()
+        {
+            var result = _pendingResult.Value;
+            _pendingResult = null;
+            _hud.HideTimingPrompt();
+            var attacker = _active.Unit;
+            var target = _target.Unit;
+
+            string outcome;
+            if (!result.Hit)
+                outcome = "Miss!";
+            else if (result.Blocked)
+                outcome = "Blocked!";
+            else
+            {
+                target.TakeDamage(result.Damage);
+                outcome = $"{result.Damage} damage{(result.Critical ? " - critical!" : "")}{(target.IsKnockedOut ? $"  {target.Name} is down!" : "")}";
+            }
+
+            // FFT rewards a successful action: EXP and Prof for the actor, a quarter of the Prof for allies.
+            if (result.Hit && !result.Blocked)
+            {
+                attacker.GainExperience(BattleRewards.Experience(attacker, target));
+                int prof = BattleRewards.Proficiency(attacker);
+                attacker.GainProficiency(prof);
+                foreach (var ally in Units.Where(u => u != attacker && u.Team == attacker.Team && !u.IsKnockedOut))
+                    ally.GainProficiency(BattleRewards.SpilloverProficiency(prof));
+            }
+
+            Debug.Log($"[Battle] {attacker.Name} attacks {target.Name} from the {result.Angle.ToString().ToLowerInvariant()} " +
+                      $"({result.HitChance}% to hit): {result}.", this);
+            _hud.ShowBanner($"{attacker.Name} > {target.Name}: {outcome}");
             _turn.RecordAct();
+            if (CheckBattleOver())
+                return;
             AfterAction();
+        }
+
+        private bool CheckBattleOver()
+        {
+            bool playersStanding = Units.Any(u => u.Team == Team.Player && !u.IsKnockedOut);
+            bool enemiesStanding = Units.Any(u => u.Team == Team.Enemy && !u.IsKnockedOut);
+            if (playersStanding && enemiesStanding)
+                return false;
+
+            _phase = Phase.BattleOver;
+            _hud.HideMenu();
+            _hud.HideTimingPrompt();
+            _gridView.ClearHighlights();
+            _hud.ShowBanner(playersStanding ? "Victory!" : "Defeat...", seconds: 0f);
+            _hud.SetHint("R / Select: new map");
+            return true;
+        }
+
+        /// <summary>A knocked-out unit whose counter ran out leaves the battle (FFT turns it into a crystal or chest).</summary>
+        private void RemoveLostUnit(Unit unit)
+        {
+            var view = _views.FirstOrDefault(v => v.Unit == unit);
+            _order.Remove(unit);
+            if (view != null)
+            {
+                _views.Remove(view);
+                Destroy(view.gameObject);
+            }
+            _hud.ShowBanner($"{unit.Name} is lost.");
+            Debug.Log($"[Battle] {unit.Name}'s death counter ran out.", this);
         }
 
         private void AfterAction()
@@ -266,6 +407,10 @@ namespace FriendshipWarriors.Battle
                 case Phase.ActMenu when _actMenu.Selected is { Enabled: true } item: Activate(item.Id); break;
                 case Phase.ChooseDestination: TryMoveTo(_cursor.Coord); break;
                 case Phase.ChooseTarget: TryTarget(_cursor.Coord); break;
+                case Phase.TimedPress when _pendingResult == null:
+                    float elapsed = Time.unscaledTime - _pressStart;
+                    ResolveAttack(_timedPress.Accuracy(elapsed), pressed: true);
+                    break;
                 case Phase.ChooseFacing: EndTurn(); break;
             }
         }
@@ -373,6 +518,21 @@ namespace FriendshipWarriors.Battle
                 case Phase.ChooseTarget:
                     foreach (var coord in _targets)
                         _gridView.SetHighlight(coord, TileHighlight.EnemyDeployment);
+                    var preview = Attackable(_cursor.Coord);
+                    if (preview != null)
+                    {
+                        int hit = CombatFormulas.HitChance(_active.Unit, preview.Unit);
+                        int damage = CombatFormulas.AttackFactors(_active.Unit).Damage;
+                        var angle = FacingRules.AngleOfAttack(preview.Unit.Coord, preview.Unit.Facing, _active.Unit.Coord);
+                        _hud.SetHint($"{preview.Unit.Name}: {hit}% to hit, {damage} damage ({angle.ToString().ToLowerInvariant()})   A / click: attack   B / Esc: back");
+                    }
+                    else
+                    {
+                        _hud.SetHint("Choose a target in range   A / click: attack   B / Esc: back");
+                    }
+                    break;
+                case Phase.TimedPress:
+                    _gridView.SetHighlight(_target.Unit.Coord, TileHighlight.EnemyDeployment);
                     break;
                 case Phase.ChooseFacing:
                     _gridView.SetHighlight(_active.Unit.Coord + _active.Unit.Facing.ToStep(), TileHighlight.Path);

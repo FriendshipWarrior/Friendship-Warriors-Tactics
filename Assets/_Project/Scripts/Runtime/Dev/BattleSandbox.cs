@@ -7,6 +7,7 @@ using FriendshipWarriors.Grid.Generation;
 using FriendshipWarriors.Grid.View;
 using FriendshipWarriors.Units;
 using FriendshipWarriors.Units.Abilities;
+using FriendshipWarriors.Units.Equipment;
 using FriendshipWarriors.Units.View;
 using UnityEngine;
 using UnityEngine.InputSystem;
@@ -15,8 +16,9 @@ namespace FriendshipWarriors.Dev
 {
     /// <summary>
     /// Test-scene setup: spawns both teams on their deployment zones and hands them to the
-    /// <see cref="BattleController"/>. Units whose job teaches a turn-trade ability start with it learned and
-    /// equipped, so the trades can be tried. R / Select rolls a random map and restarts.
+    /// <see cref="BattleController"/>. Each unit gets the first starter item for each slot its job can use, and units
+    /// whose job teaches a turn-trade ability start with it learned and equipped. R / Select rolls a random map and
+    /// restarts.
     /// </summary>
     public sealed class BattleSandbox : MonoBehaviour
     {
@@ -30,6 +32,7 @@ namespace FriendshipWarriors.Dev
         [SerializeField] private JobDefinition[] _enemyJobs = System.Array.Empty<JobDefinition>();
         [SerializeField, Range(1, 99)] private int _unitLevel = 5;
         [SerializeField] private int _rosterSeed = 7;
+        [SerializeField] private EquipmentDefinition[] _starterGear = System.Array.Empty<EquipmentDefinition>();
 
         [Header("Random Maps")]
         [SerializeField] private MapGeneratorSettings _generatorSettings;
@@ -85,7 +88,29 @@ namespace FriendshipWarriors.Dev
                 unit.Coord = zone[i];
                 unit.Facing = DirectionExtensions.Toward(zone[i], target);
                 EquipTurnTrades(unit);
+                EquipStarterGear(unit);
+                unit.RestoreFully();
                 _views.Add(UnitView.Create(unit, _gridView, _cameraRig, _unitRoot));
+            }
+        }
+
+        /// <summary>Fills each empty slot with the first starter item the unit's job can use.</summary>
+        private void EquipStarterGear(Unit unit)
+        {
+            foreach (var item in _starterGear)
+            {
+                if (item == null)
+                    continue;
+                var slot = item.Category switch
+                {
+                    EquipmentCategory.Weapon => EquipmentSlot.MainHand,
+                    EquipmentCategory.Shield => EquipmentSlot.OffHand,
+                    EquipmentCategory.Head => EquipmentSlot.Head,
+                    EquipmentCategory.Body => EquipmentSlot.Body,
+                    _ => EquipmentSlot.Accessory,
+                };
+                if (unit.Equipped(slot) == null)
+                    unit.TryEquipItem(item);
             }
         }
 

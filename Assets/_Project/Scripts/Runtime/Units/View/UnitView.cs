@@ -7,7 +7,7 @@ namespace FriendshipWarriors.Units.View
     /// <summary>
     /// Shows a <see cref="Units.Unit"/>: a flat sprite that turns to face the camera (rotating only around the
     /// vertical axis so it stays upright), switches between front/back poses and mirrors them based on the unit's
-    /// facing and the camera angle, plus a team-colored marker on the ground.
+    /// facing and the camera angle, plus a team-colored marker on the ground. Knocked-out units lie down, greyed.
     /// </summary>
     public sealed class UnitView : MonoBehaviour
     {
@@ -59,7 +59,10 @@ namespace FriendshipWarriors.Units.View
         private void UpdateSprite()
         {
             float yaw = _cameraRig.transform.eulerAngles.y;
-            _sprite.transform.rotation = Quaternion.Euler(0f, yaw, 0f);
+            // Knocked-out units lie on their side and fade to grey until revived or lost.
+            bool down = Unit.IsKnockedOut;
+            _sprite.transform.rotation = Quaternion.Euler(0f, yaw, down ? 90f : 0f);
+            _sprite.color = down ? new Color(0.55f, 0.55f, 0.6f) : Color.white;
 
             var pose = SpriteViewMath.Resolve(Unit.Facing, yaw);
             var job = Unit.Job;

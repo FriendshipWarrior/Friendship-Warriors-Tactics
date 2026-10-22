@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using FriendshipWarriors.Grid;
 using FriendshipWarriors.Units.Abilities;
+using FriendshipWarriors.Units.Equipment;
 
 namespace FriendshipWarriors.Units
 {
@@ -13,6 +14,9 @@ namespace FriendshipWarriors.Units
     public sealed class Unit
     {
         public const int MaxLevel = 99;
+
+        /// <summary>Turns a knocked-out unit lasts before it is lost for good (FFT's count of 3; recalled).</summary>
+        public const int DeathCounterStart = 3;
 
         private readonly Dictionary<JobDefinition, int> _proficiency = new();
         private readonly Dictionary<JobDefinition, int> _spentProficiency = new();
@@ -55,14 +59,125 @@ namespace FriendshipWarriors.Units
 
         public IReadOnlyCollection<AbilityDefinition> LearnedAbilities => _learned;
 
+        private readonly EquipmentDefinition[] _equipment = new EquipmentDefinition[5];
+
+        public EquipmentDefinition Equipped(EquipmentSlot slot) => _equipment[(int)slot];
+
+        /// <summary>The main-hand weapon, or null for bare hands.</summary>
+        public EquipmentDefinition Weapon => Equipped(EquipmentSlot.MainHand);
+
+        /// <summary>The off-hand shield, if that's what the off hand holds.</summary>
+        public EquipmentDefinition Shield =>
+            Equipped(EquipmentSlot.OffHand) is { } offHand && offHand.Category == EquipmentCategory.Shield ? offHand : null;
+
+        public EquipmentDefinition Head => Equipped(EquipmentSlot.Head);
+        public EquipmentDefinition Body => Equipped(EquipmentSlot.Body);
+        public EquipmentDefinition Accessory => Equipped(EquipmentSlot.Accessory);
+
+        /// <summary>The weapon family used for attacks; bare hands without a weapon.</summary>
+        public WeaponType WeaponType => Weapon != null ? Weapon.WeaponType : WeaponType.Unarmed;
+
+        public bool IsKnockedOut => CurrentHp <= 0;
+
+        /// <summary>Turns left before a knocked-out unit is gone. Only meaningful while knocked out.</summary>
+        public int DeathCounter { get; private set; }
+
+        /// <summary>The death counter ran out; the unit has left the battle.</summary>
+        public bool IsGone => IsKnockedOut && DeathCounter <= 0;
+
+        /// <summary>
+        /// Equips an item the current job allows into its slot, replacing what was there. A two-handed weapon empties the
+        /// off hand, and nothing can go in the off hand while one is held. Current HP and MP are capped at the new
+        /// maximums.
+        /// </summary>
+        public bool TryEquipItem(EquipmentDefinition item)
+        {
+            if (item == null || !Job.CanEquip(item))
+                return false;
+
+            switch (item.Category)
+            {
+                case EquipmentCategory.Weapon:
+                    _equipment[(int)EquipmentSlot.MainHand] = item;
+                    if (item.TwoHanded)
+                        _equipment[(int)EquipmentSlot.OffHand] = null;
+                    break;
+                case EquipmentCategory.Shield:
+                    if (Weapon != null && Weapon.TwoHanded)
+                        return false;
+                    _equipment[(int)EquipmentSlot.OffHand] = item;
+                    break;
+                case EquipmentCategory.Head: _equipment[(int)EquipmentSlot.Head] = item; break;
+                case EquipmentCategory.Body: _equipment[(int)EquipmentSlot.Body] = item; break;
+                default: _equipment[(int)EquipmentSlot.Accessory] = item; break;
+            }
+            CapHpAndMp();
+            return true;
+        }
+
+        /// <summary>Full HP and MP and no knock-out, as between battles.</summary>
+        public void RestoreFully()
+        {
+            var stats = Stats;
+            CurrentHp = stats.MaxHp;
+            CurrentMp = stats.MaxMp;
+            DeathCounter = 0;
+        }
+
+        public void Unequip(EquipmentSlot slot)
+        {
+            _equipment[(int)slot] = null;
+            CapHpAndMp();
+        }
+
+        private void CapHpAndMp()
+        {
+            var stats = Stats;
+            CurrentHp = Math.Min(CurrentHp, stats.MaxHp);
+            CurrentMp = Math.Min(CurrentMp, stats.MaxMp);
+        }
+
+        private int GearBonus(Func<EquipmentDefinition, int> bonus)
+        {
+            int total = 0;
+            foreach (var item in _equipment)
+            {
+                if (item != null)
+                    total += bonus(item);
+            }
+            return total;
+        }
+
+        /// <summary>Removes HP (never below 0); dropping to 0 knocks the unit out and starts its death counter.</summary>
+        public int TakeDamage(int amount)
+        {
+            if (IsKnockedOut || amount <= 0)
+                return 0;
+            int dealt = Math.Min(amount, CurrentHp);
+            CurrentHp -= dealt;
+            if (CurrentHp == 0)
+                DeathCounter = DeathCounterStart;
+            return dealt;
+        }
+
+        /// <summary>Counts down a knocked-out unit's remaining turns. Returns true once it is gone.</summary>
+        public bool TickDeathCounter()
+        {
+            if (!IsKnockedOut || DeathCounter <= 0)
+                return IsGone;
+            DeathCounter--;
+            return IsGone;
+        }
+
         public UnitStats Stats
         {
             get
             {
                 var m = Job.Multipliers;
+                // Headgear and body gear add flat HP/MP on top of the job-scaled values, as in FFT.
                 return new UnitStats(
-                    StatFormulas.Shown(Raw.Hp, m.Hp, StatFormulas.MaxHpOrMp),
-                    StatFormulas.Shown(Raw.Mp, m.Mp, StatFormulas.MaxHpOrMp),
+                    Math.Min(StatFormulas.MaxHpOrMp, StatFormulas.Shown(Raw.Hp, m.Hp, StatFormulas.MaxHpOrMp) + GearBonus(i => i.HpBonus)),
+                    Math.Min(StatFormulas.MaxHpOrMp, StatFormulas.Shown(Raw.Mp, m.Mp, StatFormulas.MaxHpOrMp) + GearBonus(i => i.MpBonus)),
                     StatFormulas.Shown(Raw.Speed, m.Speed, StatFormulas.MaxOtherStat),
                     StatFormulas.Shown(Raw.PhysicalAttack, m.PhysicalAttack, StatFormulas.MaxOtherStat),
                     StatFormulas.Shown(Raw.MagicAttack, m.MagicAttack, StatFormulas.MaxOtherStat),
@@ -205,6 +320,12 @@ namespace FriendshipWarriors.Units
             Job = job;
             if (SecondaryJob == job)
                 SecondaryJob = null;
+            // Equipment the new job can't use comes off, as in FFT.
+            for (int i = 0; i < _equipment.Length; i++)
+            {
+                if (_equipment[i] != null && !job.CanEquip(_equipment[i]))
+                    _equipment[i] = null;
+            }
             var stats = Stats;
             CurrentHp = Math.Min(CurrentHp, stats.MaxHp);
             CurrentMp = Math.Min(CurrentMp, stats.MaxMp);

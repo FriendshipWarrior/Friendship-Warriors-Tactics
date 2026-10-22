@@ -31,6 +31,9 @@ MonoBehaviour:
   _classEvasion: 5
   _commandName: Evocation
   _abilities: []
+  _weaponTypes: 04000000i
+  _canUseShields: 0
+  _armorTypes: 020000000400000005000000i
   _requirements:
   - _job: {fileID: 11400000, guid: b58661765412841a69212c216ad8a5a0, type: 2}
     _level: 2

@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using FriendshipWarriors.Battle.Combat;
 using FriendshipWarriors.Units;
 using TMPro;
 using UnityEngine;
@@ -9,8 +10,9 @@ namespace FriendshipWarriors.UI
 {
     /// <summary>
     /// Placeholder battle HUD, built in code on a Screen Space Overlay canvas: the command menu (left), the turn
-    /// order (top right), unit details (bottom left) and a controls hint (bottom). Menu navigation comes from the
-    /// battle flow's own input handling; the mouse can hover and click items directly.
+    /// order (top right), unit details (bottom left), a controls hint (bottom), the timed-press bar (center) and a
+    /// result banner (top). Menu navigation comes from the battle flow's own input handling; the mouse can hover and
+    /// click items directly.
     /// </summary>
     [RequireComponent(typeof(Canvas))]
     public sealed class BattleHud : MonoBehaviour
@@ -36,6 +38,19 @@ namespace FriendshipWarriors.UI
         private RectTransform _unitPanel;
         private TextMeshProUGUI _hint;
 
+        private RectTransform _timingPanel;
+        private TextMeshProUGUI _timingTitle;
+        private TextMeshProUGUI _timingFeedback;
+        private RectTransform _timingZone;
+        private RectTransform _timingMarker;
+        private TimedPressRules _timingRules;
+        private float _timingStart;
+        private bool _timingRunning;
+
+        private RectTransform _bannerPanel;
+        private TextMeshProUGUI _banner;
+        private float _bannerHideTime;
+
         /// <summary>The mouse clicked an enabled menu item.</summary>
         public event Action<int> MenuItemClicked;
 
@@ -57,6 +72,24 @@ namespace FriendshipWarriors.UI
             var hintPanel = Panel("Hint", new Vector2(0.5f, 0f), new Vector2(0f, 24f), 1200f);
             _hint = Label(hintPanel, "Text", 24, FontStyles.Normal);
             _hint.alignment = TextAlignmentOptions.Center;
+
+            BuildTimingPrompt();
+
+            _bannerPanel = Panel("Banner", new Vector2(0.5f, 1f), new Vector2(0f, -40f), 900f);
+            _banner = Label(_bannerPanel, "Text", 32, FontStyles.Bold);
+            _banner.alignment = TextAlignmentOptions.Center;
+            _bannerPanel.gameObject.SetActive(false);
+        }
+
+        private void Update()
+        {
+            if (_timingRunning)
+            {
+                float t = Mathf.Clamp01((Time.unscaledTime - _timingStart) / _timingRules.Duration);
+                _timingMarker.anchorMin = _timingMarker.anchorMax = new Vector2(t, 0.5f);
+            }
+            if (_bannerPanel.gameObject.activeSelf && _bannerHideTime > 0f && Time.unscaledTime >= _bannerHideTime)
+                _bannerPanel.gameObject.SetActive(false);
         }
 
         // ------------------------------------------------------------------ Public API
@@ -109,12 +142,55 @@ namespace FriendshipWarriors.UI
                 $"HP {unit.CurrentHp}/{s.MaxHp}   MP {unit.CurrentMp}/{s.MaxMp}\n" +
                 $"Speed {s.Speed}   P.Atk {s.PhysicalAttack}   M.Atk {s.MagicAttack}\n" +
                 $"Move {s.Move}   Jump {s.Jump}   C-Ev {s.ClassEvasion}%   Facing {unit.Facing}\n" +
+                $"EXP {unit.Experience}/{ExperienceCurve.ToNextLevel(unit.Level)}   Prof {unit.AvailableProficiency(unit.Job)}" +
+                (unit.IsKnockedOut ? $"   <color=#FF7070>KO ({unit.DeathCounter})</color>" : "") + "\n" +
+                $"<size=80%>{Gear(unit.Weapon, "Bare hands")} | {Gear(unit.Equipped(Units.Equipment.EquipmentSlot.OffHand), "-")}" +
+                $" | {Gear(unit.Head, "-")} | {Gear(unit.Body, "-")} | {Gear(unit.Accessory, "-")}</size>\n" +
                 $"<size=80%>Secondary {secondary} | Reaction {Name(unit.Reaction)} | Support {Name(unit.Support)} | Movement {Name(unit.Movement)}</size>";
         }
 
         public void SetHint(string text) => _hint.text = text;
 
+        /// <summary>Shows the sweeping timing bar; the perfect moment is the highlighted zone.</summary>
+        public void ShowTimingPrompt(string title, TimedPressRules rules)
+        {
+            _timingRules = rules;
+            _timingStart = Time.unscaledTime;
+            _timingRunning = true;
+            _timingTitle.text = title;
+            _timingFeedback.text = " ";
+            float center = rules.PerfectTime / rules.Duration;
+            float half = rules.Tolerance / rules.Duration;
+            _timingZone.anchorMin = new Vector2(Mathf.Clamp01(center - half), 0f);
+            _timingZone.anchorMax = new Vector2(Mathf.Clamp01(center + half), 1f);
+            _timingMarker.anchorMin = _timingMarker.anchorMax = new Vector2(0f, 0.5f);
+            _timingPanel.gameObject.SetActive(true);
+        }
+
+        /// <summary>Freezes the marker and shows how the press went.</summary>
+        public void StopTimingPrompt(float accuracy, bool pressed)
+        {
+            _timingRunning = false;
+            _timingFeedback.text = !pressed ? "Too late" : accuracy >= 0.9f ? "Perfect!" : accuracy >= 0.6f ? "Great" : accuracy > 0f ? "Good" : "Missed";
+        }
+
+        public void HideTimingPrompt()
+        {
+            _timingRunning = false;
+            _timingPanel.gameObject.SetActive(false);
+        }
+
+        /// <summary>Shows a message at the top of the screen; it hides itself after <paramref name="seconds"/> (0 = stays).</summary>
+        public void ShowBanner(string text, float seconds = 2.5f)
+        {
+            _banner.text = text;
+            _bannerHideTime = seconds > 0f ? Time.unscaledTime + seconds : 0f;
+            _bannerPanel.gameObject.SetActive(true);
+        }
+
         private static string Name(Units.Abilities.AbilityDefinition ability) => ability != null ? ability.DisplayName : "-";
+
+        private static string Gear(Units.Equipment.EquipmentDefinition item, string empty) => item != null ? item.DisplayName : empty;
 
         // ------------------------------------------------------------------ Menu rendering
 
@@ -197,6 +273,40 @@ namespace FriendshipWarriors.UI
             var label = Text(row.transform, "Label", 24, FontStyles.Normal);
             label.gameObject.AddComponent<UnityEngine.UI.LayoutElement>().flexibleWidth = 1f;
             return (teamImage, label);
+        }
+
+        private void BuildTimingPrompt()
+        {
+            // Low on screen, above the hint, so it never covers the units the camera is centered on.
+            _timingPanel = Panel("Timing", new Vector2(0.5f, 0f), new Vector2(0f, 110f), 660f);
+            _timingTitle = Label(_timingPanel, "Title", 34, FontStyles.Bold);
+            _timingTitle.alignment = TextAlignmentOptions.Center;
+
+            var bar = new GameObject("Bar", typeof(RectTransform), typeof(UnityEngine.UI.Image), typeof(UnityEngine.UI.LayoutElement));
+            bar.transform.SetParent(_timingPanel, false);
+            bar.GetComponent<UnityEngine.UI.LayoutElement>().preferredHeight = 30f;
+            var track = bar.GetComponent<UnityEngine.UI.Image>();
+            track.color = new Color(1f, 1f, 1f, 0.12f);
+            track.raycastTarget = false;
+
+            _timingZone = Block(bar.transform, "Perfect Zone", new Color(0.95f, 0.70f, 0.25f, 0.85f));
+            _timingZone.offsetMin = _timingZone.offsetMax = Vector2.zero;
+            _timingMarker = Block(bar.transform, "Marker", Color.white);
+            _timingMarker.sizeDelta = new Vector2(8f, 44f);
+
+            _timingFeedback = Label(_timingPanel, "Feedback", 26, FontStyles.Normal);
+            _timingFeedback.alignment = TextAlignmentOptions.Center;
+            _timingPanel.gameObject.SetActive(false);
+        }
+
+        private static RectTransform Block(Transform parent, string blockName, Color color)
+        {
+            var go = new GameObject(blockName, typeof(RectTransform), typeof(UnityEngine.UI.Image));
+            go.transform.SetParent(parent, false);
+            var image = go.GetComponent<UnityEngine.UI.Image>();
+            image.color = color;
+            image.raycastTarget = false;
+            return (RectTransform)go.transform;
         }
 
         // ------------------------------------------------------------------ Building blocks

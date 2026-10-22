@@ -44,6 +44,7 @@ namespace FriendshipWarriors.Editor.Maps
             TestMapFactory.CreateHillsideAsset(tree, rock);
             CreateGeneratorSettings(tree, rock);
             Units.StartingJobsBuilder.CreateStartingJobs();
+            Units.StartingJobsBuilder.CreateStarterEquipment();
             AssetDatabase.SaveAssets();
 
             // NewScene unloads unreferenced assets, so everything the scene references is loaded after it.
@@ -101,6 +102,7 @@ namespace FriendshipWarriors.Editor.Maps
             Set(sandbox, "_generatorSettings", AssetDatabase.LoadAssetAtPath<MapGeneratorSettings>(ProjectAssets.DefaultGeneratorSettingsPath));
             SetArray(sandbox, "_playerJobs", playerJobs.ToArray());
             SetArray(sandbox, "_enemyJobs", enemyJobs.ToArray());
+            SetArray(sandbox, "_starterGear", Units.StartingJobsBuilder.CreateStarterEquipment());
         }
 
         /// <summary>A Screen Space Overlay canvas scaled from 1920x1080, plus the EventSystem for mouse input on UI.</summary>
