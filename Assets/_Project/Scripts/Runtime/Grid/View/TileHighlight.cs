@@ -4,6 +4,8 @@ namespace FriendshipWarriors.Grid.View
     public enum TileHighlight
     {
         None,
+        PlayerDeployment,
+        EnemyDeployment,
         MoveRange,
         Path,
         Hover,

@@ -45,6 +45,7 @@ namespace FriendshipWarriors.Grid.Pathfinding
         /// <summary>
         /// Fills <paramref name="path"/> with the steps from the tile after the origin up to and including
         /// <paramref name="destination"/>. Returns false, leaving the list empty, if the unit can't stop there.
+        /// Consecutive steps are adjacent except for leaps across gaps, which move in a straight line.
         /// </summary>
         public bool TryGetPath(GridCoord destination, List<GridCoord> path)
         {

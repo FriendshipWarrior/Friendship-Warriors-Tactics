@@ -51,11 +51,28 @@ namespace FriendshipWarriors.Tests
         }
 
         [Test]
-        public void Walkability_ExcludesDeepWaterAndVoid()
+        public void Walkability_ExcludesVoidAndBlockedTiles()
         {
-            Assert.That(new Tile(0, TerrainType.ShallowWater).IsWalkable, Is.True);
-            Assert.That(new Tile(0, TerrainType.DeepWater).IsWalkable, Is.False);
+            Assert.That(new Tile(0, TerrainType.Water, depth: 2).IsWalkable, Is.True);
             Assert.That(new Tile(0, TerrainType.Void).IsWalkable, Is.False);
+            Assert.That(new Tile(0, TerrainType.Grass, blocked: true).IsWalkable, Is.False);
+        }
+
+        [Test]
+        public void FlatTiles_IgnoreSlopeHeight()
+        {
+            var tile = new Tile(4, TerrainType.Grass, slope: SlopeType.Flat, slopeHeight: 3);
+
+            Assert.That(tile.SlopeHeight, Is.Zero);
+            Assert.That(tile.StandingHeight, Is.EqualTo(4f));
+        }
+
+        [Test]
+        public void SlopedTiles_StandAtTheMiddleOfTheSlope()
+        {
+            var tile = new Tile(4, TerrainType.Dirt, slope: SlopeType.RiseNorth, slopeHeight: 3);
+
+            Assert.That(tile.StandingHeight, Is.EqualTo(5.5f));
         }
     }
 }

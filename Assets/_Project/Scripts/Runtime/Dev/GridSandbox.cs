@@ -1,59 +1,47 @@
 using System.Collections.Generic;
 using FriendshipWarriors.Cameras;
+using FriendshipWarriors.Controls;
 using FriendshipWarriors.Grid;
 using FriendshipWarriors.Grid.Pathfinding;
 using FriendshipWarriors.Grid.View;
 using UnityEngine;
-using UnityEngine.InputSystem;
 
 namespace FriendshipWarriors.Dev
 {
     /// <summary>
-    /// Test-scene driver for the grid milestone: shows a unit's movement range, previews the path to the hovered
-    /// tile, and moves the unit on click. Stands in for the battle state machine until that exists.
+    /// Test-scene driver for the battlefield: shows a unit's movement range, previews the path to the cursor, and
+    /// moves the unit on Confirm. Cancel toggles a view of the map's deployment zones. Stands in for the battle
+    /// state machine until that exists.
     /// </summary>
     public sealed class GridSandbox : MonoBehaviour
     {
         [SerializeField] private GridView _gridView;
-        [SerializeField] private Camera _camera;
+        [SerializeField] private TileCursor _cursor;
         [SerializeField] private IsoCameraRig _cameraRig;
         [SerializeField] private Transform _unit;
 
-        [Header("Unit")]
+        [Header("Unit (FFT Squire baseline)")]
         [SerializeField] private Vector2Int _startCoord = new(1, 1);
         [SerializeField, Min(0)] private int _move = 4;
-        [SerializeField, Min(0)] private int _jump = 2;
+        [SerializeField, Range(0, 7)] private int _jump = 3;
 
         private readonly List<GridCoord> _path = new();
-        private InputAction _point;
-        private InputAction _select;
         private GridCoord _unitCoord;
-        private GridCoord? _hovered;
         private MovementRange _range;
-
-        private void Awake()
-        {
-            _point = new InputAction("Point", InputActionType.Value, "<Pointer>/position");
-            _select = new InputAction("Select", InputActionType.Button, "<Pointer>/press");
-            _select.performed += _ => OnSelect();
-        }
+        private bool _showDeployment;
 
         private void OnEnable()
         {
-            _point.Enable();
-            _select.Enable();
+            _cursor.Moved += OnCursorMoved;
+            _cursor.Confirmed += OnConfirmed;
+            _cursor.Cancelled += OnCancelled;
         }
 
         private void OnDisable()
         {
-            _point.Disable();
-            _select.Disable();
-        }
-
-        private void OnDestroy()
-        {
-            _point.Dispose();
-            _select.Dispose();
+            _cursor.Moved -= OnCursorMoved;
+            _cursor.Confirmed -= OnConfirmed;
+            _cursor.Cancelled -= OnCancelled;
         }
 
         private void Start()
@@ -61,60 +49,59 @@ namespace FriendshipWarriors.Dev
             var grid = _gridView.Grid;
             var center = GridMetrics.GridCenter(grid);
             _cameraRig.SetPanBounds(new Bounds(center, new Vector3(grid.Width, 0f, grid.Depth)));
-            _cameraRig.Focus(center, snap: true);
 
-            PlaceUnit(new GridCoord(_startCoord.x, _startCoord.y));
+            var start = new GridCoord(_startCoord.x, _startCoord.y);
+            PlaceUnit(start);
+            _cursor.SetCoord(start, followCamera: true);
+            _cameraRig.Focus(_gridView.SurfaceCenter(start), snap: true);
         }
 
-        private void Update()
-        {
-            var hovered = PickTile();
-            if (hovered != _hovered)
-            {
-                _hovered = hovered;
-                RefreshHighlights();
-            }
-        }
+        private void OnCursorMoved(GridCoord _) => RefreshHighlights();
 
-        private void OnSelect()
+        private void OnConfirmed(GridCoord target)
         {
-            if (_hovered is { } target && _range.CanMoveTo(target))
+            if (_range.CanMoveTo(target))
                 PlaceUnit(target);
+        }
+
+        private void OnCancelled()
+        {
+            _showDeployment = !_showDeployment;
+            RefreshHighlights();
         }
 
         private void PlaceUnit(GridCoord coord)
         {
             _unitCoord = coord;
-            _unit.position = GridMetrics.TileTopCenter(coord, _gridView.Grid[coord].Height);
+            _unit.position = _gridView.SurfaceCenter(coord);
             _range = Pathfinder.FindMovementRange(_gridView.Grid, coord, new MovementProfile(_move, _jump));
             RefreshHighlights();
-        }
-
-        private GridCoord? PickTile()
-        {
-            var ray = _camera.ScreenPointToRay(_point.ReadValue<Vector2>());
-            if (Physics.Raycast(ray, out var hit, 1000f) && hit.collider.TryGetComponent<TileView>(out var tile))
-                return tile.Coord;
-            return null;
         }
 
         private void RefreshHighlights()
         {
             _gridView.ClearHighlights();
-            foreach (var coord in _range.Destinations)
-                _gridView.SetHighlight(coord, TileHighlight.MoveRange);
 
-            if (_hovered is { } hovered)
+            if (_showDeployment)
             {
-                if (_range.TryGetPath(hovered, _path))
+                foreach (var coord in _gridView.Map.PlayerDeployment)
+                    _gridView.SetHighlight(coord, TileHighlight.PlayerDeployment);
+                foreach (var coord in _gridView.Map.EnemyDeployment)
+                    _gridView.SetHighlight(coord, TileHighlight.EnemyDeployment);
+            }
+            else
+            {
+                foreach (var coord in _range.Destinations)
+                    _gridView.SetHighlight(coord, TileHighlight.MoveRange);
+                if (_range.TryGetPath(_cursor.Coord, _path))
                 {
                     foreach (var step in _path)
                         _gridView.SetHighlight(step, TileHighlight.Path);
                 }
-                _gridView.SetHighlight(hovered, TileHighlight.Hover);
             }
 
             _gridView.SetHighlight(_unitCoord, TileHighlight.Selected);
+            _gridView.SetHighlight(_cursor.Coord, TileHighlight.Hover);
         }
     }
 }

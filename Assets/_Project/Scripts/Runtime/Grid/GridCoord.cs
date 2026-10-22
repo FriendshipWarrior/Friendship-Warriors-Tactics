@@ -29,6 +29,7 @@ namespace FriendshipWarriors.Grid
 
         public static GridCoord operator +(GridCoord a, GridCoord b) => new(a.X + b.X, a.Y + b.Y);
         public static GridCoord operator -(GridCoord a, GridCoord b) => new(a.X - b.X, a.Y - b.Y);
+        public static GridCoord operator *(GridCoord a, int scale) => new(a.X * scale, a.Y * scale);
         public static bool operator ==(GridCoord a, GridCoord b) => a.Equals(b);
         public static bool operator !=(GridCoord a, GridCoord b) => !a.Equals(b);
 

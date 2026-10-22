@@ -60,15 +60,18 @@ Assets/
   _Project/
     Scripts/
       Runtime/            # FriendshipWarriors.Runtime.asmdef
-        Grid/             # GridCoord, Tile, BattleGrid, BattleMapData, GridMetrics
+        Grid/             # GridCoord, Tile, TileShape, BattleGrid, BattleMapData, GridMetrics
           Pathfinding/    # Pathfinder, MovementRange, MovementProfile, Occupancy
-          View/           # GridView, TileView (placeholder geometry + highlights)
+          Props/          # PropDefinition, PropPlacement (decoration layer)
+          View/           # GridView, BattlefieldMeshBuilder, TerrainPalette (presentation)
+        Controls/         # BattleInput, TileCursor, CursorMath (gamepad + mouse/keyboard)
         Camera/           # IsoCameraRig (namespace FriendshipWarriors.Cameras)
         Dev/              # GridSandbox and other test-scene drivers
         Core/ Battle/ Units/ UI/   # planned
-      Editor/             # FriendshipWarriors.Editor.asmdef — TestMapFactory, future map tools
-    Data/                 # ScriptableObject assets: jobs, abilities, items, maps
-    Materials/            # Tile.mat (URP Lit, tinted per tile via MaterialPropertyBlock)
+      Editor/             # FriendshipWarriors.Editor.asmdef — TestMapFactory, TestSceneBuilder, future map editor
+    Data/                 # ScriptableObject assets: maps, props, terrain palette (later jobs, abilities, items)
+    Input/                # BattleControls.inputactions (control schemes: Keyboard&Mouse, Gamepad)
+    Materials/            # Terrain.mat (URP Lit, cloned per terrain look), Highlight.mat (transparent unlit)
     Scenes/               # Battle_Test.unity (the only scene in Build Settings)
     Prefabs/ Art/ Audio/  # planned
   Tests/
@@ -102,6 +105,8 @@ Root namespace: `FriendshipWarriors`; namespaces follow folders (e.g. `Friendshi
 - New battle/grid/stat logic gets **EditMode tests** (Unity Test Framework / NUnit). `TestGrids.FromRows(...)` builds small maps from strings for pathfinding tests.
 - Run tests in the open Editor: `unity command test run --caller plugin --skill unity-cli -- --mode EditMode --filter FriendshipWarriors` (headless `unity test` refuses a project that's open in an Editor).
 - For visual changes, play the `Battle_Test` scene and capture the Game view (see *Editor gotchas*).
+- Rebuild the test scene and its placeholder assets from code with **Friendship Warriors → Dev → Rebuild Battle Test Scene** (`TestSceneBuilder.Rebuild()`); don't hand-wire it.
+- Gamepad paths can be tested without hardware: in Play mode, `InputSystem.AddDevice<Gamepad>()` and `InputSystem.QueueStateEvent(pad, new GamepadState().WithButton(...))` through `script eval`, then remove the device.
 - After code changes, confirm the project compiles with no console errors before reporting work as done. If verification wasn't possible, say so.
 
 ### Editor gotchas (learned the hard way)
@@ -116,12 +121,14 @@ Root namespace: `FriendshipWarriors`; namespaces follow folders (e.g. `Friendshi
 
 Record decisions here as they are made (date — decision — rationale).
 
-- 2026-10-22 — Tile heights are integer **steps** of 0.5 world units (FFT-style half steps); `Jump` is measured in steps and limits both climbing and dropping. — Matches FFT feel; keeps rules integer-only.
-- 2026-10-22 — Movement is 4-directional, 1 Move per tile; deep water and void are impassable; enemies block, allies can be passed but not stopped on. — FFT baseline; terrain move costs can be added later in `Pathfinder`.
-- 2026-10-22 — Camera: orthographic, 30° pitch, 45° + 90° steps, Q/E rotate, scroll zoom, WASD/arrows pan. — Classic FFT framing.
-- 2026-10-22 — Placeholder geometry (column + inset cap per tile) built at runtime from `BattleMapData`. — Stand-in until the art direction is decided.
+- 2026-10-22 — **Heights:** tiles store height in half-h steps (FFT shows heights like 2.5h); 1h = 0.5 world units. `Jump` is in h, as in FFT. Tiles follow FFT's tile data: height, slope type + slope height, water depth, surface type.
+- 2026-10-22 — **Movement (FFT rules, confirmed):** orthogonal steps cost 1 Move and may climb up to Jump; a unit can leap a gap of Jump / 2 tiles (void or lower ground), paying Move as if flat (Jump caps at 7, so at most a 3-tile gap); enemies block, allies can be passed but not stopped on.
+- 2026-10-22 — **Movement (unverified approximations, revisit):** Jump also limits stepping *down*; a sloped tile's height for movement is its midpoint; leaps can't clear enemies or blocked tiles; water depth doesn't affect movement yet (FFT: depth 2+ stops units acting unless they have Swim-type abilities).
+- 2026-10-22 — **Battlefield rendering:** one combined mesh with real slopes (cheap on Steam Deck), terrain looks from `TerrainPalette` (colors now, textures later), translucent highlight overlays. Props are a decoration layer; blocking props make their tile impassable.
+- 2026-10-22 — **Camera (FFT):** orthographic, always diagonal, 90° rotation steps plus a low/high tilt toggle (30°/45°, approximated). Walls hiding units are handled the FFT way, by rotating or tilting the camera; no wall fading.
+- 2026-10-22 — **Controls:** one tile cursor for every device. D-pad/left stick/WASD/arrows move it along grid axes (input turned 45°, FFT-style) with key repeat, and the camera follows. Mouse hover places it. Confirm = A/Enter/Space/click, Cancel = B/Esc/Backspace/right-click, rotate = LB/RB or Q/E, tilt = Y or T, zoom = triggers, scroll or -/=, pan = right stick or middle-drag.
 - 2026-10-22 — **Scope:** an FFT-style game (FFT look and mechanics) with original characters, story and job names. Modes planned: story campaign, quick play, and possibly random map generation.
 - 2026-10-22 — **Art style:** 2D sprite characters on 3D tiles. Each unit is a 3D placeholder object with a sprite on a camera-facing child (rotates on the vertical axis only, so it stays upright). Units face the **4 grid directions** (FFT). Because the camera always sits on a 45° diagonal, only 2 poses need drawing (front 3/4 and back 3/4), mirrored to cover all 4 views.
 - 2026-10-22 — **Platforms:** Steam on PC. Windows first, then SteamOS/Steam Deck (Linux), then macOS if it isn't too much work. **Controller support is required**, since the game must work on Steam Deck. Every interaction needs a gamepad path, and the UI must be readable at 1280x800.
 - 2026-10-22 — **Map authoring: hybrid.** Grid data (`BattleMapData`) is the single source of truth for campaign, quick play and the random generator. A custom in-Unity editor paints it, a decoration/props layer sits on top, and custom backdrops are allowed later for set pieces. Fully modeled maps are out of scope (no 3D artist).
-- Open questions: save system scope; walls hiding units (fade/cutaway).
+- Open questions: save system scope; map editor UX (next PR); whether to add FFT's multi-layer tiles (bridges, walking under things).

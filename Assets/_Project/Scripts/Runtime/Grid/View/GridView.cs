@@ -1,45 +1,49 @@
 using System.Collections.Generic;
+using FriendshipWarriors.Grid.Props;
 using UnityEngine;
 
 namespace FriendshipWarriors.Grid.View
 {
     /// <summary>
-    /// Builds placeholder geometry for a <see cref="BattleMapData"/>: one column per tile plus a colored cap on top,
-    /// and tints caps to show highlights. Holds no rules; the <see cref="Grid"/> it exposes is the source of truth.
+    /// Presents a <see cref="BattleMapData"/>: one combined battlefield mesh, placeholder props, and translucent
+    /// overlays for highlighted tiles. Holds no rules; the <see cref="Grid"/> it exposes is the source of truth.
     /// </summary>
     public sealed class GridView : MonoBehaviour
     {
         private static readonly int BaseColorId = Shader.PropertyToID("_BaseColor");
+        private static readonly int BaseMapId = Shader.PropertyToID("_BaseMap");
 
         [SerializeField] private BattleMapData _map;
-        [SerializeField] private Material _tileMaterial;
+        [SerializeField] private TerrainPalette _palette;
 
-        [Tooltip("How far tile columns extend below height 0.")]
+        [Tooltip("Opaque lit material each terrain look is cloned from.")]
+        [SerializeField] private Material _terrainMaterial;
+
+        [Tooltip("Transparent unlit material for tile highlights; tinted per tile.")]
+        [SerializeField] private Material _highlightMaterial;
+
+        [Tooltip("How far the battlefield extends below height 0.")]
         [SerializeField, Min(0.1f)] private float _baseDepth = 1f;
-        [SerializeField, Range(0.02f, 0.5f)] private float _capThickness = 0.08f;
-        [Tooltip("Cap width relative to the tile; the gap leaves visible grid lines.")]
-        [SerializeField, Range(0.5f, 1f)] private float _capInset = 0.92f;
-        [SerializeField, Range(0f, 1f)] private float _sideDarkening = 0.35f;
-        [SerializeField, Range(0f, 1f)] private float _highlightStrength = 0.65f;
-
-        [Header("Terrain Colors")]
-        [SerializeField] private Color _grass = new(0.42f, 0.62f, 0.30f);
-        [SerializeField] private Color _dirt = new(0.55f, 0.42f, 0.28f);
-        [SerializeField] private Color _stone = new(0.55f, 0.55f, 0.58f);
-        [SerializeField] private Color _sand = new(0.85f, 0.78f, 0.55f);
-        [SerializeField] private Color _shallowWater = new(0.35f, 0.60f, 0.80f);
-        [SerializeField] private Color _deepWater = new(0.15f, 0.30f, 0.60f);
 
         [Header("Highlight Colors")]
-        [SerializeField] private Color _moveRange = new(0.30f, 0.55f, 1.00f);
-        [SerializeField] private Color _path = new(1.00f, 0.85f, 0.25f);
-        [SerializeField] private Color _hover = new(1.00f, 1.00f, 1.00f);
-        [SerializeField] private Color _selected = new(1.00f, 0.40f, 0.30f);
+        [SerializeField] private Color _moveRange = new(0.25f, 0.55f, 1.00f, 0.55f);
+        [SerializeField] private Color _path = new(1.00f, 0.85f, 0.25f, 0.65f);
+        [SerializeField] private Color _hover = new(1.00f, 1.00f, 1.00f, 0.60f);
+        [SerializeField] private Color _selected = new(1.00f, 0.35f, 0.25f, 0.65f);
+        [SerializeField] private Color _playerDeployment = new(0.30f, 0.90f, 0.40f, 0.50f);
+        [SerializeField] private Color _enemyDeployment = new(0.95f, 0.30f, 0.60f, 0.50f);
 
-        private readonly Dictionary<GridCoord, TileView> _tiles = new();
+        private readonly Dictionary<GridCoord, MeshRenderer> _overlays = new();
+        private readonly List<Material> _ownedMaterials = new();
+        private readonly Vector3[] _corners = new Vector3[4];
         private MaterialPropertyBlock _block;
+        private Texture2D _placeholderTopTexture;
+        private MeshCollider _collider;
+        private Transform _propRoot;
+        private Transform _overlayRoot;
 
         public BattleGrid Grid { get; private set; }
+        public BattleMapData Map => _map;
 
         private void Awake()
         {
@@ -47,87 +51,192 @@ namespace FriendshipWarriors.Grid.View
             Build();
         }
 
-        public void Build()
+        private void OnDestroy()
         {
-            foreach (var tile in _tiles.Values)
-                Destroy(tile.gameObject);
-            _tiles.Clear();
-
-            Grid = _map.CreateGrid();
-            foreach (var coord in Grid.AllCoords())
-            {
-                var tile = Grid[coord];
-                if (tile.Terrain != TerrainType.Void)
-                    _tiles.Add(coord, CreateTile(coord, tile));
-            }
+            foreach (var material in _ownedMaterials)
+                Destroy(material);
+            if (_placeholderTopTexture != null)
+                Destroy(_placeholderTopTexture);
         }
 
-        public bool TryGetTileView(GridCoord coord, out TileView view) => _tiles.TryGetValue(coord, out view);
+        public void Build()
+        {
+            Grid = _map.CreateGrid();
+            BuildTerrain();
+            BuildProps();
+            ResetOverlays();
+        }
+
+        /// <summary>World position a unit stands at on this tile.</summary>
+        public Vector3 SurfaceCenter(GridCoord coord) => transform.TransformPoint(GridMetrics.SurfaceCenter(coord, Grid[coord]));
+
+        /// <summary>Finds the tile under a ray, ignoring props and units. Hitting a cliff face picks the tile above it.</summary>
+        public bool TryPickTile(Ray ray, out GridCoord coord)
+        {
+            coord = default;
+            if (!_collider.Raycast(ray, out var hit, 1000f))
+                return false;
+
+            // Step slightly into the surface so a hit on a wall resolves to the tile that owns the wall.
+            var local = transform.InverseTransformPoint(hit.point - hit.normal * 0.01f);
+            coord = GridMetrics.WorldToCoord(local);
+            return Grid.TryGetTile(coord, out var tile) && tile.Terrain != TerrainType.Void;
+        }
 
         public void SetHighlight(GridCoord coord, TileHighlight highlight)
         {
-            if (!_tiles.TryGetValue(coord, out var view))
+            if (highlight == TileHighlight.None)
+            {
+                if (_overlays.TryGetValue(coord, out var existing))
+                    existing.enabled = false;
+                return;
+            }
+
+            if (!Grid.TryGetTile(coord, out var tile) || tile.Terrain == TerrainType.Void)
                 return;
 
-            var color = highlight == TileHighlight.None
-                ? view.BaseColor
-                : Color.Lerp(view.BaseColor, HighlightColor(highlight), _highlightStrength);
-            SetColor(view.Cap, color);
+            var overlay = GetOrCreateOverlay(coord, tile);
+            overlay.enabled = true;
+            _block.SetColor(BaseColorId, HighlightColor(highlight));
+            overlay.SetPropertyBlock(_block);
         }
 
         public void ClearHighlights()
         {
-            foreach (var view in _tiles.Values)
-                SetColor(view.Cap, view.BaseColor);
+            foreach (var overlay in _overlays.Values)
+                overlay.enabled = false;
         }
 
-        private TileView CreateTile(GridCoord coord, Tile tile)
+        private void BuildTerrain()
         {
-            var top = GridMetrics.TileTopCenter(coord, tile.Height);
-            var color = TerrainColor(tile.Terrain);
+            var meshFilter = GetOrAdd<MeshFilter>();
+            var meshRenderer = GetOrAdd<MeshRenderer>();
+            _collider = GetOrAdd<MeshCollider>();
 
-            // The column keeps its collider so pointer picks hit the tile from any side.
-            var column = GameObject.CreatePrimitive(PrimitiveType.Cube);
-            column.name = $"Tile {coord}";
-            column.transform.SetParent(transform, false);
-            float columnHeight = top.y + _baseDepth;
-            column.transform.localPosition = new Vector3(top.x, top.y - columnHeight * 0.5f, top.z);
-            column.transform.localScale = new Vector3(GridMetrics.TileSize, columnHeight, GridMetrics.TileSize);
-            var columnRenderer = column.GetComponent<Renderer>();
-            columnRenderer.sharedMaterial = _tileMaterial;
-            SetColor(columnRenderer, Color.Lerp(color, Color.black, _sideDarkening));
+            if (meshFilter.sharedMesh != null)
+                Destroy(meshFilter.sharedMesh);
+            var mesh = BattlefieldMeshBuilder.Build(Grid, _baseDepth);
+            meshFilter.sharedMesh = mesh;
+            _collider.sharedMesh = mesh;
 
-            // The cap sits flush with the column top, raised a hair to avoid z-fighting.
-            var cap = GameObject.CreatePrimitive(PrimitiveType.Cube);
-            cap.name = "Cap";
-            Destroy(cap.GetComponent<Collider>());
-            cap.transform.SetParent(column.transform, true);
-            cap.transform.position = top + Vector3.up * (0.002f - _capThickness * 0.5f);
-            cap.transform.localScale = new Vector3(_capInset, _capThickness / columnHeight, _capInset);
-            var capRenderer = cap.GetComponent<Renderer>();
-            capRenderer.sharedMaterial = _tileMaterial;
-            SetColor(capRenderer, color);
-
-            var view = column.AddComponent<TileView>();
-            view.Initialize(coord, capRenderer, color);
-            return view;
+            var materials = new Material[BattlefieldMeshBuilder.SubmeshCount];
+            for (int t = 0; t < BattlefieldMeshBuilder.TerrainCount; t++)
+            {
+                var look = _palette.Get((TerrainType)t);
+                materials[BattlefieldMeshBuilder.TopSubmesh((TerrainType)t)] = CreateMaterial($"{look.Terrain} Top", look.TopColor, look.TopTexture ? look.TopTexture : PlaceholderTopTexture());
+                materials[BattlefieldMeshBuilder.SideSubmesh((TerrainType)t)] = CreateMaterial($"{look.Terrain} Side", look.SideColor, look.SideTexture);
+            }
+            meshRenderer.sharedMaterials = materials;
         }
 
-        private void SetColor(Renderer target, Color color)
+        private void BuildProps()
         {
-            _block.SetColor(BaseColorId, color);
-            target.SetPropertyBlock(_block);
+            if (_propRoot != null)
+                Destroy(_propRoot.gameObject);
+            _propRoot = new GameObject("Props").transform;
+            _propRoot.SetParent(transform, false);
+
+            foreach (var placement in _map.Props)
+            {
+                var prop = placement.Prop;
+                if (prop == null || !Grid.Contains(placement.Coord))
+                    continue;
+
+                var surface = GridMetrics.SurfaceCenter(placement.Coord, Grid[placement.Coord]);
+                GameObject instance;
+                if (prop.Prefab != null)
+                {
+                    instance = Instantiate(prop.Prefab, _propRoot);
+                    instance.transform.localPosition = surface;
+                }
+                else
+                {
+                    instance = GameObject.CreatePrimitive(prop.Shape == PropShape.Pillar ? PrimitiveType.Cylinder : PrimitiveType.Cube);
+                    Destroy(instance.GetComponent<Collider>());
+                    instance.transform.SetParent(_propRoot, false);
+                    float height = Mathf.Max(prop.Height, 1) * GridMetrics.StepHeight;
+                    // Unity's cylinder is 2 units tall; the cube is 1.
+                    float yScale = prop.Shape == PropShape.Pillar ? height * 0.5f : height;
+                    instance.transform.localScale = new Vector3(prop.Footprint, yScale, prop.Footprint);
+                    instance.transform.localPosition = surface + Vector3.up * (height * 0.5f);
+                    instance.GetComponent<Renderer>().sharedMaterial = CreateMaterial(prop.DisplayName, prop.Color, null);
+                }
+                instance.name = $"{prop.DisplayName} {placement.Coord}";
+            }
         }
 
-        private Color TerrainColor(TerrainType terrain) => terrain switch
+        private void ResetOverlays()
         {
-            TerrainType.Dirt => _dirt,
-            TerrainType.Stone => _stone,
-            TerrainType.Sand => _sand,
-            TerrainType.ShallowWater => _shallowWater,
-            TerrainType.DeepWater => _deepWater,
-            _ => _grass,
-        };
+            foreach (var overlay in _overlays.Values)
+                Destroy(overlay.GetComponent<MeshFilter>().sharedMesh);
+            if (_overlayRoot != null)
+                Destroy(_overlayRoot.gameObject);
+            _overlays.Clear();
+            _overlayRoot = new GameObject("Highlights").transform;
+            _overlayRoot.SetParent(transform, false);
+        }
+
+        private MeshRenderer GetOrCreateOverlay(GridCoord coord, in Tile tile)
+        {
+            if (_overlays.TryGetValue(coord, out var overlay))
+                return overlay;
+
+            BattlefieldMeshBuilder.TopCorners(coord, tile, _corners, lift: 0.01f);
+            var mesh = new Mesh { name = $"Highlight {coord}" };
+            mesh.SetVertices(_corners);
+            mesh.SetTriangles(BattlefieldMeshBuilder.TopTriangles(tile.Slope), 0);
+            mesh.RecalculateNormals();
+
+            var go = new GameObject($"Highlight {coord}");
+            go.transform.SetParent(_overlayRoot, false);
+            go.AddComponent<MeshFilter>().sharedMesh = mesh;
+            overlay = go.AddComponent<MeshRenderer>();
+            overlay.sharedMaterial = _highlightMaterial;
+            overlay.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+            overlay.receiveShadows = false;
+            _overlays.Add(coord, overlay);
+            return overlay;
+        }
+
+        private Material CreateMaterial(string materialName, Color color, Texture texture)
+        {
+            var material = new Material(_terrainMaterial) { name = materialName };
+            material.SetColor(BaseColorId, color);
+            if (texture != null)
+                material.SetTexture(BaseMapId, texture);
+            _ownedMaterials.Add(material);
+            return material;
+        }
+
+        /// <summary>White with a soft dark border, so tile edges read until terrain has real textures.</summary>
+        private Texture2D PlaceholderTopTexture()
+        {
+            if (_placeholderTopTexture != null)
+                return _placeholderTopTexture;
+
+            const int size = 32;
+            var pixels = new Color32[size * size];
+            for (int y = 0; y < size; y++)
+            for (int x = 0; x < size; x++)
+            {
+                int edge = Mathf.Min(Mathf.Min(x, size - 1 - x), Mathf.Min(y, size - 1 - y));
+                byte value = edge == 0 ? (byte)150 : edge == 1 ? (byte)215 : (byte)255;
+                pixels[y * size + x] = new Color32(value, value, value, 255);
+            }
+
+            _placeholderTopTexture = new Texture2D(size, size, TextureFormat.RGBA32, mipChain: true)
+            {
+                name = "Placeholder Tile Border",
+                wrapMode = TextureWrapMode.Repeat,
+                anisoLevel = 4,
+            };
+            _placeholderTopTexture.SetPixels32(pixels);
+            _placeholderTopTexture.Apply();
+            return _placeholderTopTexture;
+        }
+
+        private T GetOrAdd<T>() where T : Component =>
+            TryGetComponent<T>(out var component) ? component : gameObject.AddComponent<T>();
 
         private Color HighlightColor(TileHighlight highlight) => highlight switch
         {
@@ -135,6 +244,8 @@ namespace FriendshipWarriors.Grid.View
             TileHighlight.Path => _path,
             TileHighlight.Hover => _hover,
             TileHighlight.Selected => _selected,
+            TileHighlight.PlayerDeployment => _playerDeployment,
+            TileHighlight.EnemyDeployment => _enemyDeployment,
             _ => Color.clear,
         };
     }
