@@ -116,4 +116,7 @@ Record decisions here as they are made (date — decision — rationale).
 - 2026-10-22 — Movement is 4-directional, 1 Move per tile; deep water and void are impassable; enemies block, allies can be passed but not stopped on. — FFT baseline; terrain move costs can be added later in `Pathfinder`.
 - 2026-10-22 — Camera: orthographic, 30° pitch, 45° + 90° steps, Q/E rotate, scroll zoom, WASD/arrows pan. — Classic FFT framing.
 - 2026-10-22 — Placeholder geometry (column + inset cap per tile) built at runtime from `BattleMapData`. — Stand-in until the art direction is decided.
-- Open questions: map authoring approach (custom editor tool vs. tilemap vs. modeled meshes), art style (sprites on 3D tiles vs. full 3D), target platforms, save system scope, occluding walls hiding units (fade/cutaway).
+- 2026-10-22 — **Scope:** an FFT-style game (FFT look and mechanics) with original characters, story and job names. Modes planned: story campaign, quick play, and possibly random map generation.
+- 2026-10-22 — **Art style:** 2D sprite characters on 3D tiles. Each unit is a 3D placeholder object with a sprite on a camera-facing child (rotates on the vertical axis only, so it stays upright). Character sheets are drawn from 8 directions.
+- 2026-10-22 — **Platforms:** Steam on PC. Windows first, then SteamOS/Steam Deck (Linux), then macOS if it isn't too much work. So gamepad input and the Deck's 1280x800 screen need support, not only mouse and keyboard.
+- Open questions: how maps are authored (comparing a custom grid editor, Unity Tilemap, modeled meshes, and a hybrid); 4- vs 8-direction unit facing; save system scope; walls hiding units (fade/cutaway).
