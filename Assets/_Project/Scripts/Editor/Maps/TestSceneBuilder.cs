@@ -2,6 +2,7 @@ using FriendshipWarriors.Cameras;
 using FriendshipWarriors.Controls;
 using FriendshipWarriors.Dev;
 using FriendshipWarriors.Grid;
+using FriendshipWarriors.Grid.Generation;
 using FriendshipWarriors.Grid.Props;
 using FriendshipWarriors.Grid.View;
 using UnityEditor;
@@ -39,6 +40,7 @@ namespace FriendshipWarriors.Editor.Maps
             var tree = CreateProp(TreePath, "Tree", PropShape.Pillar, new Color(0.18f, 0.42f, 0.20f), 6, 0.5f);
             var rock = CreateProp(RockPath, "Rock", PropShape.Box, new Color(0.45f, 0.45f, 0.48f), 2, 0.7f);
             TestMapFactory.CreateHillsideAsset(tree, rock);
+            CreateGeneratorSettings(tree, rock);
             AssetDatabase.SaveAssets();
 
             // NewScene unloads unreferenced assets, so everything the scene references is loaded after it.
@@ -88,10 +90,26 @@ namespace FriendshipWarriors.Editor.Maps
             body.transform.localScale = new Vector3(0.5f, 0.6f, 0.5f);
 
             var sandbox = new GameObject("Grid Sandbox").AddComponent<GridSandbox>();
+            Set(sandbox, "_input", input);
+            Set(sandbox, "_generatorSettings", AssetDatabase.LoadAssetAtPath<MapGeneratorSettings>(ProjectAssets.DefaultGeneratorSettingsPath));
             Set(sandbox, "_gridView", grid);
             Set(sandbox, "_cursor", cursor);
             Set(sandbox, "_cameraRig", rig);
             Set(sandbox, "_unit", unit.transform);
+        }
+
+        private static void CreateGeneratorSettings(PropDefinition tree, PropDefinition rock)
+        {
+            if (AssetDatabase.LoadAssetAtPath<MapGeneratorSettings>(ProjectAssets.DefaultGeneratorSettingsPath) != null)
+                return;
+            EnsureFolder(ProjectAssets.GenerationFolder);
+            var settings = ScriptableObject.CreateInstance<MapGeneratorSettings>();
+            settings.SetProps(new[]
+            {
+                new MapGeneratorSettings.PropChoice(tree, 2f),
+                new MapGeneratorSettings.PropChoice(rock, 1f),
+            });
+            AssetDatabase.CreateAsset(settings, ProjectAssets.DefaultGeneratorSettingsPath);
         }
 
         private static void CreateTerrainMaterial()

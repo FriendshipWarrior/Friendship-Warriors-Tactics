@@ -1,0 +1,34 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e866556fd2f174e4aa42ddafd2451cc1, type: 3}
+  m_Name: MapGenerator_Default
+  m_EditorClassIdentifier: FriendshipWarriors.Runtime::FriendshipWarriors.Grid.Generation.MapGeneratorSettings
+  _widthRange: {x: 10, y: 14}
+  _depthRange: {x: 10, y: 14}
+  _baseHeight: 1
+  _maxHeight: 6
+  _hillCount: {x: 3, y: 6}
+  _hillRadius: {x: 2, y: 4.5}
+  _hillAmplitude: {x: 1, y: 3.5}
+  _plateauChance: 0.5
+  _rampChance: 0.6
+  _pondCount: {x: 0, y: 2}
+  _chasmCount: {x: 0, y: 1}
+  _props:
+  - _prop: {fileID: 11400000, guid: 78be583f6964042878835e233b80ccf7, type: 2}
+    _weight: 2
+  - _prop: {fileID: 11400000, guid: 1898d440d552440f69d6220129a3f632, type: 2}
+    _weight: 1
+  _propDensity: 0.06
+  _deploymentSize: 5
+  _referenceJump: 3
+  _maxAttempts: 25
