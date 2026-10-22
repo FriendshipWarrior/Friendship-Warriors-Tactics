@@ -173,6 +173,20 @@ namespace FriendshipWarriors.Tests
             Assert.That(range.CanMoveTo(new GridCoord(2, 0)), Is.EqualTo(reachesFarSide));
         }
 
+        [TestCase("323", -1, false)] // only 1h of clearance; the default rule needs 2h
+        [TestCase("323", 1, true)]   // the same leap with the rule relaxed to 1h
+        [TestCase("303", 4, false)]  // 3h of clearance is short of a 4h rule
+        public void Leaping_OverAnEnemy_NeedsTheConfiguredClearance(string row, int clearance, bool reachesFarSide)
+        {
+            var enemy = new GridCoord(1, 0);
+            MovementRules? rules = clearance < 0 ? null : new MovementRules(clearance);
+
+            var range = Pathfinder.FindMovementRange(TestGrids.FromRows(row), new GridCoord(0, 0), new MovementProfile(4, 4),
+                c => c == enemy ? Occupancy.Enemy : Occupancy.Empty, rules);
+
+            Assert.That(range.CanMoveTo(new GridCoord(2, 0)), Is.EqualTo(reachesFarSide));
+        }
+
         [TestCase("333")]
         [TestCase("353")]
         public void Leaping_CannotClearAnEnemyAtTheSameHeightOrHigher(string row)

@@ -11,24 +11,27 @@ namespace FriendshipWarriors.Grid.Pathfinding
         /// <item>Steps are orthogonal and cost 1 Move; the standing heights of the two tiles may differ by at most
         /// Jump, both climbing up and stepping down.</item>
         /// <item>A unit may leap straight across up to Jump / 2 gap tiles, paying Move as if the gap were flat
-        /// ground. A gap is void or any tile lower than the take-off tile, including one an enemy stands on.
-        /// Blocked tiles and tiles as high or higher can't be leapt.</item>
+        /// ground. A gap is void or any tile lower than the take-off tile. A tile an enemy stands on is an obstacle:
+        /// it must be at least <see cref="MovementRules.EnemyLeapClearance"/> lower. Blocked tiles and tiles as high
+        /// or higher can't be leapt.</item>
         /// <item>Enemies block walking; allies can be passed but not stopped on.</item>
         /// </list>
         /// Water depth doesn't affect movement; it stops units acting instead (see <see cref="Tile.AllowsActions"/>).
         /// </summary>
         /// <param name="occupancy">Who stands on a tile, relative to the mover. Null means the field is empty.</param>
+        /// <param name="rules">Battle-wide tuning; null uses <see cref="MovementRules.Default"/>.</param>
         public static MovementRange FindMovementRange(
             BattleGrid grid,
             GridCoord origin,
             MovementProfile profile,
-            Func<GridCoord, Occupancy> occupancy = null)
+            Func<GridCoord, Occupancy> occupancy = null,
+            MovementRules? rules = null)
         {
             if (grid == null) throw new ArgumentNullException(nameof(grid));
             if (!grid.Contains(origin))
                 throw new ArgumentOutOfRangeException(nameof(origin), origin, "Origin is outside the grid.");
 
-            var search = new Search(grid, profile, occupancy ?? (_ => Occupancy.Empty));
+            var search = new Search(grid, profile, occupancy ?? (_ => Occupancy.Empty), rules ?? MovementRules.Default);
             search.Run(origin);
             return new MovementRange(origin, search.Nodes, search.Destinations);
         }
@@ -39,16 +42,18 @@ namespace FriendshipWarriors.Grid.Pathfinding
             private readonly BattleGrid _grid;
             private readonly MovementProfile _profile;
             private readonly Func<GridCoord, Occupancy> _occupancy;
+            private readonly MovementRules _rules;
             private readonly List<GridCoord>[] _buckets;
 
             public readonly Dictionary<GridCoord, MovementRange.Node> Nodes = new();
             public readonly List<GridCoord> Destinations = new();
 
-            public Search(BattleGrid grid, MovementProfile profile, Func<GridCoord, Occupancy> occupancy)
+            public Search(BattleGrid grid, MovementProfile profile, Func<GridCoord, Occupancy> occupancy, MovementRules rules)
             {
                 _grid = grid;
                 _profile = profile;
                 _occupancy = occupancy;
+                _rules = rules;
                 _buckets = new List<GridCoord>[profile.Move + 1];
             }
 
@@ -96,7 +101,11 @@ namespace FriendshipWarriors.Grid.Pathfinding
             {
                 if (!_grid.TryGetTile(coord, out var tile) || tile.Blocked)
                     return false;
-                return tile.Terrain == TerrainType.Void || tile.StandingHeight < takeOffHeight;
+                if (tile.Terrain == TerrainType.Void)
+                    return true;
+                if (_occupancy(coord) == Occupancy.Enemy)
+                    return takeOffHeight - tile.StandingHeight >= _rules.EnemyLeapClearanceSteps;
+                return tile.StandingHeight < takeOffHeight;
             }
 
             private void TryStep(GridCoord from, GridCoord to, int cost, int fromHeight)
