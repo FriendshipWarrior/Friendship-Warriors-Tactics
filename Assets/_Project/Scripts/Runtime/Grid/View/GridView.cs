@@ -7,6 +7,8 @@ namespace FriendshipWarriors.Grid.View
     /// <summary>
     /// Presents a <see cref="BattleMapData"/>: one combined battlefield mesh, placeholder props, and translucent
     /// overlays for highlighted tiles. Holds no rules; the <see cref="Grid"/> it exposes is the source of truth.
+    /// Builds itself in Play mode; editor tools (the map editor preview) call <see cref="Configure"/> and
+    /// <see cref="Build"/> directly and <see cref="Release"/> when done.
     /// </summary>
     public sealed class GridView : MonoBehaviour
     {
@@ -38,6 +40,7 @@ namespace FriendshipWarriors.Grid.View
         private readonly Vector3[] _corners = new Vector3[4];
         private MaterialPropertyBlock _block;
         private Texture2D _placeholderTopTexture;
+        private Mesh _terrainMesh;
         private MeshCollider _collider;
         private Transform _propRoot;
         private Transform _overlayRoot;
@@ -45,26 +48,51 @@ namespace FriendshipWarriors.Grid.View
         public BattleGrid Grid { get; private set; }
         public BattleMapData Map => _map;
 
-        private void Awake()
+        private MaterialPropertyBlock Block => _block ??= new MaterialPropertyBlock();
+
+        private void Awake() => Build();
+
+        private void OnDestroy() => Release();
+
+        /// <summary>Points the view at a map and its looks, for tools that create views from code.</summary>
+        public void Configure(BattleMapData map, TerrainPalette palette, Material terrainMaterial, Material highlightMaterial)
         {
-            _block = new MaterialPropertyBlock();
-            Build();
+            _map = map;
+            _palette = palette;
+            _terrainMaterial = terrainMaterial;
+            _highlightMaterial = highlightMaterial;
         }
 
-        private void OnDestroy()
-        {
-            foreach (var material in _ownedMaterials)
-                Destroy(material);
-            if (_placeholderTopTexture != null)
-                Destroy(_placeholderTopTexture);
-        }
-
+        /// <summary>(Re)builds everything from the map, freeing whatever a previous build generated.</summary>
         public void Build()
         {
+            Release();
             Grid = _map.CreateGrid();
             BuildTerrain();
             BuildProps();
-            ResetOverlays();
+            _overlayRoot = CreateChild("Highlights");
+        }
+
+        /// <summary>Destroys generated meshes, materials, textures and child objects.</summary>
+        public void Release()
+        {
+            foreach (var overlay in _overlays.Values)
+            {
+                if (overlay != null)
+                    DestroySafe(overlay.GetComponent<MeshFilter>().sharedMesh);
+            }
+            _overlays.Clear();
+            if (_overlayRoot != null)
+                DestroySafe(_overlayRoot.gameObject);
+            if (_propRoot != null)
+                DestroySafe(_propRoot.gameObject);
+            foreach (var material in _ownedMaterials)
+                DestroySafe(material);
+            _ownedMaterials.Clear();
+            if (_terrainMesh != null)
+                DestroySafe(_terrainMesh);
+            if (_placeholderTopTexture != null)
+                DestroySafe(_placeholderTopTexture);
         }
 
         /// <summary>World position a unit stands at on this tile.</summary>
@@ -97,8 +125,8 @@ namespace FriendshipWarriors.Grid.View
 
             var overlay = GetOrCreateOverlay(coord, tile);
             overlay.enabled = true;
-            _block.SetColor(BaseColorId, HighlightColor(highlight));
-            overlay.SetPropertyBlock(_block);
+            Block.SetColor(BaseColorId, HighlightColor(highlight));
+            overlay.SetPropertyBlock(Block);
         }
 
         public void ClearHighlights()
@@ -113,11 +141,10 @@ namespace FriendshipWarriors.Grid.View
             var meshRenderer = GetOrAdd<MeshRenderer>();
             _collider = GetOrAdd<MeshCollider>();
 
-            if (meshFilter.sharedMesh != null)
-                Destroy(meshFilter.sharedMesh);
-            var mesh = BattlefieldMeshBuilder.Build(Grid, _baseDepth);
-            meshFilter.sharedMesh = mesh;
-            _collider.sharedMesh = mesh;
+            _terrainMesh = BattlefieldMeshBuilder.Build(Grid, _baseDepth);
+            _terrainMesh.hideFlags = HideFlags.DontSave;
+            meshFilter.sharedMesh = _terrainMesh;
+            _collider.sharedMesh = _terrainMesh;
 
             var materials = new Material[BattlefieldMeshBuilder.SubmeshCount];
             for (int t = 0; t < BattlefieldMeshBuilder.TerrainCount; t++)
@@ -131,10 +158,7 @@ namespace FriendshipWarriors.Grid.View
 
         private void BuildProps()
         {
-            if (_propRoot != null)
-                Destroy(_propRoot.gameObject);
-            _propRoot = new GameObject("Props").transform;
-            _propRoot.SetParent(transform, false);
+            _propRoot = CreateChild("Props");
 
             foreach (var placement in _map.Props)
             {
@@ -152,7 +176,7 @@ namespace FriendshipWarriors.Grid.View
                 else
                 {
                     instance = GameObject.CreatePrimitive(prop.Shape == PropShape.Pillar ? PrimitiveType.Cylinder : PrimitiveType.Cube);
-                    Destroy(instance.GetComponent<Collider>());
+                    DestroySafe(instance.GetComponent<Collider>());
                     instance.transform.SetParent(_propRoot, false);
                     float height = Mathf.Max(prop.Height, 1) * GridMetrics.StepHeight;
                     // Unity's cylinder is 2 units tall; the cube is 1.
@@ -165,24 +189,13 @@ namespace FriendshipWarriors.Grid.View
             }
         }
 
-        private void ResetOverlays()
-        {
-            foreach (var overlay in _overlays.Values)
-                Destroy(overlay.GetComponent<MeshFilter>().sharedMesh);
-            if (_overlayRoot != null)
-                Destroy(_overlayRoot.gameObject);
-            _overlays.Clear();
-            _overlayRoot = new GameObject("Highlights").transform;
-            _overlayRoot.SetParent(transform, false);
-        }
-
         private MeshRenderer GetOrCreateOverlay(GridCoord coord, in Tile tile)
         {
             if (_overlays.TryGetValue(coord, out var overlay))
                 return overlay;
 
             BattlefieldMeshBuilder.TopCorners(coord, tile, _corners, lift: 0.01f);
-            var mesh = new Mesh { name = $"Highlight {coord}" };
+            var mesh = new Mesh { name = $"Highlight {coord}", hideFlags = HideFlags.DontSave };
             mesh.SetVertices(_corners);
             mesh.SetTriangles(BattlefieldMeshBuilder.TopTriangles(tile.Slope), 0);
             mesh.RecalculateNormals();
@@ -200,7 +213,7 @@ namespace FriendshipWarriors.Grid.View
 
         private Material CreateMaterial(string materialName, Color color, Texture texture)
         {
-            var material = new Material(_terrainMaterial) { name = materialName };
+            var material = new Material(_terrainMaterial) { name = materialName, hideFlags = HideFlags.DontSave };
             material.SetColor(BaseColorId, color);
             if (texture != null)
                 material.SetTexture(BaseMapId, texture);
@@ -227,12 +240,31 @@ namespace FriendshipWarriors.Grid.View
             _placeholderTopTexture = new Texture2D(size, size, TextureFormat.RGBA32, mipChain: true)
             {
                 name = "Placeholder Tile Border",
+                hideFlags = HideFlags.DontSave,
                 wrapMode = TextureWrapMode.Repeat,
                 anisoLevel = 4,
             };
             _placeholderTopTexture.SetPixels32(pixels);
             _placeholderTopTexture.Apply();
             return _placeholderTopTexture;
+        }
+
+        private Transform CreateChild(string childName)
+        {
+            var child = new GameObject(childName).transform;
+            child.SetParent(transform, false);
+            return child;
+        }
+
+        /// <summary>Destroy in Play mode, DestroyImmediate in the editor, where deferred destruction never runs.</summary>
+        private static void DestroySafe(Object target)
+        {
+            if (target == null)
+                return;
+            if (Application.isPlaying)
+                Destroy(target);
+            else
+                DestroyImmediate(target);
         }
 
         private T GetOrAdd<T>() where T : Component =>

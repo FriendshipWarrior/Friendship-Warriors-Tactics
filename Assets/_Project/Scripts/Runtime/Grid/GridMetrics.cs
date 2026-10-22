@@ -21,6 +21,12 @@ namespace FriendshipWarriors.Grid
         public static Vector3 GridCenter(BattleGrid grid) =>
             new((grid.Width - 1) * TileSize * 0.5f, 0f, (grid.Depth - 1) * TileSize * 0.5f);
 
+        /// <summary>Formats half-h steps the way FFT shows heights: 3 steps → "1.5h", 4 steps → "2h".</summary>
+        public static string FormatHeight(int steps) =>
+            steps % StepsPerH == 0
+                ? $"{steps / StepsPerH}h"
+                : $"{(steps / (float)StepsPerH).ToString("0.#", System.Globalization.CultureInfo.InvariantCulture)}h";
+
         /// <summary>The tile whose column contains a world point (heights ignored).</summary>
         public static GridCoord WorldToCoord(Vector3 world) =>
             new(Mathf.RoundToInt(world.x / TileSize), Mathf.RoundToInt(world.z / TileSize));
