@@ -66,11 +66,13 @@ Assets/
           Validation/     # MapValidator, MapIssue (shared by the map editor and generator)
           Generation/     # MapGenerator, MapGeneratorSettings (seeded random maps)
           View/           # GridView, BattlefieldMeshBuilder, TerrainPalette (presentation)
+        Units/            # Unit, JobDefinition, stats/EXP/Prof/Commendations, facing rules, UnitFactory
+          View/           # UnitView (billboard sprite), SpriteViewMath, PlaceholderSprites
         Controls/         # BattleInput, TileCursor, CursorMath (gamepad + mouse/keyboard)
         Camera/           # IsoCameraRig (namespace FriendshipWarriors.Cameras)
-        Dev/              # GridSandbox and other test-scene drivers
-        Core/ Battle/ Units/ UI/   # planned
-      Editor/             # FriendshipWarriors.Editor.asmdef — MapEditorWindow, MapPreview, TestMapFactory, TestSceneBuilder
+        Dev/              # BattleSandbox and other test-scene drivers
+        Core/ Battle/ UI/ # planned
+      Editor/             # FriendshipWarriors.Editor.asmdef — MapEditorWindow, MapPreview, TestMapFactory, TestSceneBuilder, StartingJobsBuilder
     Data/                 # ScriptableObject assets: maps, props, terrain palette, generator settings (later jobs, abilities, items)
     Input/                # BattleControls.inputactions (control schemes: Keyboard&Mouse, Gamepad)
     Materials/            # Terrain.mat (URP Lit, cloned per terrain look), Highlight.mat (transparent unlit)
@@ -140,4 +142,11 @@ Record decisions here as they are made (date — decision — rationale).
 - 2026-10-22 — **Art style:** 2D sprite characters on 3D tiles. Each unit is a 3D placeholder object with a sprite on a camera-facing child (rotates on the vertical axis only, so it stays upright). Units face the **4 grid directions** (FFT). Because the camera always sits on a 45° diagonal, only 2 poses need drawing (front 3/4 and back 3/4), mirrored to cover all 4 views.
 - 2026-10-22 — **Platforms:** Steam on PC. Windows first, then SteamOS/Steam Deck (Linux), then macOS if it isn't too much work. **Controller support is required**, since the game must work on Steam Deck. Every interaction needs a gamepad path, and the UI must be readable at 1280x800.
 - 2026-10-22 — **Map authoring: hybrid.** Grid data (`BattleMapData`) is the single source of truth for campaign, quick play and the random generator. A custom in-Unity editor paints it, a decoration/props layer sits on top, and custom backdrops are allowed later for set pieces. Fully modeled maps are out of scope (no 3D artist).
+- 2026-10-22 — **Theme:** fantasy with steampunk elements; strict military roles and names.
+- 2026-10-22 — **Stats (FFT, minus Brave/Faith):** HP, MP, Speed, Physical Attack, Magic Attack, Move, Jump, class evasion. FFT's model: hidden raw stats × job multiplier / 1,638,400; level-up adds raw / (growth constant + level) using the current job's constants. Brave and Faith are left out until we design our own; spells use a flat multiplier where FFT used Faith. Idea to revisit: the timed block/crit press could replace FFT's Brave-based reaction chance.
+- 2026-10-22 — **Jobs (6):** Cadet (FFT Squire) → Vanguard (Knight, melee) and Marksman (Archer, ranged); Corpsman (Chemist) → Evoker (Black Mage) and Warder (White Mage). Advanced jobs unlock at job level 2 in the base job. Multipliers and growth constants are FFT's (verified); Move/Jump/class evasion are recalled FFT values. Name pool kept for later specialist jobs: Ironclad, Cuirassier, Sentinel, Aethermancer, Grenadier, Artificer, Arcane Artillerist.
+- 2026-10-22 — **Progression (intended departures from FFT):** EXP per level grows exponentially (`ExperienceCurve`: 100 × 1.06^(level−1); about 500k EXP to reach the level-99 cap) instead of FFT's flat 100. FFT's JP is called **Proficiency (Prof)** and uses FFT's job level thresholds (200 … 3000). Reaching max job level masters a job (until abilities exist) and awards a **Commendation**; Commendations can also come from field challenges (not defined yet).
+- 2026-10-22 — **Facing (FFT):** units face the 4 grid directions and choose a facing at the end of their turn. Facing changes evasion, not damage: front = class + shield + accessory evasion, side = shield + accessory, back = accessory only. Exact diagonals count as side (our approximation).
+- 2026-10-22 — **Timed defense/offense (intended departure):** in combat, a well-timed button press gives a *chance* to block (when attacked) or land a critical hit (when attacking). Design details come with the combat system.
+- 2026-10-22 — **Unit visuals:** a placeholder object with a camera-facing sprite (rotates on the vertical axis only). Two drawn poses per job (front ¾ and back ¾, facing screen-right) mirrored to cover all four views. Set `FrontSprite`/`BackSprite` on a job to replace the generated placeholder.
 - Open questions: save system scope; whether to add FFT's multi-layer tiles (bridges, walking under things).

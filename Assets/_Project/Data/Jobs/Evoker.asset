@@ -1,0 +1,37 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 3fde6b8b9e981486ca3bdb16f048a2b6, type: 3}
+  m_Name: Evoker
+  m_EditorClassIdentifier: FriendshipWarriors.Runtime::FriendshipWarriors.Units.JobDefinition
+  _displayName: Evoker
+  _description: Battle mage who vents raw aether as fire, frost and lightning.
+  _multipliers:
+    _hp: 75
+    _mp: 120
+    _speed: 100
+    _physicalAttack: 60
+    _magicAttack: 150
+  _growth:
+    _hp: 12
+    _mp: 9
+    _speed: 100
+    _physicalAttack: 60
+    _magicAttack: 50
+  _move: 3
+  _jump: 3
+  _classEvasion: 5
+  _requirements:
+  - _job: {fileID: 11400000, guid: b58661765412841a69212c216ad8a5a0, type: 2}
+    _level: 2
+  _placeholderColor: {r: 0.55, g: 0.32, b: 0.72, a: 1}
+  _frontSprite: {fileID: 0}
+  _backSprite: {fileID: 0}

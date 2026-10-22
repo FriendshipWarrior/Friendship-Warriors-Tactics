@@ -1,0 +1,37 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 3fde6b8b9e981486ca3bdb16f048a2b6, type: 3}
+  m_Name: Marksman
+  m_EditorClassIdentifier: FriendshipWarriors.Runtime::FriendshipWarriors.Units.JobDefinition
+  _displayName: Marksman
+  _description: Long-rifle specialist who strikes from rooftops and ridgelines.
+  _multipliers:
+    _hp: 100
+    _mp: 65
+    _speed: 100
+    _physicalAttack: 110
+    _magicAttack: 80
+  _growth:
+    _hp: 11
+    _mp: 16
+    _speed: 100
+    _physicalAttack: 45
+    _magicAttack: 50
+  _move: 3
+  _jump: 3
+  _classEvasion: 10
+  _requirements:
+  - _job: {fileID: 11400000, guid: b06acf20998d4439ea92f707821b229a, type: 2}
+    _level: 2
+  _placeholderColor: {r: 0.62, g: 0.46, b: 0.26, a: 1}
+  _frontSprite: {fileID: 0}
+  _backSprite: {fileID: 0}

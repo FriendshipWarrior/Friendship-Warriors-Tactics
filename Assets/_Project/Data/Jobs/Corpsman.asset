@@ -1,0 +1,35 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 3fde6b8b9e981486ca3bdb16f048a2b6, type: 3}
+  m_Name: Corpsman
+  m_EditorClassIdentifier: FriendshipWarriors.Runtime::FriendshipWarriors.Units.JobDefinition
+  _displayName: Corpsman
+  _description: Field medic carrying tonics, splints and a satchel of aether vials. The first step on the path of magic.
+  _multipliers:
+    _hp: 80
+    _mp: 75
+    _speed: 100
+    _physicalAttack: 75
+    _magicAttack: 80
+  _growth:
+    _hp: 12
+    _mp: 16
+    _speed: 100
+    _physicalAttack: 75
+    _magicAttack: 50
+  _move: 3
+  _jump: 3
+  _classEvasion: 5
+  _requirements: []
+  _placeholderColor: {r: 0.3, g: 0.7, b: 0.5, a: 1}
+  _frontSprite: {fileID: 0}
+  _backSprite: {fileID: 0}
