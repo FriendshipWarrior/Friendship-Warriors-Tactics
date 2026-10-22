@@ -19,12 +19,12 @@ namespace FriendshipWarriors.Editor.Maps
     public static class TestSceneBuilder
     {
         private const string ScenePath = "Assets/_Project/Scenes/Battle_Test.unity";
-        private const string TerrainMaterialPath = "Assets/_Project/Materials/Terrain.mat";
-        private const string HighlightMaterialPath = "Assets/_Project/Materials/Highlight.mat";
-        private const string PalettePath = "Assets/_Project/Data/TerrainPalette_Placeholder.asset";
-        private const string TreePath = "Assets/_Project/Data/Props/Tree.asset";
-        private const string RockPath = "Assets/_Project/Data/Props/Rock.asset";
-        private const string ControlsPath = "Assets/_Project/Input/BattleControls.inputactions";
+        private const string TerrainMaterialPath = ProjectAssets.TerrainMaterialPath;
+        private const string HighlightMaterialPath = ProjectAssets.HighlightMaterialPath;
+        private const string PalettePath = ProjectAssets.PlaceholderPalettePath;
+        private const string TreePath = ProjectAssets.PropsFolder + "/Tree.asset";
+        private const string RockPath = ProjectAssets.PropsFolder + "/Rock.asset";
+        private const string ControlsPath = ProjectAssets.BattleControlsPath;
 
         [MenuItem("Friendship Warriors/Dev/Rebuild Battle Test Scene")]
         public static void Rebuild()
@@ -32,7 +32,7 @@ namespace FriendshipWarriors.Editor.Maps
             if (!EditorSceneManager.SaveCurrentModifiedScenesIfUserWantsTo())
                 return;
 
-            EnsureFolder("Assets/_Project/Data/Props");
+            EnsureFolder(ProjectAssets.PropsFolder);
             CreateTerrainMaterial();
             CreateHighlightMaterial();
             CreatePalette();
@@ -170,7 +170,7 @@ namespace FriendshipWarriors.Editor.Maps
             so.ApplyModifiedPropertiesWithoutUndo();
         }
 
-        private static void EnsureFolder(string path)
+        internal static void EnsureFolder(string path)
         {
             if (AssetDatabase.IsValidFolder(path))
                 return;
