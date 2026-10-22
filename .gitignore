@@ -112,3 +112,19 @@ InitTestScene*.unity*
 
 # Auto-generated cache in Assets folder
 /[Aa]ssets/[Ss]ceneDependencyCache*
+
+# ---------------------------------------------------------------------------
+# Project-specific additions
+# ---------------------------------------------------------------------------
+
+# macOS
+.DS_Store
+._*
+
+# IDE / editor settings (personal)
+.idea/
+.vscode/
+*.code-workspace
+
+# Claude Code personal settings (shared .claude/settings.json is committed)
+.claude/settings.local.json
