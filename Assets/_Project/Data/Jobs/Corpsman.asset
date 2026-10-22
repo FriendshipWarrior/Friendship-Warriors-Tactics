@@ -29,6 +29,8 @@ MonoBehaviour:
   _move: 3
   _jump: 3
   _classEvasion: 5
+  _commandName: Field Kit
+  _abilities: []
   _requirements: []
   _placeholderColor: {r: 0.3, g: 0.7, b: 0.5, a: 1}
   _frontSprite: {fileID: 0}

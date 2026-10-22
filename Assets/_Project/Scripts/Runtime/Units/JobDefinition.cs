@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using FriendshipWarriors.Units.Abilities;
 using UnityEngine;
 
 namespace FriendshipWarriors.Units
@@ -24,6 +25,11 @@ namespace FriendshipWarriors.Units
         [SerializeField, Range(0, 7)] private int _jump = 3;
         [SerializeField, Range(0, 100)] private int _classEvasion = 5;
 
+        [Header("Abilities")]
+        [Tooltip("Name of this job's command in the Act menu (FFT: Squire's \"Fundaments\", Chemist's \"Items\").")]
+        [SerializeField] private string _commandName = "Skills";
+        [SerializeField] private AbilityDefinition[] _abilities = Array.Empty<AbilityDefinition>();
+
         [Header("Unlock")]
         [SerializeField] private JobRequirement[] _requirements = Array.Empty<JobRequirement>();
 
@@ -42,11 +48,21 @@ namespace FriendshipWarriors.Units
         public int Jump => _jump;
         public int ClassEvasion => _classEvasion;
         public IReadOnlyList<JobRequirement> Requirements => _requirements;
+        public string CommandName => _commandName;
+        public IReadOnlyList<AbilityDefinition> Abilities => _abilities;
         public Color PlaceholderColor => _placeholderColor;
         public Sprite FrontSprite => _frontSprite;
         public Sprite BackSprite => _backSprite;
 
         /// <summary>Sets every gameplay field at once; used by tooling that generates job assets.</summary>
+        public void SetAbilities(string commandName, AbilityDefinition[] abilities)
+        {
+            _commandName = commandName;
+            _abilities = abilities;
+        }
+
+        public bool Teaches(AbilityDefinition ability) => Array.IndexOf(_abilities, ability) >= 0;
+
         public void Define(string displayName, string description, StatFactors multipliers, StatFactors growth,
             int move, int jump, int classEvasion, JobRequirement[] requirements, Color placeholderColor)
         {

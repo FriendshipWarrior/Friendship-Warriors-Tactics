@@ -3,14 +3,16 @@ using FriendshipWarriors.Cameras;
 using FriendshipWarriors.Grid;
 using FriendshipWarriors.Grid.View;
 using UnityEngine;
-using UnityEngine.InputSystem;
+using UnityEngine.EventSystems;
 
 namespace FriendshipWarriors.Controls
 {
     /// <summary>
     /// The battlefield cursor. Moved tile by tile with the D-pad, left stick or WASD/arrows (with key-repeat), or
     /// placed by hovering the mouse. The camera follows directional moves so gamepad players never need to pan.
-    /// Draws nothing itself; listeners highlight <see cref="Coord"/> as they see fit.
+    /// Draws nothing itself; listeners highlight <see cref="Coord"/> as they see fit. Confirm and Cancel belong to
+    /// whoever runs the battle flow; the cursor only reports mouse clicks on tiles (<see cref="Clicked"/>), ignoring
+    /// clicks that land on UI.
     /// </summary>
     public sealed class TileCursor : MonoBehaviour
     {
@@ -37,22 +39,9 @@ namespace FriendshipWarriors.Controls
         public bool DirectionalInputLocked { get; set; }
 
         public event Action<GridCoord> Moved;
-        public event Action<GridCoord> Confirmed;
-        public event Action Cancelled;
 
-        private void OnEnable()
-        {
-            _input.Confirm.performed += OnConfirm;
-            _input.Click.performed += OnClick;
-            _input.Cancel.performed += OnCancel;
-        }
-
-        private void OnDisable()
-        {
-            _input.Confirm.performed -= OnConfirm;
-            _input.Click.performed -= OnClick;
-            _input.Cancel.performed -= OnCancel;
-        }
+        /// <summary>A tile was clicked with the mouse (not through UI).</summary>
+        public event Action<GridCoord> Clicked;
 
         /// <summary>Places the cursor, optionally bringing the camera along.</summary>
         public void SetCoord(GridCoord coord, bool followCamera)
@@ -71,7 +60,10 @@ namespace FriendshipWarriors.Controls
         {
             UpdateDirectional();
             UpdatePointer();
+            UpdateClick();
         }
+
+        private static bool PointerOverUI => EventSystem.current != null && EventSystem.current.IsPointerOverGameObject();
 
         private void UpdateDirectional()
         {
@@ -111,6 +103,8 @@ namespace FriendshipWarriors.Controls
             if ((pointer - _lastPointer).sqrMagnitude < 1f)
                 return;
             _lastPointer = pointer;
+            if (PointerOverUI)
+                return;
 
             if (_gridView.TryPickTile(_camera.ScreenPointToRay(pointer), out var coord))
                 SetCoord(coord, followCamera: false);
@@ -130,17 +124,16 @@ namespace FriendshipWarriors.Controls
             }
         }
 
-        private void OnConfirm(InputAction.CallbackContext _) => Confirmed?.Invoke(Coord);
-
-        private void OnClick(InputAction.CallbackContext _)
+        // Polled rather than event-driven: EventSystem's pointer-over-UI check is only reliable outside input callbacks.
+        private void UpdateClick()
         {
+            if (!_input.Click.WasPressedThisFrame() || PointerOverUI)
+                return;
             if (_gridView.TryPickTile(_camera.ScreenPointToRay(_input.Point.ReadValue<Vector2>()), out var coord))
             {
                 SetCoord(coord, followCamera: false);
-                Confirmed?.Invoke(coord);
+                Clicked?.Invoke(coord);
             }
         }
-
-        private void OnCancel(InputAction.CallbackContext _) => Cancelled?.Invoke();
     }
 }

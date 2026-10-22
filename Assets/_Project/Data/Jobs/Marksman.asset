@@ -29,6 +29,9 @@ MonoBehaviour:
   _move: 3
   _jump: 3
   _classEvasion: 10
+  _commandName: Marksmanship
+  _abilities:
+  - {fileID: 11400000, guid: 69e38cfa668f6485c8f8a76af030c0e8, type: 2}
   _requirements:
   - _job: {fileID: 11400000, guid: b06acf20998d4439ea92f707821b229a, type: 2}
     _level: 2

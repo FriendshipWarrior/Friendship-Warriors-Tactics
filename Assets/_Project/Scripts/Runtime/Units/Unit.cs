@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using FriendshipWarriors.Grid;
+using FriendshipWarriors.Units.Abilities;
 
 namespace FriendshipWarriors.Units
 {
@@ -14,6 +15,8 @@ namespace FriendshipWarriors.Units
         public const int MaxLevel = 99;
 
         private readonly Dictionary<JobDefinition, int> _proficiency = new();
+        private readonly Dictionary<JobDefinition, int> _spentProficiency = new();
+        private readonly HashSet<AbilityDefinition> _learned = new();
         private readonly List<Commendation> _commendations = new();
 
         public Unit(string name, Team team, JobDefinition job, RawStats raw)
@@ -40,6 +43,17 @@ namespace FriendshipWarriors.Units
         public int CurrentMp { get; private set; }
         public GridCoord Coord { get; set; }
         public Direction Facing { get; set; }
+
+        /// <summary>FFT's Charge Time: fills by Speed every clock tick; the unit takes a turn at 100.</summary>
+        public int ChargeTime { get; set; }
+
+        /// <summary>The other job whose learned action abilities appear in the Act menu.</summary>
+        public JobDefinition SecondaryJob { get; private set; }
+        public AbilityDefinition Reaction { get; private set; }
+        public AbilityDefinition Support { get; private set; }
+        public AbilityDefinition Movement { get; private set; }
+
+        public IReadOnlyCollection<AbilityDefinition> LearnedAbilities => _learned;
 
         public UnitStats Stats
         {
@@ -76,8 +90,81 @@ namespace FriendshipWarriors.Units
             return gained;
         }
 
-        /// <summary>Total Proficiency (Prof) earned in a job.</summary>
+        /// <summary>Total Proficiency (Prof) ever earned in a job. Job level follows this, spent or not, as in FFT.</summary>
         public int Proficiency(JobDefinition job) => _proficiency.TryGetValue(job, out int prof) ? prof : 0;
+
+        /// <summary>Prof earned in a job that hasn't been spent on its abilities yet.</summary>
+        public int AvailableProficiency(JobDefinition job) =>
+            Proficiency(job) - (_spentProficiency.TryGetValue(job, out int spent) ? spent : 0);
+
+        public bool HasLearned(AbilityDefinition ability) => _learned.Contains(ability);
+
+        /// <summary>Spends Prof from the job that teaches the ability. Fails if already learned or unaffordable.</summary>
+        public bool TryLearn(AbilityDefinition ability, JobDefinition fromJob)
+        {
+            if (ability == null || fromJob == null || !fromJob.Teaches(ability) || HasLearned(ability))
+                return false;
+            if (AvailableProficiency(fromJob) < ability.LearnCost)
+                return false;
+            _spentProficiency[fromJob] = (_spentProficiency.TryGetValue(fromJob, out int spent) ? spent : 0) + ability.LearnCost;
+            _learned.Add(ability);
+            return true;
+        }
+
+        /// <summary>
+        /// Sets the secondary command: any other job with at least one learned action ability, or null to clear.
+        /// </summary>
+        public bool TrySetSecondary(JobDefinition job)
+        {
+            if (job == null)
+            {
+                SecondaryJob = null;
+                return true;
+            }
+            if (job == Job)
+                return false;
+            foreach (var ability in job.Abilities)
+            {
+                if (ability != null && ability.Kind == AbilityKind.Action && HasLearned(ability))
+                {
+                    SecondaryJob = job;
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        /// <summary>Equips a learned reaction, support or movement ability into its slot.</summary>
+        public bool TryEquip(AbilityDefinition ability)
+        {
+            if (ability == null || !HasLearned(ability))
+                return false;
+            switch (ability.Kind)
+            {
+                case AbilityKind.Reaction: Reaction = ability; return true;
+                case AbilityKind.Support: Support = ability; return true;
+                case AbilityKind.Movement: Movement = ability; return true;
+                default: return false;
+            }
+        }
+
+        public void Unequip(AbilityKind slot)
+        {
+            switch (slot)
+            {
+                case AbilityKind.Reaction: Reaction = null; break;
+                case AbilityKind.Support: Support = null; break;
+                case AbilityKind.Movement: Movement = null; break;
+                case AbilityKind.Action: SecondaryJob = null; break;
+            }
+        }
+
+        /// <summary>Whether an equipped ability grants a turn trade.</summary>
+        public bool HasTurnTrade(TurnTrade trade) =>
+            trade != TurnTrade.None && (Grants(Reaction, trade) || Grants(Support, trade) || Grants(Movement, trade));
+
+        // Explicit null checks: '?.' skips Unity's check for destroyed assets.
+        private static bool Grants(AbilityDefinition ability, TurnTrade trade) => ability != null && ability.TurnTrade == trade;
 
         public int JobLevel(JobDefinition job) => JobLevels.ForProficiency(Proficiency(job));
 
@@ -116,6 +203,8 @@ namespace FriendshipWarriors.Units
             if (job == null || !MeetsRequirements(job))
                 return false;
             Job = job;
+            if (SecondaryJob == job)
+                SecondaryJob = null;
             var stats = Stats;
             CurrentHp = Math.Min(CurrentHp, stats.MaxHp);
             CurrentMp = Math.Min(CurrentMp, stats.MaxMp);
