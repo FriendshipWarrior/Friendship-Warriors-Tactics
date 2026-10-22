@@ -64,13 +64,14 @@ Assets/
           Pathfinding/    # Pathfinder, MovementRange, MovementProfile, Occupancy
           Props/          # PropDefinition, PropPlacement (decoration layer)
           Validation/     # MapValidator, MapIssue (shared by the map editor and generator)
+          Generation/     # MapGenerator, MapGeneratorSettings (seeded random maps)
           View/           # GridView, BattlefieldMeshBuilder, TerrainPalette (presentation)
         Controls/         # BattleInput, TileCursor, CursorMath (gamepad + mouse/keyboard)
         Camera/           # IsoCameraRig (namespace FriendshipWarriors.Cameras)
         Dev/              # GridSandbox and other test-scene drivers
         Core/ Battle/ Units/ UI/   # planned
       Editor/             # FriendshipWarriors.Editor.asmdef — MapEditorWindow, MapPreview, TestMapFactory, TestSceneBuilder
-    Data/                 # ScriptableObject assets: maps, props, terrain palette (later jobs, abilities, items)
+    Data/                 # ScriptableObject assets: maps, props, terrain palette, generator settings (later jobs, abilities, items)
     Input/                # BattleControls.inputactions (control schemes: Keyboard&Mouse, Gamepad)
     Materials/            # Terrain.mat (URP Lit, cloned per terrain look), Highlight.mat (transparent unlit)
     Scenes/               # Battle_Test.unity (the only scene in Build Settings)
@@ -107,6 +108,7 @@ Root namespace: `FriendshipWarriors`; namespaces follow folders (e.g. `Friendshi
 - Run tests in the open Editor: `unity command test run --caller plugin --skill unity-cli -- --mode EditMode --filter FriendshipWarriors` (headless `unity test` refuses a project that's open in an Editor).
 - For visual changes, play the `Battle_Test` scene and capture the Game view (see *Editor gotchas*).
 - **Map editor:** *Friendship Warriors → Map Editor*, or double-click a Battle Map asset. Paints height (in halves), terrain, slopes, water depth, props and deployment zones on a top-down grid; live 3D preview; validation via `MapValidator` (also used by the random generator). Left-click paints, right-click copies the tile's value (erases for props/deployment), each stroke is one undo step. When testing it from scripts, work on a copy of a map: the window is on the user's screen and real clicks edit the open map.
+- **Random maps:** `MapGenerator.Generate(settings, seed, map)` fills a `BattleMapData` (works at runtime for quick play). Deterministic per seed, validated with `MapValidator`, retried on errors. Tune via `MapGeneratorSettings` assets (`Data/Generation/MapGenerator_Default.asset`). In the map editor use the Generate row; in `Battle_Test` press R / Select (the seed is logged so maps can be reproduced).
 - Rebuild the test scene and its placeholder assets from code with **Friendship Warriors → Dev → Rebuild Battle Test Scene** (`TestSceneBuilder.Rebuild()`); don't hand-wire it.
 - Gamepad paths can be tested without hardware: in Play mode, `InputSystem.AddDevice<Gamepad>()` and `InputSystem.QueueStateEvent(pad, new GamepadState().WithButton(...))` through `script eval`, then remove the device.
 - After code changes, confirm the project compiles with no console errors before reporting work as done. If verification wasn't possible, say so.
@@ -116,6 +118,7 @@ Root namespace: `FriendshipWarriors`; namespaces follow folders (e.g. `Friendshi
 - New files on disk aren't compiled until an asset refresh: `script eval 'UnityEditor.AssetDatabase.Refresh();'`, then poll `script recompile_status`. Commands fail briefly during the domain reload.
 - `EditorSceneManager.NewScene` unloads unreferenced assets, so load assets you intend to assign **after** creating the scene, or the reference saves as null.
 - `capture game_view --save_path` writes under `Assets/`. Don't use it; take the inline image (`--max_resolution`) and decode it into the scratchpad.
+- In Play mode `Destroy` is deferred to the end of the frame: clear references to destroyed objects right away, or a same-frame rebuild reuses them.
 - Pipeline-specific flags go after `--`; the CLI's own flags (`--caller`, `--skill`, `--format`) go before it.
 - Play-mode checks: `editor set_auto_tick` + `editor.playmode set_run_in_background` first, then `job wait` on `Time.frameCount` to prove frames advance. Afterwards revert run-in-background and confirm `PlayerSettings.runInBackground` didn't get saved as changed.
 

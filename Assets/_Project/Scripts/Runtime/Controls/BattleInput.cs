@@ -26,6 +26,9 @@ namespace FriendshipWarriors.Controls
         public InputAction PanDrag => Find("PanDrag");
         public InputAction PanStick => Find("PanStick");
 
+        /// <summary>Dev-only: rolls a new random map in test scenes (R / Select).</summary>
+        public InputAction DebugRegenerate => Find("DebugRegenerate");
+
         private InputActionMap Map => _map ??= _actions.FindActionMap("Battle", throwIfNotFound: true);
 
         private void OnEnable() => Map.Enable();

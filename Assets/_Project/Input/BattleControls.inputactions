@@ -113,6 +113,15 @@
                     "processors": "",
                     "interactions": "",
                     "initialStateCheck": true
+                },
+                {
+                    "name": "DebugRegenerate",
+                    "type": "Button",
+                    "id": "846c1997-3ed9-4403-86d3-dc39924d2feb",
+                    "expectedControlType": "",
+                    "processors": "",
+                    "interactions": "",
+                    "initialStateCheck": false
                 }
             ],
             "bindings": [
@@ -531,6 +540,28 @@
                     "processors": "",
                     "groups": "Gamepad",
                     "action": "PanStick",
+                    "isComposite": false,
+                    "isPartOfComposite": false
+                },
+                {
+                    "name": "",
+                    "id": "e9da36fa-bb08-4cec-9f9a-a10602306881",
+                    "path": "<Keyboard>/r",
+                    "interactions": "",
+                    "processors": "",
+                    "groups": "Keyboard&Mouse",
+                    "action": "DebugRegenerate",
+                    "isComposite": false,
+                    "isPartOfComposite": false
+                },
+                {
+                    "name": "",
+                    "id": "c0315b4c-540c-4b9a-94cf-8a37ad940f1b",
+                    "path": "<Gamepad>/select",
+                    "interactions": "",
+                    "processors": "",
+                    "groups": "Gamepad",
+                    "action": "DebugRegenerate",
                     "isComposite": false,
                     "isPartOfComposite": false
                 }
