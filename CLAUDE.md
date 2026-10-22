@@ -42,7 +42,10 @@ This repo belongs to GitHub account **`FriendshipWarrior`**. Everything else on 
 ## Tooling / MCP
 
 - **GitHub:** via `gh` CLI using the per-command `GH_TOKEN` pattern (see *Account isolation*). A GitHub MCP server is optional.
-- **Unity MCP:** _not yet configured._ Once connected, use it to inspect/modify scenes, prefabs, and components, read the Unity console, trigger recompiles, and run tests — rather than hand-editing serialized YAML. Until then, Claude writes C# and editor scripts, and the user performs Editor-side setup (scene wiring, assigning references) from explicit instructions.
+- **Unity CLI:** installed at `~/.unity/bin/unity` (may not be on PATH in agent shells — use the full path). The project's `com.unity.pipeline` package lets it drive the open Editor live.
+- **Unity MCP:** registered as `unity-editor` (Claude Code *local* scope, this project only) → `~/.unity/bin/unity mcp --project-path <this repo>`. The `unity@unity-agent-plugin` Claude Code plugin supplies the Unity skills (`unity:unity-cli` etc.).
+- **Driving the Editor:** when the Editor is open, make scene/prefab/component/asset changes through the MCP tools or `unity command …` (e.g. `unity command script eval --caller plugin --skill <skill> '<C#>'`), never by hand-editing `.unity`/`.prefab`/`.asset` YAML. Check with `unity status --project-path <repo>` first; if the Editor is in Safe Mode (compile errors), fix the C# errors first.
+- If the Editor isn't open, ask the user to open it rather than starting a separate headless Editor on the same project.
 
 ## Project Layout (target)
 
