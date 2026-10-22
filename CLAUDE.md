@@ -69,7 +69,7 @@ Assets/
     PlayMode/             # FWT.Tests.PlayMode.asmdef
 ```
 
-Root namespace: `FriendshipWarriors` (e.g. `FriendshipWarriors.Battle`). Template sample content (`Assets/TutorialInfo`, `Readme.asset`, `SampleScene`) can be removed when real scenes exist.
+Root namespace: `FriendshipWarriors` (e.g. `FriendshipWarriors.Battle`). `Assets/Scenes/SampleScene.unity` is a template leftover (it's in Build Settings); replace it with a real scene, removing it from Build Settings in the Editor.
 
 ## Architecture Principles
 
