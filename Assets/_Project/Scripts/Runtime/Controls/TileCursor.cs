@@ -30,6 +30,12 @@ namespace FriendshipWarriors.Controls
 
         public GridCoord Coord { get; private set; }
 
+        /// <summary>
+        /// While true the D-pad/stick/keys no longer move the cursor, so another mode (such as choosing a facing)
+        /// can read them. The mouse still moves it.
+        /// </summary>
+        public bool DirectionalInputLocked { get; set; }
+
         public event Action<GridCoord> Moved;
         public event Action<GridCoord> Confirmed;
         public event Action Cancelled;
@@ -69,6 +75,12 @@ namespace FriendshipWarriors.Controls
 
         private void UpdateDirectional()
         {
+            if (DirectionalInputLocked)
+            {
+                _heldStep = default;
+                return;
+            }
+
             var stick = _input.MoveCursor.ReadValue<Vector2>();
             var step = stick.magnitude >= _deadZone ? CursorMath.ToGridStep(stick, _cameraRig.ViewYaw) : default;
 

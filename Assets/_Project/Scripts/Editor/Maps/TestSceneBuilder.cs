@@ -10,6 +10,7 @@ using UnityEditor.SceneManagement;
 using UnityEngine;
 using UnityEngine.InputSystem;
 using UnityEngine.Rendering;
+using System.Linq;
 
 namespace FriendshipWarriors.Editor.Maps
 {
@@ -41,6 +42,7 @@ namespace FriendshipWarriors.Editor.Maps
             var rock = CreateProp(RockPath, "Rock", PropShape.Box, new Color(0.45f, 0.45f, 0.48f), 2, 0.7f);
             TestMapFactory.CreateHillsideAsset(tree, rock);
             CreateGeneratorSettings(tree, rock);
+            Units.StartingJobsBuilder.CreateStartingJobs();
             AssetDatabase.SaveAssets();
 
             // NewScene unloads unreferenced assets, so everything the scene references is loaded after it.
@@ -81,21 +83,15 @@ namespace FriendshipWarriors.Editor.Maps
             Set(cursor, "_cameraRig", rig);
             Set(cursor, "_camera", camera);
 
-            var unit = new GameObject("Unit");
-            var body = GameObject.CreatePrimitive(PrimitiveType.Capsule);
-            body.name = "Body";
-            Object.DestroyImmediate(body.GetComponent<Collider>());
-            body.transform.SetParent(unit.transform, false);
-            body.transform.localPosition = new Vector3(0f, 0.6f, 0f);
-            body.transform.localScale = new Vector3(0.5f, 0.6f, 0.5f);
-
-            var sandbox = new GameObject("Grid Sandbox").AddComponent<GridSandbox>();
+            var (playerJobs, enemyJobs) = Units.StartingJobsBuilder.TestRoster();
+            var sandbox = new GameObject("Battle Sandbox").AddComponent<BattleSandbox>();
             Set(sandbox, "_input", input);
-            Set(sandbox, "_generatorSettings", AssetDatabase.LoadAssetAtPath<MapGeneratorSettings>(ProjectAssets.DefaultGeneratorSettingsPath));
             Set(sandbox, "_gridView", grid);
             Set(sandbox, "_cursor", cursor);
             Set(sandbox, "_cameraRig", rig);
-            Set(sandbox, "_unit", unit.transform);
+            Set(sandbox, "_generatorSettings", AssetDatabase.LoadAssetAtPath<MapGeneratorSettings>(ProjectAssets.DefaultGeneratorSettingsPath));
+            SetArray(sandbox, "_playerJobs", playerJobs.ToArray());
+            SetArray(sandbox, "_enemyJobs", enemyJobs.ToArray());
         }
 
         private static void CreateGeneratorSettings(PropDefinition tree, PropDefinition rock)
@@ -176,6 +172,16 @@ namespace FriendshipWarriors.Editor.Maps
             so.FindProperty("_footprint").floatValue = footprint;
             so.ApplyModifiedPropertiesWithoutUndo();
             return prop;
+        }
+
+        private static void SetArray(Object target, string field, Object[] values)
+        {
+            var so = new SerializedObject(target);
+            var property = so.FindProperty(field);
+            property.arraySize = values.Length;
+            for (int i = 0; i < values.Length; i++)
+                property.GetArrayElementAtIndex(i).objectReferenceValue = values[i];
+            so.ApplyModifiedPropertiesWithoutUndo();
         }
 
         private static void Set(Object target, string field, Object value)
