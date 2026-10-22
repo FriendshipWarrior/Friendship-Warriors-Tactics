@@ -6,6 +6,10 @@ Guidance for Claude Code when working in this repository.
 
 **Friendship Warriors Tactics** — an isometric, turn-based tactics RPG in the spirit of *Final Fantasy Tactics*: height-mapped grid battlefields, a speed/charge-time turn order, a job/class system, facing-based combat, and a story campaign between battles.
 
+**FFT is the source of truth** for mechanics and presentation. When a design choice departs from how FFT works, point it out and explain the tradeoff instead of quietly diverging. Content (characters, story, job names) is original.
+
+**Team & budget:** just the user and Claude, no budget. Prefer approaches one person can maintain; all art is placeholder until the user draws sprites, so art must be swappable through data without code changes.
+
 **Roles:** Claude is the primary developer for all code and game logic (C# scripts, systems architecture, editor tooling, tests). The user owns creative direction, art/audio, design decisions, and anything done by hand in the Unity Editor. When a design question has no clear answer in this file, ask rather than invent — then record the decision under *Design Decisions* below.
 
 ## Tech Stack
@@ -117,6 +121,7 @@ Record decisions here as they are made (date — decision — rationale).
 - 2026-10-22 — Camera: orthographic, 30° pitch, 45° + 90° steps, Q/E rotate, scroll zoom, WASD/arrows pan. — Classic FFT framing.
 - 2026-10-22 — Placeholder geometry (column + inset cap per tile) built at runtime from `BattleMapData`. — Stand-in until the art direction is decided.
 - 2026-10-22 — **Scope:** an FFT-style game (FFT look and mechanics) with original characters, story and job names. Modes planned: story campaign, quick play, and possibly random map generation.
-- 2026-10-22 — **Art style:** 2D sprite characters on 3D tiles. Each unit is a 3D placeholder object with a sprite on a camera-facing child (rotates on the vertical axis only, so it stays upright). Character sheets are drawn from 8 directions.
-- 2026-10-22 — **Platforms:** Steam on PC. Windows first, then SteamOS/Steam Deck (Linux), then macOS if it isn't too much work. So gamepad input and the Deck's 1280x800 screen need support, not only mouse and keyboard.
-- Open questions: how maps are authored (comparing a custom grid editor, Unity Tilemap, modeled meshes, and a hybrid); 4- vs 8-direction unit facing; save system scope; walls hiding units (fade/cutaway).
+- 2026-10-22 — **Art style:** 2D sprite characters on 3D tiles. Each unit is a 3D placeholder object with a sprite on a camera-facing child (rotates on the vertical axis only, so it stays upright). Units face the **4 grid directions** (FFT). Because the camera always sits on a 45° diagonal, only 2 poses need drawing (front 3/4 and back 3/4), mirrored to cover all 4 views.
+- 2026-10-22 — **Platforms:** Steam on PC. Windows first, then SteamOS/Steam Deck (Linux), then macOS if it isn't too much work. **Controller support is required**, since the game must work on Steam Deck. Every interaction needs a gamepad path, and the UI must be readable at 1280x800.
+- 2026-10-22 — **Map authoring: hybrid.** Grid data (`BattleMapData`) is the single source of truth for campaign, quick play and the random generator. A custom in-Unity editor paints it, a decoration/props layer sits on top, and custom backdrops are allowed later for set pieces. Fully modeled maps are out of scope (no 3D artist).
+- Open questions: save system scope; walls hiding units (fade/cutaway).
