@@ -82,18 +82,130 @@ namespace FriendshipWarriors.Tests
         [Test]
         public void UnwalkableTiles_AreNeitherDestinationsNorPassable()
         {
-            // Deep water and void wall off the right side.
+            // Blocked tiles and void wall off the right side.
             var grid = TestGrids.FromRows(
-                "0~0",
+                "0#0",
                 "0.0",
-                "0~0");
+                "0#0");
 
-            var range = Pathfinder.FindMovementRange(grid, new GridCoord(0, 1), new MovementProfile(6, 9));
+            var range = Pathfinder.FindMovementRange(grid, new GridCoord(0, 1), new MovementProfile(6, 1));
 
             Assert.That(range.CanMoveTo(new GridCoord(1, 0)), Is.False);
             Assert.That(range.CanMoveTo(new GridCoord(1, 1)), Is.False);
             Assert.That(range.CanMoveTo(new GridCoord(2, 1)), Is.False);
             Assert.That(range.Destinations.Count, Is.EqualTo(2));
+        }
+
+        [Test]
+        public void Water_IsWalkable()
+        {
+            var range = Pathfinder.FindMovementRange(TestGrids.FromRows("0~0"), new GridCoord(0, 0), new MovementProfile(2, 1));
+
+            Assert.That(range.CanMoveTo(new GridCoord(1, 0)), Is.True);
+            Assert.That(range.CanMoveTo(new GridCoord(2, 0)), Is.True);
+        }
+
+        [TestCase(1, false)]
+        [TestCase(2, true)]
+        public void Leaping_AOneTileGap_NeedsJumpTwo(int jump, bool reachesFarSide)
+        {
+            var grid = TestGrids.FromRows("1.1");
+
+            var range = Pathfinder.FindMovementRange(grid, new GridCoord(0, 0), new MovementProfile(4, jump));
+
+            Assert.That(range.CanMoveTo(new GridCoord(2, 0)), Is.EqualTo(reachesFarSide));
+        }
+
+        [Test]
+        public void Leaping_CostsMoveAsIfTheGapWereFlat()
+        {
+            var grid = TestGrids.FromRows("1..1");
+
+            var range = Pathfinder.FindMovementRange(grid, new GridCoord(0, 0), new MovementProfile(3, 4));
+
+            Assert.That(range.CostTo(new GridCoord(3, 0)), Is.EqualTo(3));
+        }
+
+        [Test]
+        public void Leaping_TwoTileGap_NeedsJumpFour()
+        {
+            var grid = TestGrids.FromRows("1..1");
+
+            var jump3 = Pathfinder.FindMovementRange(grid, new GridCoord(0, 0), new MovementProfile(5, 3));
+            var jump4 = Pathfinder.FindMovementRange(grid, new GridCoord(0, 0), new MovementProfile(5, 4));
+
+            Assert.That(jump3.CanMoveTo(new GridCoord(3, 0)), Is.False);
+            Assert.That(jump4.CanMoveTo(new GridCoord(3, 0)), Is.True);
+        }
+
+        [Test]
+        public void Leaping_CrossesLowerGroundThatIsTooDeepToWalkInto()
+        {
+            // Dropping 3h into the ditch exceeds Jump 2, but leaping straight over it is fine.
+            var grid = TestGrids.FromRows("303");
+
+            var range = Pathfinder.FindMovementRange(grid, new GridCoord(0, 0), new MovementProfile(4, 2));
+
+            Assert.That(range.CanMoveTo(new GridCoord(1, 0)), Is.False);
+            Assert.That(range.CanMoveTo(new GridCoord(2, 0)), Is.True);
+        }
+
+        [TestCase("1#1")]
+        [TestCase("192")]
+        public void Leaping_CannotClearBlockedOrHigherTiles(string row)
+        {
+            var range = Pathfinder.FindMovementRange(TestGrids.FromRows(row), new GridCoord(0, 0), new MovementProfile(4, 4));
+
+            Assert.That(range.CanMoveTo(new GridCoord(2, 0)), Is.False);
+        }
+
+        [TestCase(3, true)]
+        [TestCase(1, false)]
+        public void Leaping_ClearsAnEnemyStandingLower(int jump, bool reachesFarSide)
+        {
+            // Standing at 3h next to an enemy at 1h: Jump 3 hops over it; Jump 1 can't leap at all.
+            var grid = TestGrids.FromRows("313");
+            var enemy = new GridCoord(1, 0);
+
+            var range = Pathfinder.FindMovementRange(grid, new GridCoord(0, 0), new MovementProfile(4, jump),
+                c => c == enemy ? Occupancy.Enemy : Occupancy.Empty);
+
+            Assert.That(range.CanMoveTo(new GridCoord(2, 0)), Is.EqualTo(reachesFarSide));
+        }
+
+        [TestCase("333")]
+        [TestCase("353")]
+        public void Leaping_CannotClearAnEnemyAtTheSameHeightOrHigher(string row)
+        {
+            var enemy = new GridCoord(1, 0);
+
+            var range = Pathfinder.FindMovementRange(TestGrids.FromRows(row), new GridCoord(0, 0), new MovementProfile(4, 7),
+                c => c == enemy ? Occupancy.Enemy : Occupancy.Empty);
+
+            Assert.That(range.CanMoveTo(new GridCoord(2, 0)), Is.False);
+        }
+
+        [Test]
+        public void Leaping_PastTheMapEdgeIsImpossible()
+        {
+            var range = Pathfinder.FindMovementRange(TestGrids.FromRows("1."), new GridCoord(0, 0), new MovementProfile(4, 7));
+
+            Assert.That(range.Destinations, Is.Empty);
+        }
+
+        [Test]
+        public void Slopes_LetUnitsClimbHeightsTheyCouldNotStepUp()
+        {
+            // A 2h step is too tall for Jump 1, but a ramp splitting it into two 1h rises is not.
+            var steps = TestGrids.FromRows("02");
+            var ramp = TestGrids.FromRows("012");
+            ramp[new GridCoord(1, 0)] = new Tile(0, TerrainType.Grass, slope: SlopeType.RiseEast, slopeHeight: 4);
+
+            var stepRange = Pathfinder.FindMovementRange(steps, new GridCoord(0, 0), new MovementProfile(3, 1));
+            var rampRange = Pathfinder.FindMovementRange(ramp, new GridCoord(0, 0), new MovementProfile(3, 1));
+
+            Assert.That(stepRange.CanMoveTo(new GridCoord(1, 0)), Is.False);
+            Assert.That(rampRange.CanMoveTo(new GridCoord(2, 0)), Is.True);
         }
 
         [Test]
@@ -146,6 +258,7 @@ namespace FriendshipWarriors.Tests
                 "000");
             var origin = new GridCoord(0, 0);
             var destination = new GridCoord(2, 0);
+            // Jump 1 means no leaps, so every step must be adjacent.
             var range = Pathfinder.FindMovementRange(grid, origin, new MovementProfile(6, 1));
             var path = new List<GridCoord>();
 

@@ -51,11 +51,46 @@ namespace FriendshipWarriors.Tests
         }
 
         [Test]
-        public void Walkability_ExcludesDeepWaterAndVoid()
+        public void Walkability_ExcludesVoidAndBlockedTiles()
         {
-            Assert.That(new Tile(0, TerrainType.ShallowWater).IsWalkable, Is.True);
-            Assert.That(new Tile(0, TerrainType.DeepWater).IsWalkable, Is.False);
+            Assert.That(new Tile(0, TerrainType.Water, depth: 2).IsWalkable, Is.True);
             Assert.That(new Tile(0, TerrainType.Void).IsWalkable, Is.False);
+            Assert.That(new Tile(0, TerrainType.Grass, blocked: true).IsWalkable, Is.False);
+        }
+
+        [Test]
+        public void FlatTiles_IgnoreSlopeHeight()
+        {
+            var tile = new Tile(4, TerrainType.Grass, slope: SlopeType.Flat, slopeHeight: 3);
+
+            Assert.That(tile.SlopeHeight, Is.Zero);
+            Assert.That(tile.StandingHeight, Is.EqualTo(4));
+        }
+
+        [Test]
+        public void SlopedTiles_StandAtTheMiddleOfTheSlope()
+        {
+            // A ramp from 1h (2 steps) to 2h (4 steps) counts as 1.5h (3 steps).
+            var tile = new Tile(2, TerrainType.Dirt, slope: SlopeType.RiseNorth, slopeHeight: 2);
+
+            Assert.That(tile.StandingHeight, Is.EqualTo(3));
+        }
+
+        [Test]
+        public void SlopeMidpoints_BetweenHalfSteps_RoundDown()
+        {
+            var tile = new Tile(2, TerrainType.Dirt, slope: SlopeType.RiseNorth, slopeHeight: 3);
+
+            Assert.That(tile.StandingHeight, Is.EqualTo(3));
+        }
+
+        [TestCase(0, true)]
+        [TestCase(1, true)]
+        [TestCase(2, false)]
+        [TestCase(5, false)]
+        public void DeepWater_StopsUnitsActing(int depth, bool allowsActions)
+        {
+            Assert.That(new Tile(0, TerrainType.Water, depth: depth).AllowsActions, Is.EqualTo(allowsActions));
         }
     }
 }
