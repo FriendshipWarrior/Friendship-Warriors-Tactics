@@ -25,6 +25,10 @@ namespace FriendshipWarriors.Dev
         [SerializeField, Min(0)] private int _move = 4;
         [SerializeField, Range(0, 7)] private int _jump = 3;
 
+        [Header("Rules")]
+        [Tooltip("How many h higher a unit must be to leap over an enemy.")]
+        [SerializeField, Min(0)] private int _enemyLeapClearance = 2;
+
         private readonly List<GridCoord> _path = new();
         private GridCoord _unitCoord;
         private MovementRange _range;
@@ -74,7 +78,8 @@ namespace FriendshipWarriors.Dev
         {
             _unitCoord = coord;
             _unit.position = _gridView.SurfaceCenter(coord);
-            _range = Pathfinder.FindMovementRange(_gridView.Grid, coord, new MovementProfile(_move, _jump));
+            _range = Pathfinder.FindMovementRange(_gridView.Grid, coord, new MovementProfile(_move, _jump),
+                rules: new MovementRules(_enemyLeapClearance));
             RefreshHighlights();
         }
 
