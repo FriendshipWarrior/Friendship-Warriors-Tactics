@@ -50,9 +50,9 @@ namespace FriendshipWarriors.Editor.Units
                 "Forced march: give up this turn's Act to Move a second time.");
             var rapidFire = Ability("Rapid Fire", AbilityKind.Support, 400, TurnTrade.MoveForAct,
                 "Hold position and keep firing: give up this turn's Move to Act a second time.");
-            Teach(cadet, "Drill", doubleTime);
+            Teach(cadet, "Drill");
             Teach(corpsman, "Field Kit");
-            Teach(vanguard, "Assault");
+            Teach(vanguard, "Assault", doubleTime);
             Teach(marksman, "Marksmanship", rapidFire);
             Teach(evoker, "Evocation");
             Teach(warder, "Warding");
