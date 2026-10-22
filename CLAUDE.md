@@ -47,32 +47,32 @@ This repo belongs to GitHub account **`FriendshipWarrior`**. Everything else on 
 - **Driving the Editor:** when the Editor is open, make scene/prefab/component/asset changes through the MCP tools or `unity command …` (e.g. `unity command script eval --caller plugin --skill <skill> '<C#>'`), never by hand-editing `.unity`/`.prefab`/`.asset` YAML. Check with `unity status --project-path <repo>` first; if the Editor is in Safe Mode (compile errors), fix the C# errors first.
 - If the Editor isn't open, ask the user to open it rather than starting a separate headless Editor on the same project.
 
-## Project Layout (target)
+## Project Layout
 
-Keep game code under one root so it can get its own assembly definitions:
+Game code lives under one root with its own assembly definitions (folders marked *planned* don't exist yet):
 
 ```
 Assets/
   _Project/
     Scripts/
-      Runtime/            # FWT.Runtime.asmdef
-        Core/             # bootstrapping, service locator, events, save/load
-        Grid/             # tiles, heights, pathfinding, map data
-        Battle/           # turn order (CT), battle state machine, actions, AI
-        Units/            # stats, jobs, abilities, equipment, status effects
-        Camera/           # isometric camera, rotation, zoom
-        UI/
-      Editor/             # FWT.Editor.asmdef — map editor tools, inspectors
+      Runtime/            # FriendshipWarriors.Runtime.asmdef
+        Grid/             # GridCoord, Tile, BattleGrid, BattleMapData, GridMetrics
+          Pathfinding/    # Pathfinder, MovementRange, MovementProfile, Occupancy
+          View/           # GridView, TileView (placeholder geometry + highlights)
+        Camera/           # IsoCameraRig (namespace FriendshipWarriors.Cameras)
+        Dev/              # GridSandbox and other test-scene drivers
+        Core/ Battle/ Units/ UI/   # planned
+      Editor/             # FriendshipWarriors.Editor.asmdef — TestMapFactory, future map tools
     Data/                 # ScriptableObject assets: jobs, abilities, items, maps
-    Prefabs/
-    Scenes/
-    Art/ Audio/ Materials/
+    Materials/            # Tile.mat (URP Lit, tinted per tile via MaterialPropertyBlock)
+    Scenes/               # Battle_Test.unity (the only scene in Build Settings)
+    Prefabs/ Art/ Audio/  # planned
   Tests/
-    EditMode/             # FWT.Tests.EditMode.asmdef — pure logic tests
-    PlayMode/             # FWT.Tests.PlayMode.asmdef
+    EditMode/             # FriendshipWarriors.Tests.EditMode.asmdef — pure logic tests
+    PlayMode/             # planned
 ```
 
-Root namespace: `FriendshipWarriors` (e.g. `FriendshipWarriors.Battle`). `Assets/Scenes/SampleScene.unity` is a template leftover (it's in Build Settings); replace it with a real scene, removing it from Build Settings in the Editor.
+Root namespace: `FriendshipWarriors`; namespaces follow folders (e.g. `FriendshipWarriors.Grid.Pathfinding`). Avoid a namespace named `Camera` — it shadows `UnityEngine.Camera`.
 
 ## Architecture Principles
 
@@ -95,14 +95,25 @@ Root namespace: `FriendshipWarriors` (e.g. `FriendshipWarriors.Battle`). `Assets
 
 ## Testing & Verification
 
-- New battle/grid/stat logic gets **EditMode tests** (Unity Test Framework / NUnit) — add `com.unity.test-framework` to the manifest when the first test lands.
-- Run tests from the Editor Test Runner, via Unity MCP once available, or headless:
-  `"/Applications/Unity/Hub/Editor/6000.6.7f1/Unity.app/Contents/MacOS/Unity" -batchmode -projectPath . -runTests -testPlatform EditMode -testResults Temp/results.xml`
-  (headless runs fail if the project is already open in the Editor).
+- New battle/grid/stat logic gets **EditMode tests** (Unity Test Framework / NUnit). `TestGrids.FromRows(...)` builds small maps from strings for pathfinding tests.
+- Run tests in the open Editor: `unity command test run --caller plugin --skill unity-cli -- --mode EditMode --filter FriendshipWarriors` (headless `unity test` refuses a project that's open in an Editor).
+- For visual changes, play the `Battle_Test` scene and capture the Game view (see *Editor gotchas*).
 - After code changes, confirm the project compiles with no console errors before reporting work as done. If verification wasn't possible, say so.
+
+### Editor gotchas (learned the hard way)
+
+- New files on disk aren't compiled until an asset refresh: `script eval 'UnityEditor.AssetDatabase.Refresh();'`, then poll `script recompile_status`. Commands fail briefly during the domain reload.
+- `EditorSceneManager.NewScene` unloads unreferenced assets, so load assets you intend to assign **after** creating the scene, or the reference saves as null.
+- `capture game_view --save_path` writes under `Assets/`. Don't use it; take the inline image (`--max_resolution`) and decode it into the scratchpad.
+- Pipeline-specific flags go after `--`; the CLI's own flags (`--caller`, `--skill`, `--format`) go before it.
+- Play-mode checks: `editor set_auto_tick` + `editor.playmode set_run_in_background` first, then `job wait` on `Time.frameCount` to prove frames advance. Afterwards revert run-in-background and confirm `PlayerSettings.runInBackground` didn't get saved as changed.
 
 ## Design Decisions
 
 Record decisions here as they are made (date — decision — rationale).
 
-- _None yet. Open questions: map authoring approach (custom editor tool vs. tilemap vs. modeled meshes), art style (sprites on 3D tiles vs. full 3D), target platforms, save system scope._
+- 2026-10-22 — Tile heights are integer **steps** of 0.5 world units (FFT-style half steps); `Jump` is measured in steps and limits both climbing and dropping. — Matches FFT feel; keeps rules integer-only.
+- 2026-10-22 — Movement is 4-directional, 1 Move per tile; deep water and void are impassable; enemies block, allies can be passed but not stopped on. — FFT baseline; terrain move costs can be added later in `Pathfinder`.
+- 2026-10-22 — Camera: orthographic, 30° pitch, 45° + 90° steps, Q/E rotate, scroll zoom, WASD/arrows pan. — Classic FFT framing.
+- 2026-10-22 — Placeholder geometry (column + inset cap per tile) built at runtime from `BattleMapData`. — Stand-in until the art direction is decided.
+- Open questions: map authoring approach (custom editor tool vs. tilemap vs. modeled meshes), art style (sprites on 3D tiles vs. full 3D), target platforms, save system scope, occluding walls hiding units (fade/cutaway).
