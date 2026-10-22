@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using FriendshipWarriors.Editor.Maps;
 using FriendshipWarriors.Units;
 using FriendshipWarriors.Units.Abilities;
+using FriendshipWarriors.Units.Equipment;
 using UnityEditor;
 using UnityEngine;
 
@@ -17,6 +18,7 @@ namespace FriendshipWarriors.Editor.Units
         public const string JobsFolder = "Assets/_Project/Data/Jobs";
         public const string CatalogPath = JobsFolder + "/JobCatalog.asset";
         public const string AbilitiesFolder = "Assets/_Project/Data/Abilities";
+        public const string EquipmentFolder = "Assets/_Project/Data/Equipment";
 
         [MenuItem("Friendship Warriors/Data/Create Starting Jobs")]
         public static JobCatalog CreateStartingJobs()
@@ -57,6 +59,22 @@ namespace FriendshipWarriors.Editor.Units
             Teach(evoker, "Evocation");
             Teach(warder, "Warding");
 
+            // Which weapons each job wields, after its FFT counterpart (Marksman rifles use FFT's bow rules).
+            Arm(cadet, false, WeaponType.Sword, WeaponType.Knife);
+            Arm(corpsman, false, WeaponType.Knife);
+            Arm(vanguard, true, WeaponType.Sword);
+            Arm(marksman, false, WeaponType.Rifle);
+            Arm(evoker, false, WeaponType.Rod);
+            Arm(warder, false, WeaponType.Staff);
+
+            // Headgear and body gear each job may wear, after its FFT counterpart.
+            Dress(cadet, ArmorType.Hat, ArmorType.Clothing);
+            Dress(corpsman, ArmorType.Hat, ArmorType.Clothing);
+            Dress(vanguard, ArmorType.Helmet, ArmorType.Armor, ArmorType.Robe);
+            Dress(marksman, ArmorType.Hat, ArmorType.Clothing);
+            Dress(evoker, ArmorType.Hat, ArmorType.Clothing, ArmorType.Robe);
+            Dress(warder, ArmorType.Hat, ArmorType.Clothing, ArmorType.Robe);
+
             var catalog = AssetDatabase.LoadAssetAtPath<JobCatalog>(CatalogPath);
             if (catalog == null)
             {
@@ -66,6 +84,96 @@ namespace FriendshipWarriors.Editor.Units
             }
             AssetDatabase.SaveAssets();
             return catalog;
+        }
+
+        /// <summary>
+        /// Starter equipment, each matching an FFT starting item: Broad Sword (WP 4), Dagger (3), Long Bow (4, range 5,
+        /// two-handed), Rod (3), Oak Staff (3), Escutcheon (10% shield evasion), Leather Helmet (+10 HP), Leather Hat
+        /// (+8 HP), Leather Armor (+10 HP), Clothing (+5 HP) and Linen Robe (+10 HP, +10 MP). Gear bonuses are recalled
+        /// FFT values. Order matters: units take the first item that fits each slot.
+        /// </summary>
+        [MenuItem("Friendship Warriors/Data/Create Starter Equipment")]
+        public static EquipmentDefinition[] CreateStarterEquipment()
+        {
+            TestSceneBuilder.EnsureFolder(EquipmentFolder);
+            return new[]
+            {
+                Weapon("Service Saber", WeaponType.Sword, 4, 1, 1, 3, "Standard-issue officer's saber."),
+                Weapon("Field Knife", WeaponType.Knife, 3, 1, 1, 3, "Utility blade every corpsman carries."),
+                Weapon("Service Rifle", WeaponType.Rifle, 4, 1, 5, 99, "Bolt-action long rifle with brass sights.", twoHanded: true),
+                Weapon("Aether Rod", WeaponType.Rod, 3, 1, 1, 3, "Copper focus rod humming with aether."),
+                Weapon("Ward Staff", WeaponType.Staff, 3, 1, 1, 3, "Ironwood staff etched with warding glyphs."),
+                Armor("Buckler", EquipmentCategory.Shield, 10, "Riveted steel buckler."),
+                Gear("Steel Helm", EquipmentCategory.Head, ArmorType.Helmet, 10, 0, "Riveted helm with a brass crest."),
+                Gear("Field Cap", EquipmentCategory.Head, ArmorType.Hat, 8, 0, "Peaked cap with goggles."),
+                Gear("Plate Cuirass", EquipmentCategory.Body, ArmorType.Armor, 10, 0, "Steam-pressed steel breastplate."),
+                Gear("Aether Robe", EquipmentCategory.Body, ArmorType.Robe, 10, 10, "Robe stitched with aether-conductive thread."),
+                Gear("Fatigues", EquipmentCategory.Body, ArmorType.Clothing, 5, 0, "Standard-issue field uniform."),
+            };
+        }
+
+        private static EquipmentDefinition Weapon(string displayName, WeaponType type, int power, int minRange, int maxRange,
+            int verticalReach, string description, bool twoHanded = false)
+        {
+            var item = LoadOrCreate<EquipmentDefinition>($"{EquipmentFolder}/{displayName.Replace(" ", "")}.asset", out bool created);
+            if (created || item.TwoHanded != twoHanded)
+            {
+                item.DefineWeapon(displayName, description, type, power, minRange, maxRange, verticalReach, twoHanded);
+                EditorUtility.SetDirty(item);
+            }
+            return item;
+        }
+
+        private static EquipmentDefinition Armor(string displayName, EquipmentCategory category, int evasion, string description)
+        {
+            var item = LoadOrCreate<EquipmentDefinition>($"{EquipmentFolder}/{displayName.Replace(" ", "")}.asset", out bool created);
+            if (created)
+            {
+                item.DefineArmor(displayName, description, category, evasion);
+                EditorUtility.SetDirty(item);
+            }
+            return item;
+        }
+
+        private static EquipmentDefinition Gear(string displayName, EquipmentCategory category, ArmorType armorType, int hp, int mp, string description)
+        {
+            var item = LoadOrCreate<EquipmentDefinition>($"{EquipmentFolder}/{displayName.Replace(" ", "")}.asset", out bool created);
+            if (created)
+            {
+                item.DefineGear(displayName, description, category, armorType, hp, mp);
+                EditorUtility.SetDirty(item);
+            }
+            return item;
+        }
+
+        /// <summary>Sets a job's headgear and body gear types, unless already set.</summary>
+        private static void Dress(JobDefinition job, params ArmorType[] types)
+        {
+            if (job.ArmorTypes.Count > 0)
+                return;
+            job.SetArmorTypes(types);
+            EditorUtility.SetDirty(job);
+        }
+
+        private static T LoadOrCreate<T>(string path, out bool created) where T : ScriptableObject
+        {
+            var asset = AssetDatabase.LoadAssetAtPath<T>(path);
+            created = asset == null;
+            if (created)
+            {
+                asset = ScriptableObject.CreateInstance<T>();
+                AssetDatabase.CreateAsset(asset, path);
+            }
+            return asset;
+        }
+
+        /// <summary>Sets a job's weapon types and shield use, unless it already has weapon types set.</summary>
+        private static void Arm(JobDefinition job, bool shields, params WeaponType[] types)
+        {
+            if (job.WeaponTypes.Count > 0)
+                return;
+            job.SetEquipment(types, shields);
+            EditorUtility.SetDirty(job);
         }
 
         /// <summary>Gives a job its command name and abilities, unless it already has abilities set.</summary>

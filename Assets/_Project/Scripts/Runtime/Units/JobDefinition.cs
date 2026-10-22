@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using FriendshipWarriors.Units.Abilities;
+using FriendshipWarriors.Units.Equipment;
 using UnityEngine;
 
 namespace FriendshipWarriors.Units
@@ -30,6 +31,11 @@ namespace FriendshipWarriors.Units
         [SerializeField] private string _commandName = "Skills";
         [SerializeField] private AbilityDefinition[] _abilities = Array.Empty<AbilityDefinition>();
 
+        [Header("Equipment")]
+        [SerializeField] private WeaponType[] _weaponTypes = Array.Empty<WeaponType>();
+        [SerializeField] private bool _canUseShields;
+        [SerializeField] private ArmorType[] _armorTypes = Array.Empty<ArmorType>();
+
         [Header("Unlock")]
         [SerializeField] private JobRequirement[] _requirements = Array.Empty<JobRequirement>();
 
@@ -49,6 +55,9 @@ namespace FriendshipWarriors.Units
         public int ClassEvasion => _classEvasion;
         public IReadOnlyList<JobRequirement> Requirements => _requirements;
         public string CommandName => _commandName;
+        public IReadOnlyList<WeaponType> WeaponTypes => _weaponTypes;
+        public bool CanUseShields => _canUseShields;
+        public IReadOnlyList<ArmorType> ArmorTypes => _armorTypes;
         public IReadOnlyList<AbilityDefinition> Abilities => _abilities;
         public Color PlaceholderColor => _placeholderColor;
         public Sprite FrontSprite => _frontSprite;
@@ -62,6 +71,26 @@ namespace FriendshipWarriors.Units
         }
 
         public bool Teaches(AbilityDefinition ability) => Array.IndexOf(_abilities, ability) >= 0;
+
+        public void SetEquipment(WeaponType[] weaponTypes, bool canUseShields)
+        {
+            _weaponTypes = weaponTypes;
+            _canUseShields = canUseShields;
+        }
+
+        public void SetArmorTypes(ArmorType[] armorTypes) => _armorTypes = armorTypes;
+
+        /// <summary>
+        /// Weapons must be a type this job uses, shields need shield training, headgear and body gear must be an armor
+        /// type it wears; accessories suit anyone.
+        /// </summary>
+        public bool CanEquip(EquipmentDefinition item) => item.Category switch
+        {
+            EquipmentCategory.Weapon => Array.IndexOf(_weaponTypes, item.WeaponType) >= 0,
+            EquipmentCategory.Shield => _canUseShields,
+            EquipmentCategory.Head or EquipmentCategory.Body => Array.IndexOf(_armorTypes, item.ArmorType) >= 0,
+            _ => true,
+        };
 
         public void Define(string displayName, string description, StatFactors multipliers, StatFactors growth,
             int move, int jump, int classEvasion, JobRequirement[] requirements, Color placeholderColor)
