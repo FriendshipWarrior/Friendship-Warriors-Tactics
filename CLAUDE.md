@@ -122,8 +122,13 @@ Root namespace: `FriendshipWarriors`; namespaces follow folders (e.g. `Friendshi
 Record decisions here as they are made (date — decision — rationale).
 
 - 2026-10-22 — **Heights:** tiles store height in half-h steps (FFT shows heights like 2.5h); 1h = 0.5 world units. `Jump` is in h, as in FFT. Tiles follow FFT's tile data: height, slope type + slope height, water depth, surface type.
-- 2026-10-22 — **Movement (FFT rules, confirmed):** orthogonal steps cost 1 Move and may climb up to Jump; a unit can leap a gap of Jump / 2 tiles (void or lower ground), paying Move as if flat (Jump caps at 7, so at most a 3-tile gap); enemies block, allies can be passed but not stopped on.
-- 2026-10-22 — **Movement (unverified approximations, revisit):** Jump also limits stepping *down*; a sloped tile's height for movement is its midpoint; leaps can't clear enemies or blocked tiles; water depth doesn't affect movement yet (FFT: depth 2+ stops units acting unless they have Swim-type abilities).
+- 2026-10-22 — **Movement (FFT rules, confirmed with the user):**
+  - Orthogonal steps cost 1 Move. Jump limits the height difference both climbing up and stepping down.
+  - Heights come in halves (1, 1.5, 2...). A sloped tile's height is the middle of its slope (a ramp from 1h to 2h is 1.5h); midpoints that would fall between halves round down.
+  - A unit can leap a gap of Jump / 2 tiles, paying Move as if flat (Jump caps at 7, so at most a 3-tile gap). A gap is void or any tile lower than the take-off tile, **including one an enemy stands on** (e.g. at 3h next to an enemy at 1h, Jump 3 hops over). Same-height or higher tiles, and blocked tiles, can't be leapt.
+  - Enemies block walking; allies can be passed but not stopped on.
+  - Water depth doesn't affect movement. A unit in water of **depth 2 or more can't act** (`Tile.AllowsActions`; enforce it when the battle system lands). Swim-type abilities that lift this come later.
+- Open rule question: whether leaping over an enemy needs more than "lower than the take-off tile" (currently any lower amount counts, even 0.5h).
 - 2026-10-22 — **Battlefield rendering:** one combined mesh with real slopes (cheap on Steam Deck), terrain looks from `TerrainPalette` (colors now, textures later), translucent highlight overlays. Props are a decoration layer; blocking props make their tile impassable.
 - 2026-10-22 — **Camera (FFT):** orthographic, always diagonal, 90° rotation steps plus a low/high tilt toggle (30°/45°, approximated). Walls hiding units are handled the FFT way, by rotating or tilting the camera; no wall fading.
 - 2026-10-22 — **Controls:** one tile cursor for every device. D-pad/left stick/WASD/arrows move it along grid axes (input turned 45°, FFT-style) with key repeat, and the camera follows. Mouse hover places it. Confirm = A/Enter/Space/click, Cancel = B/Esc/Backspace/right-click, rotate = LB/RB or Q/E, tilt = Y or T, zoom = triggers, scroll or -/=, pan = right stick or middle-drag.

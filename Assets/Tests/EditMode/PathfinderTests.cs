@@ -159,13 +159,27 @@ namespace FriendshipWarriors.Tests
             Assert.That(range.CanMoveTo(new GridCoord(2, 0)), Is.False);
         }
 
-        [Test]
-        public void Leaping_CannotClearAnEnemy()
+        [TestCase(3, true)]
+        [TestCase(1, false)]
+        public void Leaping_ClearsAnEnemyStandingLower(int jump, bool reachesFarSide)
         {
-            var grid = TestGrids.FromRows("101");
+            // Standing at 3h next to an enemy at 1h: Jump 3 hops over it; Jump 1 can't leap at all.
+            var grid = TestGrids.FromRows("313");
             var enemy = new GridCoord(1, 0);
 
-            var range = Pathfinder.FindMovementRange(grid, new GridCoord(0, 0), new MovementProfile(4, 2),
+            var range = Pathfinder.FindMovementRange(grid, new GridCoord(0, 0), new MovementProfile(4, jump),
+                c => c == enemy ? Occupancy.Enemy : Occupancy.Empty);
+
+            Assert.That(range.CanMoveTo(new GridCoord(2, 0)), Is.EqualTo(reachesFarSide));
+        }
+
+        [TestCase("333")]
+        [TestCase("353")]
+        public void Leaping_CannotClearAnEnemyAtTheSameHeightOrHigher(string row)
+        {
+            var enemy = new GridCoord(1, 0);
+
+            var range = Pathfinder.FindMovementRange(TestGrids.FromRows(row), new GridCoord(0, 0), new MovementProfile(4, 7),
                 c => c == enemy ? Occupancy.Enemy : Occupancy.Empty);
 
             Assert.That(range.CanMoveTo(new GridCoord(2, 0)), Is.False);

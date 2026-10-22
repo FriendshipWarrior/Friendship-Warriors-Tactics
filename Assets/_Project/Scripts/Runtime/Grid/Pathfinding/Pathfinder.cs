@@ -9,12 +9,13 @@ namespace FriendshipWarriors.Grid.Pathfinding
         /// Finds every tile reachable from <paramref name="origin"/> within the unit's Move, following FFT's rules:
         /// <list type="bullet">
         /// <item>Steps are orthogonal and cost 1 Move; the standing heights of the two tiles may differ by at most
-        /// Jump. (Whether FFT also limits stepping <i>down</i> by Jump is unverified; we assume it does.)</item>
-        /// <item>A unit may leap straight across up to Jump / 2 gap tiles (void, or lower than the take-off tile),
-        /// paying Move as if the gap were flat ground. Blocked tiles, higher tiles and enemies can't be leapt.</item>
-        /// <item>Enemies block; allies can be passed but not stopped on.</item>
+        /// Jump, both climbing up and stepping down.</item>
+        /// <item>A unit may leap straight across up to Jump / 2 gap tiles, paying Move as if the gap were flat
+        /// ground. A gap is void or any tile lower than the take-off tile, including one an enemy stands on.
+        /// Blocked tiles and tiles as high or higher can't be leapt.</item>
+        /// <item>Enemies block walking; allies can be passed but not stopped on.</item>
         /// </list>
-        /// Water depth does not affect movement yet; FFT's exact water rules are unverified.
+        /// Water depth doesn't affect movement; it stops units acting instead (see <see cref="Tile.AllowsActions"/>).
         /// </summary>
         /// <param name="occupancy">Who stands on a tile, relative to the mover. Null means the field is empty.</param>
         public static MovementRange FindMovementRange(
@@ -77,7 +78,7 @@ namespace FriendshipWarriors.Grid.Pathfinding
 
             private void Expand(GridCoord from, int cost)
             {
-                float fromHeight = _grid[from].StandingHeight;
+                int fromHeight = _grid[from].StandingHeight;
                 foreach (var direction in GridCoord.CardinalDirections)
                 {
                     TryStep(from, from + direction, cost + 1, fromHeight);
@@ -91,16 +92,14 @@ namespace FriendshipWarriors.Grid.Pathfinding
                 }
             }
 
-            private bool IsLeapableGap(GridCoord coord, float takeOffHeight)
+            private bool IsLeapableGap(GridCoord coord, int takeOffHeight)
             {
                 if (!_grid.TryGetTile(coord, out var tile) || tile.Blocked)
-                    return false;
-                if (_occupancy(coord) == Occupancy.Enemy)
                     return false;
                 return tile.Terrain == TerrainType.Void || tile.StandingHeight < takeOffHeight;
             }
 
-            private void TryStep(GridCoord from, GridCoord to, int cost, float fromHeight)
+            private void TryStep(GridCoord from, GridCoord to, int cost, int fromHeight)
             {
                 if (cost > _profile.Move)
                     return;
