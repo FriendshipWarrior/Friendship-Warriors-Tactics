@@ -70,29 +70,69 @@ namespace FriendshipWarriors.Editor.Art
 
         public void Line(Vector2Int a, Vector2Int b, Color32 c, int thickness = 1) => Line(a.x, a.y, b.x, b.y, c, thickness);
 
-        /// <summary>
-        /// Three-tone shading for every pixel currently painted <paramref name="mid"/>: pixels on the bottom/right
-        /// edge of that region turn <paramref name="dark"/>, pixels on the top/left edge turn <paramref name="light"/>.
-        /// Light comes from the upper left, as is usual for pixel art.
-        /// </summary>
-        public void Shade(Color32 mid, Color32 light, Color32 dark, bool lightEdges = true)
+        /// <summary>Filled triangle; pixels whose centres fall inside (edges included).</summary>
+        public void Triangle(Vector2 a, Vector2 b, Vector2 c, Color32 color)
         {
+            float Cross(Vector2 o, Vector2 p, Vector2 q) => (p.x - o.x) * (q.y - o.y) - (p.y - o.y) * (q.x - o.x);
+            int x0 = (int)Math.Floor(Math.Min(a.x, Math.Min(b.x, c.x))), x1 = (int)Math.Ceiling(Math.Max(a.x, Math.Max(b.x, c.x)));
+            int y0 = (int)Math.Floor(Math.Min(a.y, Math.Min(b.y, c.y))), y1 = (int)Math.Ceiling(Math.Max(a.y, Math.Max(b.y, c.y)));
+            for (int y = y0; y <= y1; y++)
+            for (int x = x0; x <= x1; x++)
+            {
+                var p = new Vector2(x + 0.5f, y + 0.5f);
+                float d0 = Cross(a, b, p), d1 = Cross(b, c, p), d2 = Cross(c, a, p);
+                bool negative = d0 < 0 || d1 < 0 || d2 < 0, positive = d0 > 0 || d1 > 0 || d2 > 0;
+                if (!(negative && positive))
+                    Set(x, y, color);
+            }
+        }
+
+        /// <summary>A line <paramref name="width"/> pixels thick, centred on the points (limbs, sleeves).</summary>
+        public void Thick(Vector2Int a, Vector2Int b, Color32 color, int width)
+        {
+            int o = (width - 1) / 2;
+            Line(a.x - o, a.y - o, b.x - o, b.y - o, color, width);
+        }
+
+        /// <summary>
+        /// Volume shading for the region painted <c>ramp[Mid]</c>, lit from the upper left: each pixel's position across
+        /// the region (mostly left to right, partly top to bottom) picks light, mid or shadow, and the brightest corner of a
+        /// big enough region gets the highlight. Thin shapes come out as lit cylinders, round ones as lit balls.
+        /// </summary>
+        public void ShadeVolume(Color32[] ramp, bool highlight = true)
+        {
+            var mid = ramp[2];
             var copy = (Color32[])Pixels.Clone();
             bool Is(int x, int y) => Inside(x, y) && Same(copy[y * Width + x], mid);
+            int Run(int x, int y, int dx, int dy)
+            {
+                int n = 0;
+                while (Is(x, y)) { n++; x += dx; y += dy; }
+                return n;
+            }
+
             for (int y = 0; y < Height; y++)
             for (int x = 0; x < Width; x++)
             {
                 if (!Is(x, y))
                     continue;
-                if (!Is(x + 1, y) || !Is(x, y + 1))
-                    Pixels[y * Width + x] = dark;
-                else if (lightEdges && (!Is(x - 1, y) || !Is(x, y - 1)))
-                    Pixels[y * Width + x] = light;
+                int left = Run(x, y, -1, 0), right = Run(x, y, 1, 0), up = Run(x, y, 0, -1), down = Run(x, y, 0, 1);
+                int w = left + right - 1, h = up + down - 1;
+                float tx = w > 1 ? (left - 1f) / (w - 1f) : 0.5f;
+                float ty = h > 1 ? (up - 1f) / (h - 1f) : 0.5f;
+                float t = 0.62f * tx + 0.38f * ty;
+                int shade = t >= 0.66f ? 3 : t <= 0.24f ? 1 : 2;
+                if (highlight && shade == 1 && t <= 0.1f && w >= 5 && h >= 5)
+                    shade = 0;
+                Pixels[y * Width + x] = ramp[shade];
             }
         }
 
-        /// <summary>Adds a 1 px outline on the transparent pixels around everything drawn.</summary>
-        public void Outline(Color32 outline)
+        /// <summary>
+        /// Adds a 1 px outline on the transparent pixels around everything drawn, coloured by
+        /// <paramref name="outlineOf"/> from the neighbouring pixel (a coloured outline: each material's darkest shade).
+        /// </summary>
+        public void Outline(Func<Color32, Color32> outlineOf)
         {
             var copy = (Color32[])Pixels.Clone();
             bool Solid(int x, int y) => Inside(x, y) && copy[y * Width + x].a > 0;
@@ -101,9 +141,33 @@ namespace FriendshipWarriors.Editor.Art
             {
                 if (Solid(x, y))
                     continue;
-                if (Solid(x - 1, y) || Solid(x + 1, y) || Solid(x, y - 1) || Solid(x, y + 1))
-                    Pixels[y * Width + x] = outline;
+                // Prefer the pixel above or to the left, so the line hugs the shape it was drawn around.
+                if (Solid(x, y + 1)) Pixels[y * Width + x] = outlineOf(copy[(y + 1) * Width + x]);
+                else if (Solid(x - 1, y)) Pixels[y * Width + x] = outlineOf(copy[y * Width + x - 1]);
+                else if (Solid(x + 1, y)) Pixels[y * Width + x] = outlineOf(copy[y * Width + x + 1]);
+                else if (Solid(x, y - 1)) Pixels[y * Width + x] = outlineOf(copy[(y - 1) * Width + x]);
             }
+        }
+
+        /// <summary>
+        /// Copies <paramref name="shape"/> on top; with <paramref name="separator"/> set, also draws that colour on this
+        /// canvas's opaque pixels right around the shape, so overlapping pieces of one material stay readable (an arm
+        /// in front of the torso).
+        /// </summary>
+        public void Layer(PixelCanvas shape, Color32? separator = null)
+        {
+            if (separator is { } line)
+            {
+                for (int y = 0; y < Height; y++)
+                for (int x = 0; x < Width; x++)
+                {
+                    if (shape.Opaque(x, y) || !Opaque(x, y))
+                        continue;
+                    if (shape.Opaque(x - 1, y) || shape.Opaque(x + 1, y) || shape.Opaque(x, y - 1) || shape.Opaque(x, y + 1))
+                        Set(x, y, line);
+                }
+            }
+            Blit(shape, 0, 0);
         }
 
         /// <summary>Copies the non-transparent pixels of <paramref name="source"/> to (ox, oy).</summary>

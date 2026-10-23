@@ -9,27 +9,28 @@ namespace FriendshipWarriors.Units.View.PaperDoll
     /// </summary>
     public readonly struct DollPalette
     {
+        // Five-shade ramps (ColorRamp order); the first entry of each list is the key ramp itself (no change).
         private static readonly Color32[][] SkinTones =
         {
             KeyPalette.Skin,
-            new Color32[] { new(255, 224, 196, 255), new(236, 184, 146, 255), new(196, 136, 104, 255) },
-            new Color32[] { new(214, 160, 116, 255), new(180, 124, 84, 255), new(132, 86, 58, 255) },
-            new Color32[] { new(168, 112, 76, 255), new(132, 82, 54, 255), new(92, 56, 38, 255) },
-            new Color32[] { new(120, 78, 54, 255), new(92, 58, 40, 255), new(62, 38, 28, 255) },
+            ColorRamp.From(new Color32(250, 206, 172, 255)),
+            ColorRamp.From(new Color32(206, 148, 104, 255)),
+            ColorRamp.From(new Color32(164, 106, 72, 255)),
+            ColorRamp.From(new Color32(118, 76, 52, 255)),
         };
 
         private static readonly Color32[][] HairColors =
         {
             KeyPalette.Hair,
-            new Color32[] { new(64, 60, 72, 255), new(40, 36, 48, 255), new(26, 22, 32, 255) },
-            new Color32[] { new(250, 220, 140, 255), new(220, 180, 96, 255), new(170, 130, 64, 255) },
-            new Color32[] { new(190, 96, 56, 255), new(146, 66, 38, 255), new(100, 44, 28, 255) },
-            new Color32[] { new(210, 210, 216, 255), new(168, 168, 178, 255), new(120, 120, 132, 255) },
-            new Color32[] { new(150, 50, 60, 255), new(110, 34, 44, 255), new(72, 22, 30, 255) },
+            ColorRamp.From(new Color32(62, 56, 74, 255)),
+            ColorRamp.From(new Color32(226, 184, 96, 255)),
+            ColorRamp.From(new Color32(196, 92, 50, 255)),
+            ColorRamp.From(new Color32(190, 192, 204, 255)),
+            ColorRamp.From(new Color32(150, 46, 62, 255)),
         };
 
-        private static readonly Color32[] PlayerAccent = { new(96, 160, 255, 255), new(44, 92, 196, 255) };
-        private static readonly Color32[] EnemyAccent = { new(236, 78, 72, 255), new(150, 36, 44, 255) };
+        private static readonly Color32[] PlayerAccent = ColorRamp.From(new Color32(80, 146, 250, 255));
+        private static readonly Color32[] EnemyAccent = ColorRamp.From(new Color32(228, 70, 66, 255));
 
         public readonly Color32[] Skin;
         public readonly Color32[] Hair;
@@ -64,11 +65,8 @@ namespace FriendshipWarriors.Units.View.PaperDoll
             return new DollPalette(SkinTones[skin], HairColors[hair], primary, accent, style, key);
         }
 
-        /// <summary>A three-tone ramp around the job colour: lighter, as given, darker.</summary>
-        public static Color32[] JobRamp(Color job) => new Color32[]
-        {
-            Color.Lerp(job, Color.white, 0.3f), job, Color.Lerp(job, Color.black, 0.42f),
-        };
+        /// <summary>The five-shade ramp around the job colour (the job colour is the mid shade).</summary>
+        public static Color32[] JobRamp(Color job) => ColorRamp.From(job);
 
         /// <summary>Key colour → replacement, for <see cref="PaletteSwap"/>.</summary>
         public Dictionary<int, Color32> ToSwapMap()

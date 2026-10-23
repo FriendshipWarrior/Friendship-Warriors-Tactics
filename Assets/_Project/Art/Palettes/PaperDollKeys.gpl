@@ -2,33 +2,57 @@ GIMP Palette
 Name: Friendship Warriors Paper-Doll Keys
 Columns: 8
 # (key) colours are recoloured per unit; paint parts only with these colours.
- 22  18  28	Outline
-247 206 166	Skin 1 (key)
-222 166 120	Skin 2 (key)
-176 116  82	Skin 3 (key)
-130  86  52	Hair 1 (key)
- 96  60  36	Hair 2 (key)
- 64  40  26	Hair 3 (key)
-126 140  96	Job primary 1 (key)
- 96 108  70	Job primary 2 (key)
- 64  72  48	Job primary 3 (key)
- 90 150 230	Team accent 1 (key)
- 52  96 180	Team accent 2 (key)
-206 212 222	Metal 1
-150 158 172	Metal 2
- 96 102 118	Metal 3
-138  92  58	Leather 1
- 96  62  40	Leather 2
-240 200  96	Brass light
-196 150  58	Brass
-204 110  60	Copper
+244 224 180	Skin 1 highlight (key)
+239 201 152	Skin 2 light (key)
+234 178 134	Skin 3 mid (key)
+164  99  85	Skin 4 shadow (key)
+ 89  50  49	Skin 5 outline (key)
+203 177 125	Hair 1 highlight (key)
+176 135  84	Hair 2 light (key)
+150  98  58	Hair 3 mid (key)
+105  45  33	Hair 4 shadow (key)
+ 57  21  20	Hair 5 outline (key)
+189 195 155	Job primary 1 highlight (key)
+153 166 118	Job primary 2 light (key)
+118 136  90	Job primary 3 mid (key)
+ 71  95  59	Job primary 4 shadow (key)
+ 37  52  33	Job primary 5 outline (key)
+143 206 240	Team accent 1 highlight (key)
+103 172 233	Team accent 2 light (key)
+ 78 138 226	Team accent 3 mid (key)
+ 42  58 158	Team accent 4 shadow (key)
+ 28  27  86	Team accent 5 outline (key)
+201 211 219	Metal 1 highlight
+178 188 200	Metal 2 light
+158 166 182	Metal 3 mid
+109 110 127	Metal 4 shadow
+ 60  60  69	Metal 5 outline
+192 169 123	Leather 1 highlight
+161 124  81	Leather 2 light
+130  86  54	Leather 3 mid
+ 91  40  31	Leather 4 shadow
+ 49  19  19	Leather 5 outline
+165 158 178	Undersuit 1 highlight
+122 118 139	Undersuit 2 light
+ 84  82 100	Undersuit 3 mid
+ 60  56  70	Undersuit 4 shadow
+ 33  31  38	Undersuit 5 outline
+230 218 130	Brass 1 highlight
+217 187  89	Brass 2 light
+204 154  62	Brass 3 mid
+143  74  31	Brass 4 shadow
+ 78  34  21	Brass 5 outline
+226 183 129	Copper 1 highlight
+212 142  87	Copper 2 light
+198 104  60	Copper 3 mid
+139  36  30	Copper 4 shadow
+ 75  20  26	Copper 5 outline
+ 30  22  34	Outline (other)
 150 230 255	Lens
  60  90 110	Lens dark
- 30  24  36	Eye
+ 40  28  44	Eye
 250 248 240	Eye white
-150  80  70	Mouth
- 78  78  92	Undersuit
- 52  52  64	Undersuit dark
+176  92  80	Mouth
 130 220 255	Aether glow
 232 250 255	Aether glow core
 255 232 120	Muzzle flash

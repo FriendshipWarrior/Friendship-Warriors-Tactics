@@ -33,8 +33,7 @@ stay transparent.
 - **The KO frame lies along the ground**, with the head on the left.
 - **Timing** (seconds per frame): idle 0.55, walk 0.15, attack 0.12, cast 0.25 (looped while charging a spell),
   hurt 0.35. Idle and cast loop. Attack and hurt play once and then return to idle.
-- **Walk frames aren't shown in the game yet.** Units move instantly for now, so the walk frames are drawn ahead of
-  time. Animating movement tile by tile is the next art task.
+- **Walk frames** play while a unit walks its route tile by tile (4 frames, looped).
 
 Frames are 40 × 40 rather than 32 × 40 so that the lying KO pose fits inside one frame.
 
@@ -48,7 +47,7 @@ The parts are stacked per pose, from the bottom layer to the top:
 | Body (skin, undersuit, boots)        | Body                                 |
 | Body gear (clothing / armor / robe)  | Body gear                            |
 | Head                                 | Head                                 |
-| Face (eyes, brows, mouth)            | Face (leave empty: no face from behind) |
+| Face (eyes, nose, mouth)             | Face (leave empty: no face from behind) |
 | Hair                                 | Hair                                 |
 | Headgear (hat / helmet)              | Headgear                             |
 | Weapon (near hand, in front)         | Shield (now nearest the camera)      |
@@ -56,26 +55,63 @@ The parts are stacked per pose, from the bottom layer to the top:
 The top opaque pixel wins. A part can hide what's under it by painting over it, but it can't cut a hole in a lower
 layer.
 
+## Style guide
+
+The generated parts follow the look of FFT's battle sprites. FFT was used as a **visual reference only**: no pixels,
+colours or shapes were copied, traced or imported from it, and its sprite rips must never be added to this repo. Keep
+to these rules when drawing by hand so new art matches.
+
+- **Chibi proportions.** About 2.4 heads tall: the head is about 15 px high and 14 px wide (rows 4–18 of the frame),
+  the torso about 10 px (shoulders around row 18, hip around row 27), and the legs short, ending in chunky boots
+  (rows 35–39, about 5 px wide with a toe pointing toward the facing side). Hands are round 3 × 3 mittens. Arms and
+  legs are 3 px thick.
+- **Front ¾ faces screen-right.** The face sits on the right half of the head. The near eye is big (2 × 3 with a
+  white catch-light in its top corner) and the far eye narrow (1 × 3). The nose is a single shadow pixel and the mouth
+  2 px. Hair hangs behind the ear on the far side.
+- **Light comes from the upper left.** Every piece is shaded as a volume: the upper-left part in the light shade, the
+  middle in mid, and the lower-right part in shadow. The highlight shade is only for the brightest spot of big round
+  pieces (head, hair, helmet, pauldrons, metal).
+- **Four shades plus an outline per material.** Each material ramp runs highlight, light, mid, shadow, outline.
+  Lighter shades drift warm (toward yellow) and darker shades drift cool (toward purple), so shadows look coloured,
+  not grey.
+- **Coloured outlines, not black.** Outline each piece with its own material's darkest (outline) shade: skin outlined
+  in the skin outline colour, a green tunic in the job outline colour, and so on. Only things outside the ramps (eyes,
+  lenses, glows) use the general outline `#1E1622`.
+- **Pieces overlapping the same material get a dividing line.** The near arm in front of the torso, a pauldron over
+  the breastplate and the near leg over the far one all have a line in the material's outline shade where they
+  overlap.
+- **Far limbs are a step darker.** The far arm, far leg, far boot and far sleeve use the light and shadow shades
+  only, so the near side reads in front.
+- **Hair is big clumps.** Draw a few large locks with pointed tips (bangs over the forehead, jagged ends at the
+  nape) and a couple of shadow-shade strand lines between them, rather than a smooth cap.
+
 ## Key colours
 
 Paint with the palette in `../Palettes/PaperDollKeys.gpl` (the same colours are in `PaperDollKeys.png`). Only an exact
 RGB match is recoloured. A colour that's one step off stays as you painted it, so keep the palette locked while you
-paint.
+paint. Every ramp has five shades, in this order: highlight, light, mid, shadow, outline.
 
-| Ramp                   | Light     | Mid       | Dark      | Becomes                                   |
-|------------------------|-----------|-----------|-----------|-------------------------------------------|
-| **Skin** (key)         | `#F7CEA6` | `#DEA678` | `#B07452` | One of 5 skin tones, picked from the unit's name |
-| **Hair** (key)         | `#825634` | `#603C24` | `#40281A` | One of 6 hair colours, picked from the name. Brows use Hair dark |
-| **Job primary** (key)  | `#7E8C60` | `#606C46` | `#404830` | The job's `PlaceholderColor` (mid), with a lighter and a darker shade |
-| **Team accent** (key)  | `#5A96E6` | `#3460B4` |           | Player blue or Enemy red                  |
+| Ramp                  | Highlight | Light     | Mid       | Shadow    | Outline   | Becomes |
+|-----------------------|-----------|-----------|-----------|-----------|-----------|---------|
+| **Skin** (key)        | `#F4E0B4` | `#EFC998` | `#EAB286` | `#A46355` | `#593231` | One of 5 skin tones, picked from the unit's name |
+| **Hair** (key)        | `#CBB17D` | `#B08754` | `#96623A` | `#692D21` | `#391514` | One of 6 hair colours, picked from the name |
+| **Job primary** (key) | `#BDC39B` | `#99A676` | `#76885A` | `#475F3B` | `#253421` | The job's `PlaceholderColor` as the mid shade |
+| **Team accent** (key) | `#8FCEF0` | `#67ACE9` | `#4E8AE2` | `#2A3A9E` | `#1C1B56` | Player blue or Enemy red |
+| Metal                 | `#C9D3DB` | `#B2BCC8` | `#9EA6B6` | `#6D6E7F` | `#3C3C45` | Never recoloured |
+| Leather               | `#C0A97B` | `#A17C51` | `#825636` | `#5B281F` | `#311313` | Never recoloured |
+| Undersuit             | `#A59EB2` | `#7A768B` | `#545264` | `#3C3846` | `#211F26` | Never recoloured |
+| Brass                 | `#E6DA82` | `#D9BB59` | `#CC9A3E` | `#8F4A1F` | `#4E2215` | Never recoloured |
+| Copper                | `#E2B781` | `#D48E57` | `#C6683C` | `#8B241E` | `#4B141A` | Never recoloured |
 
-These colours are never recoloured: outline `#16121C`, metal `#CED4DE` `#969EAC` `#606676`, leather `#8A5C3A`
-`#603E28`, brass light `#F0C860`, brass `#C4963A`, copper `#CC6E3C`, lens `#96E6FF`, lens dark `#3C5A6E`, eye
-`#1E1824`, eye white `#FAF8F0`, mouth `#965046`, undersuit `#4E4E5C` `#343440`, aether glow `#82DCFF`, glow core
-`#E8FAFF` and muzzle flash `#FFE878`.
+The recoloured ramps are built in code from one mid colour (`ColorRamp.From`), with the same warm-light, cool-shadow
+drift, so a unit's outline follows its own skin, hair, job and team colours.
 
-The house style is a 1 px dark outline around each part, 2–3 tone shading with light from the upper left, and
-brass-and-leather steampunk military kit.
+These single colours are never recoloured: general outline `#1E1622`, lens `#96E6FF`, lens dark `#3C5A6E`, eye
+`#281C2C`, eye white `#FAF8F0`, mouth `#B05C50`, aether glow `#82DCFF`, glow core `#E8FAFF` and muzzle flash
+`#FFE878`.
+
+The kit is brass-and-leather steampunk military: field caps with goggles, plate with brass rivets, robes with copper
+trim.
 
 ## Getting started in Aseprite
 

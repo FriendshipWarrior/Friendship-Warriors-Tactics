@@ -65,7 +65,7 @@ namespace FriendshipWarriors.Tests
             foreach (var ramp in new[] { KeyPalette.Skin, KeyPalette.Hair, KeyPalette.Primary, KeyPalette.Accent })
             foreach (var c in ramp)
                 Assert.IsTrue(map.ContainsKey(PaletteSwap.Pack(c)), $"Key {c} missing from the swap map.");
-            foreach (var c in new[] { KeyPalette.Outline, KeyPalette.Brass, KeyPalette.Metal[1], KeyPalette.Leather[0], KeyPalette.Undersuit })
+            foreach (var c in new[] { KeyPalette.Outline, KeyPalette.Brass[2], KeyPalette.Metal[1], KeyPalette.Leather[0], KeyPalette.Undersuit[2] })
                 Assert.IsFalse(map.ContainsKey(PaletteSwap.Pack(c)), $"Fixed colour {c} must not be swapped.");
         }
 
@@ -80,6 +80,45 @@ namespace FriendshipWarriors.Tests
             Assert.AreEqual(a.Key, again.Key);
             Assert.AreEqual(a.HairStyle, again.HairStyle);
             Assert.AreNotEqual(a.Accent[0], enemy.Accent[0]);
+        }
+
+        private static float Brightness(Color32 c) => 0.299f * c.r + 0.587f * c.g + 0.114f * c.b;
+
+        [Test]
+        public void ColorRamp_KeepsTheMidShade_AndRunsFromLightToDark()
+        {
+            foreach (var mid in new[] { Rgb(118, 136, 90), Rgb(230, 70, 66), Rgb(158, 166, 182), Rgb(40, 36, 48) })
+            {
+                var ramp = ColorRamp.From(mid);
+                Assert.AreEqual(ColorRamp.Length, ramp.Length);
+                Assert.AreEqual(mid, ramp[ColorRamp.Mid]);
+                for (int i = 1; i < ramp.Length; i++)
+                    Assert.Less(Brightness(ramp[i]), Brightness(ramp[i - 1]), $"{mid}: shade {i} should be darker than shade {i - 1}.");
+            }
+        }
+
+        [Test]
+        public void DollPalette_GivesEveryKeyShadeAReplacement_IncludingTheOutline()
+        {
+            var palette = DollPalette.For(MakeUnit("Ada", Team.Player, Job(Color.cyan)), 4);
+            foreach (var ramp in new[] { palette.Skin, palette.Hair, palette.Primary, palette.Accent })
+                Assert.AreEqual(ColorRamp.Length, ramp.Length);
+            var map = palette.ToSwapMap();
+            Assert.AreEqual(palette.Primary[KeyPalette.Line], map[PaletteSwap.Pack(KeyPalette.Primary[KeyPalette.Line])],
+                "Coloured outlines follow the unit's colours.");
+        }
+
+        [Test]
+        public void KeyPalette_ColoursAreAllDistinct_SoSwapsAreExact()
+        {
+            var seen = new Dictionary<int, string>();
+            foreach (var (name, color) in KeyPalette.All())
+            {
+                Assert.IsFalse(seen.TryGetValue(PaletteSwap.Pack(color), out var other), $"{name} repeats {other}.");
+                seen[PaletteSwap.Pack(color)] = name;
+            }
+            foreach (var ramp in KeyPalette.Ramps())
+                Assert.AreEqual(ColorRamp.Length, ramp.Length);
         }
 
         // ------------------------------------------------------------------ Layout
