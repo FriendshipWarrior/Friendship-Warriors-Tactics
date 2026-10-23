@@ -87,13 +87,17 @@ namespace FriendshipWarriors.Battle
                 _aiSteps.Enqueue(() => AiShowMove(before));
                 _aiSteps.Enqueue(() => AiMove(before));
             }
-            if (_aiPlan.Spell != null)
+            // Acting would cancel the spell it's charging, so it holds the act unless it's clearly worth it.
+            bool holdAct = _order.ChargeOf(unit) != null && !AI.AiChargeRules.WorthCancelling(unit, _aiPlan.Spell, _aiPlan.Target);
+            if (holdAct)
+                Debug.Log($"[Battle] {unit.Name} keeps charging instead of acting.", this);
+            if (!holdAct && _aiPlan.Spell != null)
             {
                 var spell = _aiPlan.Spell;
                 var tile = _aiPlan.SpellTile;
                 _aiSteps.Enqueue(() => AiCast(spell, tile));
             }
-            else if (_aiPlan.Target != null)
+            else if (!holdAct && _aiPlan.Target != null)
             {
                 var target = _aiPlan.Target;
                 _aiSteps.Enqueue(() => AiAttack(target));
@@ -186,8 +190,11 @@ namespace FriendshipWarriors.Battle
                 return;
             _ability = spell;
             _cursor.SetCoord(tile, followCamera: true);
+            // Single-target spells follow their target; area spells stay on the tile picked for the cluster.
+            var onTile = UnitAt(tile)?.Unit;
+            var lockOn = AI.AiSpellLock.For(spell, onTile) == Magic.SpellLock.Unit ? onTile : null;
             // Hands over to the shared casting path; it calls AfterAction → ResumeAiTurn when done.
-            CastSpell(spell, tile);
+            CastSpell(spell, tile, lockOn);
         }
 
         private void AiFace()

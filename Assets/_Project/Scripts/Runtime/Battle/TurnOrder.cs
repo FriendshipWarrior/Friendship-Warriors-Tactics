@@ -66,15 +66,23 @@ namespace FriendshipWarriors.Battle
         {
             _units.Remove(unit);
             CancelCharge(unit);
+            // Spells following a unit that has left the battle land where it last stood.
+            foreach (var charge in _charging)
+                charge.ReleaseLock(unit);
+            foreach (var charge in _resolving)
+                charge.ReleaseLock(unit);
         }
 
-        /// <summary>The caster starts charging <paramref name="spell"/> at <paramref name="target"/> and gains Charging.</summary>
-        public ChargingAction BeginCharge(Unit caster, AbilityDefinition spell, GridCoord target)
+        /// <summary>
+        /// The caster starts charging <paramref name="spell"/> at <paramref name="target"/> and gains Charging. With
+        /// <paramref name="lockOn"/> the spell follows that unit instead of staying on the tile (FFT).
+        /// </summary>
+        public ChargingAction BeginCharge(Unit caster, AbilityDefinition spell, GridCoord target, Unit lockOn = null)
         {
             if (spell.ChargeSpeed <= 0)
                 throw new ArgumentException($"{spell.DisplayName} is instant; resolve it directly.", nameof(spell));
             CancelCharge(caster);
-            var charge = new ChargingAction(caster, spell, target, _sequence++);
+            var charge = new ChargingAction(caster, spell, target, _sequence++, lockOn);
             _charging.Add(charge);
             caster.AddStatus(StatusEffect.Charging, StatusRules.UntilCured);
             return charge;
@@ -198,7 +206,7 @@ namespace FriendshipWarriors.Battle
         {
             var result = new List<TurnOrderEntry>(count);
             foreach (var due in _resolving)
-                result.Add(new TurnOrderEntry(due.Caster, due.Spell));
+                result.Add(new TurnOrderEntry(due.Caster, due.Spell, due));
             var ct = _units.ToDictionary(u => u, u => u.ChargeTime);
             if (active != null && ct.ContainsKey(active))
                 ct[active] = Math.Min(ct[active] - TurnCost(true, true), MaxChargeTimeAfterTurn);
@@ -219,7 +227,7 @@ namespace FriendshipWarriors.Battle
                 AdvanceCharges(charges, c => c.ChargeTime, (c, value) => c.ChargeTime = value, due =>
                 {
                     charges.Remove(due);
-                    result.Add(new TurnOrderEntry(due.Charge.Caster, due.Charge.Spell));
+                    result.Add(new TurnOrderEntry(due.Charge.Caster, due.Charge.Spell, due.Charge));
                 });
                 foreach (var unit in _units)
                     ct[unit] += ChargeRate(unit);

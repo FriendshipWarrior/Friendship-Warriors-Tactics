@@ -190,15 +190,15 @@ namespace FriendshipWarriors.Tests
         }
 
         [Test]
-        public void ChargingUnits_CantEvadeMoveOrAct()
+        public void ChargingUnits_CantEvade_ButStillTakeTheirTurns()
         {
             var caster = UnitWith();
             var order = new TurnOrder(new[] { caster });
             order.BeginCharge(caster, Spell(AbilityEffect.Damage, 14), new GridCoord(0, 0));
 
             Assert.That(caster.CanEvade, Is.False);
-            Assert.That(caster.CanMove, Is.False);
-            Assert.That(caster.CanAct, Is.False);
+            Assert.That(caster.CanMove, Is.True, "FFT: moving keeps the spell charging");
+            Assert.That(caster.CanAct, Is.True, "FFT: acting is allowed, and cancels the spell");
         }
 
         [TestCase(StatusEffect.Silence)]
@@ -262,14 +262,14 @@ namespace FriendshipWarriors.Tests
         }
 
         [Test]
-        public void CastingConcludesTheTurn_WithoutChargingForAMove()
+        public void Concluding_EndsTheTurn_WithoutChargingForAMove()
         {
             var turn = new TurnState();
             turn.RecordAct();
             turn.Conclude();
 
             Assert.That(turn.IsFinished, Is.True);
-            Assert.That(turn.MoveSpent, Is.False, "only the Act is paid for: 80 CT, as in FFT");
+            Assert.That(turn.MoveSpent, Is.False, "only the Act is paid for: 80 CT");
             Assert.That(TurnOrder.TurnCost(turn.MoveSpent, turn.ActSpent), Is.EqualTo(80));
         }
 

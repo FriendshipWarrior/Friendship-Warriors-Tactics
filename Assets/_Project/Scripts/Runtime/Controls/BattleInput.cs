@@ -26,6 +26,12 @@ namespace FriendshipWarriors.Controls
         public InputAction PanDrag => Find("PanDrag");
         public InputAction PanStick => Find("PanStick");
 
+        /// <summary>Opens or closes the full unit details (Status) for the unit under the cursor (X / Tab).</summary>
+        public InputAction Details => Find("Details");
+
+        /// <summary>While aiming a charged spell, switches between locking onto the unit and onto the tile (X / L).</summary>
+        public InputAction ToggleLock => Find("ToggleLock");
+
         /// <summary>Dev-only: rolls a new random map in test scenes (R / Select).</summary>
         public InputAction DebugRegenerate => Find("DebugRegenerate");
 

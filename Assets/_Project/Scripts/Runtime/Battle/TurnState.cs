@@ -14,6 +14,7 @@ namespace FriendshipWarriors.Battle
         private readonly bool _moveBlocked;
         private readonly bool _actBlocked;
         private bool _concluded;
+        private bool _doneActing;
 
         /// <param name="moveBlocked">A status forbids moving this turn (Immobilize, Sleep, Stop).</param>
         /// <param name="actBlocked">A status forbids acting this turn (Disable, Sleep, Stop, Panic).</param>
@@ -35,13 +36,19 @@ namespace FriendshipWarriors.Battle
         public int ActsTaken { get; private set; }
 
         public bool CanMove => !_concluded && !_moveBlocked && (!MoveSpent || (_canTradeActForMove && !ActSpent));
-        public bool CanAct => !_concluded && !_actBlocked && (!ActSpent || (_canTradeMoveForAct && !MoveSpent));
+        public bool CanAct => !_concluded && !_doneActing && !_actBlocked && (!ActSpent || (_canTradeMoveForAct && !MoveSpent));
 
         /// <summary>
         /// Ends what the unit can still do without spending it (CT is charged only for what was used). Starting a
         /// charged spell does this: the caster stands and concentrates until it resolves.
         /// </summary>
         public void Conclude() => _concluded = true;
+
+        /// <summary>
+        /// No more acting this turn, but an unused Move stays (starting a charged spell: the caster can still move, then
+        /// stands charging; a second act would cancel the spell, so trades can't offer one).
+        /// </summary>
+        public void StopActing() => _doneActing = true;
 
         /// <summary>The next Move would use up the Act.</summary>
         public bool NextMoveUsesAct => MoveSpent && CanMove;

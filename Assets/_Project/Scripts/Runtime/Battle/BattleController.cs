@@ -35,10 +35,11 @@ namespace FriendshipWarriors.Battle
     /// </summary>
     public sealed partial class BattleController : MonoBehaviour
     {
-        private enum Phase { Idle, Command, ActMenu, ChooseDestination, ChooseTarget, TimedPress, ChooseFacing, BattleOver, AiTurn, AbilityMenu, ChooseAbilityTarget, SpellResolving, Moving, PickupMenu }
+        private enum Phase { Idle, Command, ActMenu, ChooseDestination, ChooseTarget, TimedPress, ChooseFacing, BattleOver, AiTurn, AbilityMenu, ChooseAbilityTarget, SpellResolving, Moving, PickupMenu, ConfirmMove, StatusView }
         private enum PressRole { None, Offense, Defense }
 
         private const string MoveId = "move", ActId = "act", WaitId = "wait", AttackId = "attack", PrimaryId = "primary", SecondaryId = "secondary";
+        private const string StatusId = "status", MoveConfirmId = "move-confirm", MoveCancelId = "move-cancel";
 
         [SerializeField] private BattleInput _input;
         [SerializeField] private GridView _gridView;
@@ -69,6 +70,13 @@ namespace FriendshipWarriors.Battle
 
         private readonly MenuModel _commandMenu = new("Command");
         private readonly MenuModel _actMenu = new("Act");
+        private readonly MenuModel _moveMenu = new("Move here?");
+        // A move walked but not yet confirmed (Confirm / Cancel prompt).
+        private TentativeMove _tentativeMove;
+
+        // Spell aiming: lock onto the unit on the tile (the spell follows it) or onto the tile itself.
+        private SpellLock _spellLock;
+        private GridCoord? _spellLockTile;
         private readonly List<GridCoord> _path = new();
         private readonly HashSet<GridCoord> _targets = new();
         private List<UnitView> _views = new();
@@ -163,6 +171,8 @@ namespace FriendshipWarriors.Battle
             _hud.SetClock(_clock);
             _input.Confirm.performed += OnConfirm;
             _input.Cancel.performed += OnCancel;
+            _input.Details.performed += OnDetails;
+            _input.ToggleLock.performed += OnToggleLock;
             _cursor.Moved += OnCursorMoved;
             _cursor.Clicked += OnTileClicked;
             _hud.MenuItemClicked += OnMenuClicked;
@@ -172,6 +182,8 @@ namespace FriendshipWarriors.Battle
         {
             _input.Confirm.performed -= OnConfirm;
             _input.Cancel.performed -= OnCancel;
+            _input.Details.performed -= OnDetails;
+            _input.ToggleLock.performed -= OnToggleLock;
             _cursor.Moved -= OnCursorMoved;
             _cursor.Clicked -= OnTileClicked;
             _hud.MenuItemClicked -= OnMenuClicked;
@@ -193,6 +205,8 @@ namespace FriendshipWarriors.Battle
             _phase = Phase.Idle; // a previous battle may have ended in BattleOver
             _afterWalk = null;
             _walkFollow = null;
+            _tentativeMove = null;
+            _hud.SetDetailsExpanded(false);
             ResetDrops();
             foreach (var unit in Units)
             {
@@ -229,6 +243,7 @@ namespace FriendshipWarriors.Battle
                 case Phase.ActMenu:
                 case Phase.AbilityMenu:
                 case Phase.PickupMenu:
+                case Phase.ConfirmMove:
                     ReadMenuNavigation();
                     break;
                 case Phase.ChooseFacing:
@@ -331,14 +346,16 @@ namespace FriendshipWarriors.Battle
         private void OpenCommandMenu()
         {
             _phase = Phase.Command;
+            _hud.SetDetailsExpanded(false);
             _cursor.DirectionalInputLocked = true;
             _commandMenu.Title = _active.Unit.Name;
             string preferred = _commandMenu.Selected?.Id;
             _commandMenu.SetItems(new[]
             {
                 new MenuItem(MoveId, _turn.NextMoveUsesAct ? "Move (uses Act)" : "Move", _turn.CanMove),
-                new MenuItem(ActId, _turn.NextActUsesMove ? "Act (uses Move)" : "Act", _turn.CanAct),
+                new MenuItem(ActId, ActLabel(), _turn.CanAct),
                 new MenuItem(WaitId, "Wait"),
+                new MenuItem(StatusId, "Status"),
             }, preferred);
             _hud.ShowMenu(_commandMenu);
             _hud.SetHint("D-pad / W S: choose   A / Enter: select");
@@ -346,11 +363,35 @@ namespace FriendshipWarriors.Battle
             Refresh();
         }
 
+        /// <summary>"Act", "Act (uses Move)", or "Act (cancels Fire)" while the unit is charging a spell.</summary>
+        private string ActLabel()
+        {
+            var charge = _order.ChargeOf(_active.Unit);
+            if (charge != null && _turn.CanAct)
+                return $"Act (cancels {charge.Spell.DisplayName})";
+            return _turn.NextActUsesMove ? "Act (uses Move)" : "Act";
+        }
+
+        /// <summary>
+        /// Acting while charging cancels the spell (FFT, per the user): it's dropped before the new act resolves and its
+        /// MP stays spent. Moving and Wait keep it.
+        /// </summary>
+        private void CancelChargeToAct(Unit unit)
+        {
+            var charge = _order.ChargeOf(unit);
+            if (charge == null)
+                return;
+            _order.CancelCharge(unit);
+            _hud.ShowBanner($"{unit.Name} abandons {charge.Spell.DisplayName}.");
+            Debug.Log($"[Battle] {charge} cancelled: {unit.Name} acts instead.", this);
+        }
+
         private void OpenActMenu()
         {
             _phase = Phase.ActMenu;
             var unit = _active.Unit;
-            _actMenu.Title = "Act";
+            var charging = _order.ChargeOf(unit);
+            _actMenu.Title = charging != null ? $"Act - cancels {charging.Spell.DisplayName}" : "Act";
             var items = new List<MenuItem> { new(AttackId, "Attack"), CommandItem(PrimaryId, unit.Job) };
             if (unit.SecondaryJob != null)
                 items.Add(CommandItem(SecondaryId, unit.SecondaryJob));
@@ -373,6 +414,9 @@ namespace FriendshipWarriors.Battle
                 case MoveId: BeginDestination(); break;
                 case ActId: OpenActMenu(); break;
                 case WaitId: BeginFacing(); break;
+                case StatusId: OpenStatusView(); break;
+                case MoveConfirmId: ConfirmMove(); break;
+                case MoveCancelId: CancelMove(); break;
                 case AttackId: BeginTarget(); break;
                 case PrimaryId: OpenAbilityMenu(_active.Unit.Job); break;
                 case SecondaryId: OpenAbilityMenu(_active.Unit.SecondaryJob); break;
@@ -403,6 +447,7 @@ namespace FriendshipWarriors.Battle
         private void BeginAbilityTarget(AbilityDefinition ability)
         {
             _ability = ability;
+            _spellLockTile = null;
             _abilityTiles.Clear();
             _abilityTiles.UnionWith(AbilityRules.TargetTiles(_gridView.Grid, ability, _active.Unit));
             _phase = Phase.ChooseAbilityTarget;
@@ -428,7 +473,7 @@ namespace FriendshipWarriors.Battle
             {
                 // Spells aim at a tile, occupied or not; revives still need someone down on it.
                 if (_abilityTiles.Contains(coord) && (_ability.Targeting != AbilityTargeting.KnockedOut || AbilityTargetAt(coord) != null))
-                    CastSpell(_ability, coord);
+                    CastSpell(_ability, coord, LockFor(coord) == SpellLock.Unit ? UnitAt(coord)?.Unit : null);
                 return;
             }
             var target = AbilityTargetAt(coord);
@@ -437,6 +482,7 @@ namespace FriendshipWarriors.Battle
             var user = _active.Unit;
             if (target.Unit != user)
                 user.Facing = DirectionExtensions.Toward(user.Coord, coord);
+            CancelChargeToAct(user);
 
             bool wasDown = target.Unit.IsKnockedOut;
             _active.PlayAttack();
@@ -458,19 +504,21 @@ namespace FriendshipWarriors.Battle
         // ------------------------------------------------------------------ Magic
 
         /// <summary>
-        /// Casts a spell at a tile. Instant spells resolve now; charged ones start charging (the caster gains Charging,
-        /// its turn's options end without extra CT) and resolve later on the CT clock. MP is paid on casting.
+        /// Casts a spell at a tile, or at <paramref name="lockOn"/> so a charged spell follows that unit (FFT). Instant
+        /// spells resolve now; charged ones start charging (the caster gains Charging and can't act again this turn, but
+        /// may still use an unspent Move) and resolve later on the CT clock. MP is paid on casting.
         /// </summary>
-        private void CastSpell(AbilityDefinition spell, GridCoord tile)
+        private void CastSpell(AbilityDefinition spell, GridCoord tile, Unit lockOn = null)
         {
             var caster = _active.Unit;
             if (tile != caster.Coord)
                 caster.Facing = DirectionExtensions.Toward(caster.Coord, tile);
+            CancelChargeToAct(caster);
             _turn.RecordAct();
             _active.PlayCast();
             Cue?.Invoke(caster, BattleCue.CastStarted);
 
-            var result = SpellCasting.Begin(caster, spell, tile, _order, _gridView.Grid, Units.ToList(), _rng, out var charge);
+            var result = SpellCasting.Begin(caster, spell, tile, _order, _gridView.Grid, Units.ToList(), _rng, out var charge, lockOn);
             if (charge == null)
             {
                 string message = result.Message + SpellAftermath(result);
@@ -482,9 +530,11 @@ namespace FriendshipWarriors.Battle
                 return;
             }
 
-            _turn.Conclude();
+            // A second act would cancel the charge, so acting ends here; an unused Move stays (user decision, 2026-10-23).
+            _turn.StopActing();
             string ticks = charge.TicksLeft == 1 ? "1 tick" : $"{charge.TicksLeft} ticks";
-            _hud.ShowBanner($"{caster.Name} begins {spell.DisplayName} (resolves in {ticks}).");
+            string aim = charge.LockedUnit != null ? $"on {charge.LockedUnit.Name}" : $"at {charge.Target}";
+            _hud.ShowBanner($"{caster.Name} begins {spell.DisplayName} {aim} (resolves in {ticks}).");
             Debug.Log($"[Battle] {charge} begins charging ({ticks}).", this);
             AfterAction();
         }
@@ -559,6 +609,16 @@ namespace FriendshipWarriors.Battle
             return $"{_ability.DisplayName}: {string.Join(", ", parts)} ({timing})";
         }
 
+        /// <summary>"   Lock: Vance (X / L: lock the tile)" while aiming a charged spell at a unit.</summary>
+        private string LockHint(GridCoord tile)
+        {
+            if (!IsChargedSpell(_ability) || UnitAt(tile) is not { } view)
+                return "";
+            return LockFor(tile) == SpellLock.Unit
+                ? $"   Lock: {view.Unit.Name} (X / L: lock the tile)"
+                : $"   Lock: tile (X / L: follow {view.Unit.Name})";
+        }
+
         private string AbilityPreview(Unit target)
         {
             var user = _active.Unit;
@@ -598,12 +658,113 @@ namespace FriendshipWarriors.Battle
             _range.TryGetPath(coord, _path);
             var lastFrom = _path.Count > 1 ? _path[^2] : unit.Coord;
             var walk = WalkPath.ForRoute(_gridView.Grid, unit.Coord, _path, _walkSettings);
-            unit.Coord = coord;
-            unit.Facing = DirectionExtensions.Toward(lastFrom, coord);
-            _turn.RecordMove();
+            // Walked but not spent: the player confirms or takes it back once the walk ends.
+            _tentativeMove = new TentativeMove(unit, _turn, coord, DirectionExtensions.Toward(lastFrom, coord));
             _active.Walk(walk);
-            // Ending the move on a rod or chest takes it (FFT); then the turn carries on.
-            WaitForWalks(() => TakeDropsAfterMove(AfterAction), follow: _active);
+            WaitForWalks(OpenMoveConfirm, follow: _active);
+        }
+
+        private void OpenMoveConfirm()
+        {
+            _phase = Phase.ConfirmMove;
+            _cursor.DirectionalInputLocked = true;
+            _moveMenu.Title = "Move here?";
+            _moveMenu.SetItems(new[] { new MenuItem(MoveConfirmId, "Confirm"), new MenuItem(MoveCancelId, "Cancel") });
+            _hud.ShowMenu(_moveMenu);
+            _hud.SetHint("A / Enter: confirm the move   B / Esc: cancel (back to where it started)");
+            Refresh();
+        }
+
+        /// <summary>The move counts; ending it on a rod or chest takes it (FFT), then the turn carries on.</summary>
+        private void ConfirmMove()
+        {
+            var move = _tentativeMove;
+            _tentativeMove = null;
+            if (move == null)
+                return;
+            move.Confirm();
+            Debug.Log($"[Battle] {move.Unit.Name} moves {move.Origin} -> {move.Destination}.", this);
+            TakeDropsAfterMove(AfterAction);
+        }
+
+        /// <summary>Takes the move back: the unit stands where it started, facing as before, with its Move unspent.</summary>
+        private void CancelMove()
+        {
+            var move = _tentativeMove;
+            _tentativeMove = null;
+            if (move == null)
+                return;
+            move.Cancel();
+            _active.SyncPosition();
+            OpenCommandMenu();
+        }
+
+        // ------------------------------------------------------------------ Status (full unit details)
+
+        /// <summary>FFT's Status: the full details of the unit under the cursor, which can roam the field meanwhile.</summary>
+        private void OpenStatusView()
+        {
+            _phase = Phase.StatusView;
+            _hud.HideMenu();
+            _hud.SetDetailsExpanded(true);
+            _cursor.DirectionalInputLocked = false;
+            _hud.SetHint("Status: move the cursor to look at any unit   A / B / X / Tab: back");
+            Refresh();
+        }
+
+        private void CloseStatusView()
+        {
+            _hud.SetDetailsExpanded(false);
+            OpenCommandMenu();
+        }
+
+        /// <summary>
+        /// X / Tab: from the command menu or Status, open or close Status; anywhere else in a battle it just expands or
+        /// collapses the unit panel. While aiming a charged spell the gamepad's X switches the spell lock instead.
+        /// </summary>
+        private void OnDetails(InputAction.CallbackContext context)
+        {
+            if (_order == null || _phase is Phase.Idle or Phase.BattleOver or Phase.PickupMenu or Phase.TimedPress)
+                return;
+            if (_phase == Phase.ChooseAbilityTarget && IsChargedSpell(_ability) && context.control?.device is Gamepad)
+                return;
+            Cue?.Invoke(null, BattleCue.MenuConfirm);
+            switch (_phase)
+            {
+                case Phase.Command: OpenStatusView(); break;
+                case Phase.StatusView: CloseStatusView(); break;
+                default:
+                    _hud.SetDetailsExpanded(!_hud.DetailsExpanded);
+                    Refresh();
+                    break;
+            }
+        }
+
+        // ------------------------------------------------------------------ Spell lock
+
+        private static bool IsChargedSpell(AbilityDefinition ability) => ability != null && ability.IsSpell && ability.ChargeSpeed > 0;
+
+        /// <summary>The lock for a charged spell aimed at <paramref name="tile"/>: Unit by default when someone stands there.</summary>
+        private SpellLock LockFor(GridCoord tile)
+        {
+            if (!IsChargedSpell(_ability) || UnitAt(tile) == null)
+                return SpellLock.Tile;
+            if (_spellLockTile != tile)
+            {
+                _spellLockTile = tile;
+                _spellLock = SpellLock.Unit;
+            }
+            return _spellLock;
+        }
+
+        /// <summary>X / L while aiming a charged spell at a unit: follow the unit, or stay on the tile.</summary>
+        private void OnToggleLock(InputAction.CallbackContext _)
+        {
+            if (_phase != Phase.ChooseAbilityTarget || !IsChargedSpell(_ability) || UnitAt(_cursor.Coord) == null)
+                return;
+            _spellLock = LockFor(_cursor.Coord) == SpellLock.Unit ? SpellLock.Tile : SpellLock.Unit;
+            Cue?.Invoke(null, BattleCue.MenuMove);
+            Refresh();
         }
 
         /// <summary>Targets within the equipped weapon's range and vertical reach.</summary>
@@ -631,6 +792,7 @@ namespace FriendshipWarriors.Battle
             var unit = _active.Unit;
             unit.Facing = DirectionExtensions.Toward(unit.Coord, coord);
             _target = target;
+            CancelChargeToAct(unit);
 
             // A human times a strike when attacking, or a block when the other side attacks one of theirs.
             _pressRole = PressRoleFor(unit, target.Unit);
@@ -927,7 +1089,7 @@ namespace FriendshipWarriors.Battle
         private void OnConfirm(InputAction.CallbackContext _)
         {
             if (_phase is Phase.Command or Phase.ActMenu or Phase.AbilityMenu or Phase.PickupMenu or Phase.ChooseAbilityTarget
-                or Phase.ChooseDestination or Phase.ChooseTarget or Phase.ChooseFacing)
+                or Phase.ChooseDestination or Phase.ChooseTarget or Phase.ChooseFacing or Phase.ConfirmMove or Phase.StatusView)
                 Cue?.Invoke(null, BattleCue.MenuConfirm);
             switch (_phase)
             {
@@ -935,6 +1097,8 @@ namespace FriendshipWarriors.Battle
                 case Phase.ActMenu when _actMenu.Selected is { Enabled: true } item: Activate(item.Id); break;
                 case Phase.AbilityMenu when _abilityMenu.Selected is { Enabled: true } item: Activate(item.Id); break;
                 case Phase.PickupMenu when _pickupMenu.Selected is { Enabled: true } item: Activate(item.Id); break;
+                case Phase.ConfirmMove when _moveMenu.Selected is { Enabled: true } item: Activate(item.Id); break;
+                case Phase.StatusView: CloseStatusView(); break;
                 case Phase.ChooseAbilityTarget: TryAbilityTarget(_cursor.Coord); break;
                 case Phase.ChooseDestination: TryMoveTo(_cursor.Coord); break;
                 case Phase.ChooseTarget: TryTarget(_cursor.Coord); break;
@@ -949,10 +1113,16 @@ namespace FriendshipWarriors.Battle
         private void OnCancel(InputAction.CallbackContext _)
         {
             if (_phase is Phase.ActMenu or Phase.ChooseDestination or Phase.ChooseTarget or Phase.AbilityMenu
-                    or Phase.ChooseAbilityTarget || (_phase == Phase.ChooseFacing && !_turn.IsFinished))
+                    or Phase.ChooseAbilityTarget or Phase.ConfirmMove or Phase.StatusView || (_phase == Phase.ChooseFacing && !_turn.IsFinished))
                 Cue?.Invoke(null, BattleCue.MenuCancel);
             switch (_phase)
             {
+                case Phase.ConfirmMove:
+                    CancelMove();
+                    break;
+                case Phase.StatusView:
+                    CloseStatusView();
+                    break;
                 case Phase.ActMenu:
                 case Phase.ChooseDestination:
                     OpenCommandMenu();
@@ -1000,6 +1170,7 @@ namespace FriendshipWarriors.Battle
             Phase.ActMenu => _actMenu,
             Phase.AbilityMenu => _abilityMenu,
             Phase.PickupMenu => _pickupMenu,
+            Phase.ConfirmMove => _moveMenu,
             _ => null,
         };
 
@@ -1102,7 +1273,7 @@ namespace FriendshipWarriors.Battle
                     {
                         foreach (var coord in SpellArea.Tiles(_gridView.Grid, _cursor.Coord, _ability.AreaRadius, _ability.AreaVertical))
                             _gridView.SetHighlight(coord, _ability.IsSupportAction ? TileHighlight.Path : TileHighlight.EnemyDeployment);
-                        _hud.SetHint($"{SpellPreview(_cursor.Coord)}   A / click: cast   B / Esc: back");
+                        _hud.SetHint($"{SpellPreview(_cursor.Coord)}{LockHint(_cursor.Coord)}   A / click: cast   B / Esc: back");
                     }
                     else
                     {
@@ -1124,6 +1295,9 @@ namespace FriendshipWarriors.Battle
                 case Phase.ChooseFacing:
                     _gridView.SetHighlight(_active.Unit.Coord + _active.Unit.Facing.ToStep(), TileHighlight.Path);
                     break;
+                case Phase.ConfirmMove when _tentativeMove != null:
+                    _gridView.SetHighlight(_tentativeMove.Origin, TileHighlight.Path);
+                    break;
                 case Phase.AiTurn:
                     RefreshAiHighlights();
                     break;
@@ -1131,7 +1305,7 @@ namespace FriendshipWarriors.Battle
 
             if (_active != null && _phase != Phase.Moving)
                 _gridView.SetHighlight(_active.Unit.Coord, TileHighlight.Selected);
-            if (_phase is Phase.ChooseDestination or Phase.ChooseTarget or Phase.ChooseAbilityTarget)
+            if (_phase is Phase.ChooseDestination or Phase.ChooseTarget or Phase.ChooseAbilityTarget or Phase.StatusView)
                 _gridView.SetHighlight(_cursor.Coord, TileHighlight.Hover);
 
             var hovered = UnitAt(_cursor.Coord);
