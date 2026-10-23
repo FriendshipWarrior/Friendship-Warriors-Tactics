@@ -49,6 +49,8 @@ namespace FriendshipWarriors.Editor.Maps
             Setups.BattleSetupBuilder.CreateSetups();
             // Placeholder art from the CC0 Tiny Tactics pack: unit sheets per job, sprite props, terrain colours.
             Art.TinyTacticsArtBuilder.Build();
+            // Pixel-art terrain and props from Green Wilderness (CC BY 4.0) over those colours.
+            Art.PixelTerrainBuilder.Build();
             // The pixel UI skin (Tiny RPG GUI and font packs) the HUD is drawn with.
             UI.PixelUiBuilder.Build();
             AssetDatabase.SaveAssets();
@@ -81,6 +83,8 @@ namespace FriendshipWarriors.Editor.Maps
             camera.orthographicSize = 6f;
             camera.nearClipPlane = 0.1f;
             camera.farClipPlane = 200f;
+            // Low-resolution pixel look, on by default (untick Pixelated on the camera for full resolution).
+            camera.gameObject.AddComponent<PixelRendering>();
             var rig = new GameObject("Camera Rig").AddComponent<IsoCameraRig>();
             camera.transform.SetParent(rig.transform, false);
             Set(rig, "_input", input);

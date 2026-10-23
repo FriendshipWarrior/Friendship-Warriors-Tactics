@@ -24,16 +24,18 @@ MonoBehaviour:
   _pondCount: {x: 0, y: 2}
   _chasmCount: {x: 0, y: 1}
   _props:
-  - _prop: {fileID: 11400000, guid: 78be583f6964042878835e233b80ccf7, type: 2}
+  - _prop: {fileID: 11400000, guid: 137c309e1ce144636bdda97542e65321, type: 2}
     _weight: 2
-  - _prop: {fileID: 11400000, guid: 1898d440d552440f69d6220129a3f632, type: 2}
+  - _prop: {fileID: 11400000, guid: 7463f86b181ac4a5f9519795da320924, type: 2}
     _weight: 1
-  - _prop: {fileID: 11400000, guid: 5417549d77d1e4a3f9cc849790e42f4a, type: 2}
+  - _prop: {fileID: 11400000, guid: d3e9607e9e37a4b24a18ab9593c26419, type: 2}
     _weight: 1.5
-  - _prop: {fileID: 11400000, guid: f32d0554dcf8f469499c5fda947ad108, type: 2}
-    _weight: 0.6
-  - _prop: {fileID: 11400000, guid: be36a532b602a44ae89d653068ef7b21, type: 2}
-    _weight: 0.5
+  - _prop: {fileID: 11400000, guid: 768f003591c8a41bdaf159d7f8f65d2d, type: 2}
+    _weight: 1
+  - _prop: {fileID: 11400000, guid: 765360be081a740709003f2df95d765a, type: 2}
+    _weight: 0.4
+  - _prop: {fileID: 11400000, guid: dbaebbc5d88ce49d69d0d9c8a79a0a42, type: 2}
+    _weight: 0.8
   _propDensity: 0.06
   _deploymentSize: 5
   _extraDeploymentTiles: 3

@@ -39,6 +39,8 @@ FFT is the reference for mechanics and presentation. Characters, story and job n
 - FFT movement: Move and Jump, leaping gaps of Jump ÷ 2 tiles, and leaping over enemies standing at least 2h lower. Enemies block, allies can be passed.
 - Units walk their route tile by tile, as in FFT: they follow slopes, hop up and down ledges, arc over gaps, and turn with each step. A ground shadow stays on the surface below them as they arc. Knockback pushes them. Hold A / Enter to hurry a walk.
 - The whole map is drawn as one mesh with real slopes, which keeps it cheap enough for the Steam Deck.
+- **Pixel-art terrain** from [Tiny RPG – Green Wilderness](#credits) by the Tiny Tactics artist: grass, dirt and water tiles on the tops, cliff faces down the sides (lined up across columns of any height), a grass or dirt edge hanging over each cliff top, and a few variants per terrain so fields don't repeat. Stone and sand, which the pack lacks, are drawn in its palette. Pines, oaks, shrubs, mossy rocks, mushrooms and wildflowers from the same pack decorate the maps.
+- A **pixel look**, on by default: the battlefield and units render at low resolution and scale up crisply by a whole number (640×400 × 2 on Steam Deck), so everything shares one pixel grid while the menus stay sharp. It costs no more than full resolution. Untick *Pixelated* on a camera's *Pixel Rendering* for the full-resolution look.
 - An isometric camera that rotates in 90° steps, switches between FFT's low and high tilt, zooms and pans.
 
 **Units and jobs**
@@ -62,7 +64,7 @@ FFT is the reference for mechanics and presentation. Characters, story and job n
 - Enemy AI that weighs damage, knock-outs and attack angle, retreats after attacking, faces your nearest unit, and casts spells: area damage away from its own side, heals for hurt allies.
 
 **Unit sprites**
-- **Placeholder art from [Tiny Tactics – Battle Kit I](#credits)** (CC0): every job is drawn with one of the pack's three characters (fighter: Cadet, Vanguard, Marksman; cleric: Corpsman, Warder; mage: Evoker). Each job gets its own outfit colour and each team its colour (Player blue, Enemy red); fighters also get a hair colour picked from their name. Idle, walk, attack (with a sword, knife, rod or staff swing over it), charging, casting, hurt, a kneeling pose at critical HP (a fifth of max HP or less, as in FFT) and knocked-out animations. Trees, bushes, rocks, stumps and logs come from the same pack, and the terrain uses its colours.
+- **Placeholder art from [Tiny Tactics – Battle Kit I](#credits)** (CC0): every job is drawn with one of the pack's three characters (fighter: Cadet, Vanguard, Marksman; cleric: Corpsman, Warder; mage: Evoker). Each job gets its own outfit colour and each team its colour (Player blue, Enemy red); fighters also get a hair colour picked from their name. Idle, walk, attack (with a sword, knife, rod or staff swing over it), charging, casting, hurt, a kneeling pose at critical HP (a fifth of max HP or less, as in FFT) and knocked-out animations. Trees, bushes, rocks, stumps and logs from the same pack are available as props in the map editor.
 - Jobs pick their art in data: an animated **unit sheet** on the job replaces the paper doll, and clearing it brings the paper doll back.
 - **Paper-doll sprites** (the fallback, and the base for hand-drawn art): each unit is put together from part sheets (body, head, face, hair, headgear, body gear, weapon, shield) and recoloured with its job colour, its team colour and a skin tone, hair colour and hairstyle picked from its name. Gear changes show on the sprite. The code-drawn parts follow FFT's chibi look: big heads, shading lit from the upper left and coloured outlines.
 - Paper dolls have idle, walk, attack, cast (while charging a spell), hurt and knocked-out animations, in front and back poses.
@@ -96,6 +98,8 @@ FFT is the reference for mechanics and presentation. Characters, story and job n
 | **Timed press:** press as the marker crosses the gold zone. | **Units:** Tiny Tactics sprites that face the camera. An Evoker charges a spell (CHG), a Warder kneels at critical HP, a Vanguard swings, and a knocked-out Corpsman shows its death counter (3). |
 | ![A randomly generated map](docs/images/random-map.png) | ![The map editor](docs/images/map-editor.png) |
 | **Random maps:** hills, plateaus, ponds, chasms and ramps from a seed. | **Map editor:** paint on a grid, preview in 3D, fix the reported problems. |
+| ![The Hillside test map with Green Wilderness terrain and props](docs/images/pixel-terrain.png) | ![The map editor's 3D preview of the same map](docs/images/pixel-terrain-preview.png) |
+| **Pixel-art terrain:** grass, dirt, water and cliffs from Green Wilderness; stone and sand drawn in its palette. | **Overview:** the whole test map, with pines, mossy rocks, mushrooms and wildflowers. |
 | ![A Cadet leaping a chasm mid-walk](docs/images/walk-leap.png) | |
 | **Walking:** units walk their route tile by tile. Here a Cadet leaps a chasm, seen from the high tilt. | |
 | ![The formation menu before a battle, enemies already in place](docs/images/formation-menu.png) | ![Arranging units on the blue deployment tiles](docs/images/formation.png) |
@@ -159,6 +163,7 @@ All of these are under the **Friendship Warriors** menu in the Unity Editor.
 | **Art → Generate Paper-Doll Parts** | Draws any missing paper-doll part PNGs and the key palette, and updates the part catalog. Existing PNGs are left alone. **Regenerate (Overwrite)…** replaces them after asking. |
 | **Art → Save Paper-Doll Preview…** | Saves a contact sheet of every job on both teams, to check the parts read clearly. |
 | **Art → Build Tiny Tactics Placeholders** | Builds the unit sheets and weapon swings from the Tiny Tactics pack, points every job at one, gives the props their sprites and sets the terrain colours. Safe to re-run. |
+| **Art → Build Pixel Terrain** | Builds the terrain atlas from the Green Wilderness tileset (plus stone and sand drawn in its palette), points the terrain palette at it, and makes the Green Wilderness props, which random maps then use. Safe to re-run. |
 
 ## How the game works
 
@@ -226,11 +231,11 @@ Assets/
       Menus/           Main menu
       QuickPlay/       Random teams and quick-play matches
       Controls/        Input, tile cursor
-      Camera/          Isometric camera
+      Camera/          Isometric camera, optional pixel look
       UI/              Battle HUD and menus (uGUI + TextMeshPro, built in code)
     Scripts/Editor/    Map editor, scene and data builders, paper-doll part generator
     Data/              Maps, jobs, abilities, equipment, battle setups, props, palettes, generator settings
-    Art/               Paper-doll part PNGs, key palette, art guide (Sprites/README.md), shaders, ThirdParty/TinyTactics (CC0 placeholder art)
+    Art/               Paper-doll part PNGs, key palette, art guide (Sprites/README.md), shaders, ThirdParty/TinyTactics (CC0 placeholder art), ThirdParty/TinyRPG_GreenWilderness (CC BY 4.0 terrain), Terrain/TerrainAtlas.png (built from it)
     Resources/         Sprite part catalog, sound cue set, hit-flash material (loaded at runtime)
     Input/             Input actions (gamepad + keyboard/mouse)
     Scenes/            MainMenu, QuickPlay, Battle_Test (dev sandbox)
@@ -243,7 +248,7 @@ CLAUDE.md              Design decisions, conventions and project notes
 
 - **Rules are plain C#, separate from presentation**, so they're deterministic and tested in EditMode tests. Run them from the Unity Test Runner (Window → General → Test Runner).
 - **Content is data:** jobs, abilities, equipment, maps and terrain looks are ScriptableObject assets. To use real art, set it on the asset; no code changes needed.
-- **Placeholder art throughout:** the CC0 Tiny Tactics pack for units, props and terrain colours, with code-drawn paper dolls as the fallback and the starting point for hand editing.
+- **Placeholder art throughout:** tiopalada's Tiny Tactics pack for units (CC0) and Tiny RPG – Green Wilderness for terrain and props (CC BY 4.0), with code-drawn paper dolls as the fallback and the starting point for hand editing.
 - **Workflow:** feature branches and pull requests into `main`, with commit messages in Conventional Commits style.
 - **Design record:** [`CLAUDE.md`](CLAUDE.md) records every design decision. It notes which FFT rules are confirmed, which are approximations, and where we deliberately differ.
 
@@ -266,6 +271,8 @@ CLAUDE.md              Design decisions, conventions and project notes
 - [x] Battle feedback: floating numbers, hit flashes, knock-out countdown, sound hooks (placeholder blips)
 - [x] Drops (FFT): lost units leave a steel rod (learn abilities or restore) or a treasure chest (gear, kept as spoils)
 - [x] Placeholder art from the CC0 Tiny Tactics pack: animated unit sheets with job and team colours, weapon swings, sprite props, terrain colours
+- [x] Pixel-art terrain and props from Tiny RPG – Green Wilderness, and a low-resolution pixel look (on by default)
+- [ ] More of the Green Wilderness pack: smooth borders between ground types (its edge tiles), tall grass, bridges, fallen logs, the sign, caves
 - [ ] Hand-drawn character art and terrain art, real sound effects and music
 - [ ] Battle prep, party management, campaign and story. Losing a campaign battle won't be game over: the campaign carries on, unlike FFT.
 - [ ] Quick Play options: online matches, army building
@@ -276,7 +283,8 @@ CLAUDE.md              Design decisions, conventions and project notes
 
 ## Credits
 
-- **[Tiny Tactics – Battle Kit I](https://tiopalada.itch.io/tiny-tactics---battle-kit-i)** by Gabriel "tiopalada" Lima, released under [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/): placeholder unit sprites, weapon swings, props and terrain colours. CC0 asks for no credit; we give it anyway. Files and notes in [`Assets/_Project/Art/ThirdParty/TinyTactics`](Assets/_Project/Art/ThirdParty/TinyTactics/README.md).
+- **[Tiny Tactics – Battle Kit I](https://tiopalada.itch.io/tiny-tactics---battle-kit-i)** by Gabriel "tiopalada" Lima, released under [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/): placeholder unit sprites, weapon swings and props. CC0 asks for no credit; we give it anyway. Files and notes in [`Assets/_Project/Art/ThirdParty/TinyTactics`](Assets/_Project/Art/ThirdParty/TinyTactics/README.md).
+- **[Tiny RPG – Green Wilderness](https://tiopalada.itch.io/tiny-rpg-green-wilderness)** by Gabriel "tiopalada" Lima, licensed under [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/): terrain tiles (grass, dirt, water, cliffs) and props (trees, shrubs, rocks, mushrooms, flowers). Tiles are cut out and laid on our 3D battlefield by code; the stone and sand tiles are our own, drawn in the pack's palette. Files and notes in [`Assets/_Project/Art/ThirdParty/TinyRPG_GreenWilderness`](Assets/_Project/Art/ThirdParty/TinyRPG_GreenWilderness/README.md).
 
 ---
 

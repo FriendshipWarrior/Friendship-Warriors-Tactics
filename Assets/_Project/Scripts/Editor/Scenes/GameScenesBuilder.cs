@@ -86,6 +86,8 @@ namespace FriendshipWarriors.Editor.Scenes
             camera.backgroundColor = new Color(0.06f, 0.07f, 0.09f);
             camera.nearClipPlane = 0.1f;
             camera.farClipPlane = 200f;
+            // The title backdrop gets the same pixel look as battles.
+            camera.gameObject.AddComponent<PixelRendering>();
             TiltLight();
 
             var grid = CreateGridView("Backdrop Battlefield");
@@ -116,6 +118,8 @@ namespace FriendshipWarriors.Editor.Scenes
             camera.orthographicSize = 6f;
             camera.nearClipPlane = 0.1f;
             camera.farClipPlane = 200f;
+            // Low-resolution pixel look, on by default (untick Pixelated on the camera for full resolution).
+            camera.gameObject.AddComponent<PixelRendering>();
             var rig = new GameObject("Camera Rig").AddComponent<IsoCameraRig>();
             camera.transform.SetParent(rig.transform, false);
             Set(rig, "_input", input);

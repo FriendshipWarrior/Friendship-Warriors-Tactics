@@ -5,8 +5,9 @@ using UnityEngine;
 namespace FriendshipWarriors.Grid.View
 {
     /// <summary>
-    /// Presents a <see cref="BattleMapData"/>: one combined battlefield mesh, placeholder props, and translucent
-    /// overlays for highlighted tiles. Holds no rules; the <see cref="Grid"/> it exposes is the source of truth.
+    /// Presents a <see cref="BattleMapData"/>: one combined battlefield mesh (pixel-art tiles from the palette's
+    /// <see cref="TerrainAtlas"/>, or flat colours), props, and translucent overlays for highlighted tiles (their own
+    /// renderers, drawn over the terrain). Holds no rules; the <see cref="Grid"/> it exposes is the source of truth.
     /// Builds itself in Play mode; editor tools (the map editor preview) call <see cref="Configure"/> and
     /// <see cref="Build"/> directly and <see cref="Release"/> when done.
     /// </summary>
@@ -14,6 +15,8 @@ namespace FriendshipWarriors.Grid.View
     {
         private static readonly int BaseColorId = Shader.PropertyToID("_BaseColor");
         private static readonly int BaseMapId = Shader.PropertyToID("_BaseMap");
+        private static readonly int AlphaClipId = Shader.PropertyToID("_AlphaClip");
+        private static readonly int CutoffId = Shader.PropertyToID("_Cutoff");
 
         [SerializeField] private BattleMapData _map;
         [SerializeField] private TerrainPalette _palette;
@@ -147,18 +150,31 @@ namespace FriendshipWarriors.Grid.View
             var meshRenderer = GetOrAdd<MeshRenderer>();
             _collider = GetOrAdd<MeshCollider>();
 
-            _terrainMesh = BattlefieldMeshBuilder.Build(Grid, _baseDepth);
+            var atlas = _palette.Atlas != null && _palette.Atlas.Texture != null ? _palette.Atlas : null;
+            _terrainMesh = BattlefieldMeshBuilder.Build(Grid, _baseDepth, atlas);
             _terrainMesh.hideFlags = HideFlags.DontSave;
             meshFilter.sharedMesh = _terrainMesh;
             _collider.sharedMesh = _terrainMesh;
 
             var materials = new Material[BattlefieldMeshBuilder.SubmeshCount];
+            Material atlasMaterial = null;
             for (int t = 0; t < BattlefieldMeshBuilder.TerrainCount; t++)
             {
                 var look = _palette.Get((TerrainType)t);
+                if (atlas != null && atlas.TryGet(look.Terrain, out var tiles))
+                {
+                    // Covered terrain shares one atlas material; sides without atlas cells keep their colour.
+                    atlasMaterial ??= CreateMaterial("Terrain Atlas", Color.white, atlas.Texture);
+                    materials[BattlefieldMeshBuilder.TopSubmesh((TerrainType)t)] = atlasMaterial;
+                    materials[BattlefieldMeshBuilder.SideSubmesh((TerrainType)t)] = tiles.Sides.Length > 0
+                        ? atlasMaterial
+                        : CreateMaterial($"{look.Terrain} Side", look.SideColor, look.SideTexture);
+                    continue;
+                }
                 materials[BattlefieldMeshBuilder.TopSubmesh((TerrainType)t)] = CreateMaterial($"{look.Terrain} Top", look.TopColor, look.TopTexture ? look.TopTexture : PlaceholderTopTexture());
                 materials[BattlefieldMeshBuilder.SideSubmesh((TerrainType)t)] = CreateMaterial($"{look.Terrain} Side", look.SideColor, look.SideTexture);
             }
+            materials[BattlefieldMeshBuilder.LipSubmesh] = atlas != null ? CreateCutoutMaterial("Terrain Lips", atlas.Texture) : atlasMaterial ?? materials[0];
             meshRenderer.sharedMaterials = materials;
         }
 
@@ -234,6 +250,17 @@ namespace FriendshipWarriors.Grid.View
             if (texture != null)
                 material.SetTexture(BaseMapId, texture);
             _ownedMaterials.Add(material);
+            return material;
+        }
+
+        /// <summary>The terrain material with alpha clipping, for lips that hang over the top of walls.</summary>
+        private Material CreateCutoutMaterial(string materialName, Texture texture)
+        {
+            var material = CreateMaterial(materialName, Color.white, texture);
+            material.SetFloat(AlphaClipId, 1f);
+            material.SetFloat(CutoffId, 0.5f);
+            material.EnableKeyword("_ALPHATEST_ON");
+            material.renderQueue = (int)UnityEngine.Rendering.RenderQueue.AlphaTest;
             return material;
         }
 
