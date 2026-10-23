@@ -40,7 +40,7 @@ FFT is the reference for mechanics and presentation. Characters, story and job n
 - Units walk their route tile by tile, as in FFT: they follow slopes, hop up and down ledges, arc over gaps, and turn with each step. A ground shadow stays on the surface below them as they arc. Knockback pushes them. Hold A / Enter to hurry a walk.
 - The whole map is drawn as one mesh with real slopes, which keeps it cheap enough for the Steam Deck.
 - **Pixel-art terrain** from [Tiny RPG – Green Wilderness](#credits) by the Tiny Tactics artist: grass, dirt and water tiles on the tops, cliff faces down the sides (lined up across columns of any height), a grass or dirt edge hanging over each cliff top, and a few variants per terrain so fields don't repeat. Stone and sand, which the pack lacks, are drawn in its palette. Pines, oaks, shrubs, mossy rocks, mushrooms and wildflowers from the same pack decorate the maps.
-- An optional **pixel look** (off by default): the battlefield and units render at low resolution and scale up crisply, so everything shares one pixel grid while the menus stay sharp. Turn on *Pixelated* on the battle camera's *Pixel Rendering* to try it.
+- A **pixel look**, on by default: the battlefield and units render at low resolution and scale up crisply by a whole number (640×400 × 2 on Steam Deck), so everything shares one pixel grid while the menus stay sharp. It costs no more than full resolution. Untick *Pixelated* on a camera's *Pixel Rendering* for the full-resolution look.
 - An isometric camera that rotates in 90° steps, switches between FFT's low and high tilt, zooms and pans.
 
 **Units and jobs**
@@ -271,8 +271,8 @@ CLAUDE.md              Design decisions, conventions and project notes
 - [x] Battle feedback: floating numbers, hit flashes, knock-out countdown, sound hooks (placeholder blips)
 - [x] Drops (FFT): lost units leave a steel rod (learn abilities or restore) or a treasure chest (gear, kept as spoils)
 - [x] Placeholder art from the CC0 Tiny Tactics pack: animated unit sheets with job and team colours, weapon swings, sprite props, terrain colours
-- [x] Pixel-art terrain and props from Tiny RPG – Green Wilderness, and an optional low-resolution pixel look
-- [ ] Smooth borders between terrain types (the pack's edge tiles), tall grass, bridges
+- [x] Pixel-art terrain and props from Tiny RPG – Green Wilderness, and a low-resolution pixel look (on by default)
+- [ ] More of the Green Wilderness pack: smooth borders between ground types (its edge tiles), tall grass, bridges, fallen logs, the sign, caves
 - [ ] Hand-drawn character art and terrain art, real sound effects and music
 - [ ] Battle prep, party management, campaign and story. Losing a campaign battle won't be game over: the campaign carries on, unlike FFT.
 - [ ] Quick Play options: online matches, army building

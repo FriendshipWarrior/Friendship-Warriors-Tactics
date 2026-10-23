@@ -16,13 +16,14 @@ namespace FriendshipWarriors.Cameras
     /// on the pipeline asset: they're changed only in Play mode and put back when this is disabled. URP only upscales
     /// with point sampling inside its post-processing pass, so post-processing is switched on for this camera while
     /// pixelated, with a neutral volume on top so the pipeline's default effects (the URP template's bloom, vignette,
-    /// tonemapping and motion blur) don't change the colours: pixel mode should differ only in resolution. Off by default.
+    /// tonemapping and motion blur) don't change the colours: pixel mode should differ only in resolution. On by default
+    /// (user decision); untick Pixelated for the full-resolution look.
     /// </summary>
     [DisallowMultipleComponent, RequireComponent(typeof(Camera))]
     public sealed class PixelRendering : MonoBehaviour
     {
         [Tooltip("Render the world at low resolution and scale it up crisply (pixel-art look). Changes how units look too.")]
-        [SerializeField] private bool _pixelated;
+        [SerializeField] private bool _pixelated = true;
 
         [Tooltip("Target height in pixels of the low-resolution image; the screen height is divided by a whole number to get near it (800 → 400 on Steam Deck, 1080 → 360).")]
         [SerializeField, Min(120)] private int _referenceHeight = 360;

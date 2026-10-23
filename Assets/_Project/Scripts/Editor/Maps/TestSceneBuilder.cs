@@ -81,7 +81,7 @@ namespace FriendshipWarriors.Editor.Maps
             camera.orthographicSize = 6f;
             camera.nearClipPlane = 0.1f;
             camera.farClipPlane = 200f;
-            // Optional low-resolution pixel look; off by default (toggle Pixelated on the camera).
+            // Low-resolution pixel look, on by default (untick Pixelated on the camera for full resolution).
             camera.gameObject.AddComponent<PixelRendering>();
             var rig = new GameObject("Camera Rig").AddComponent<IsoCameraRig>();
             camera.transform.SetParent(rig.transform, false);
