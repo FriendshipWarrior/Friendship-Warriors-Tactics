@@ -687,7 +687,7 @@ namespace FriendshipWarriors.Battle
             _hud.ShowBanner(outcome.Kind == BattleOutcomeKind.Victory ? $"Victory! {outcome.Reason}" : $"Defeat... {outcome.Reason}", seconds: 0f);
             Debug.Log($"[Battle] {outcome}.", this);
             _hud.SetHint("R / Select: new map");
-            BattleEnded?.Invoke(playersStanding);
+            BattleEnded?.Invoke(outcome.Kind == BattleOutcomeKind.Victory);
             return true;
         }
 

@@ -119,7 +119,7 @@ NavMeshSettings:
     debug:
       m_Flags: 0
   m_NavMeshData: {fileID: 0}
---- !u!1 &197368398
+--- !u!1 &40855809
 GameObject:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -127,8 +127,159 @@ GameObject:
   m_PrefabAsset: {fileID: 0}
   serializedVersion: 6
   m_Component:
-  - component: {fileID: 197368400}
-  - component: {fileID: 197368399}
+  - component: {fileID: 40855811}
+  - component: {fileID: 40855810}
+  m_Layer: 0
+  m_Name: Tile Cursor
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &40855810
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 40855809}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 09970eec0d5774b3693083ef0d317b8d, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: FriendshipWarriors.Runtime::FriendshipWarriors.Controls.TileCursor
+  _input: {fileID: 383033353}
+  _gridView: {fileID: 203827776}
+  _cameraRig: {fileID: 1826860034}
+  _camera: {fileID: 1811454407}
+  _deadZone: 0.5
+  _repeatDelay: 0.3
+  _repeatInterval: 0.1
+--- !u!4 &40855811
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 40855809}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1 &203827775
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 203827777}
+  - component: {fileID: 203827776}
+  m_Layer: 0
+  m_Name: Battlefield
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &203827776
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 203827775}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 4c4be3b46eb094673ab57a5a1bd348cf, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: FriendshipWarriors.Runtime::FriendshipWarriors.Grid.View.GridView
+  _map: {fileID: 11400000, guid: fd632cc52b6f5485d91042e703041f2e, type: 2}
+  _palette: {fileID: 11400000, guid: 6a4cad82fd18548ed961a5515bd0d5d2, type: 2}
+  _terrainMaterial: {fileID: 2100000, guid: d9759d6621f024fd2a2e86ce3b68a88b, type: 2}
+  _highlightMaterial: {fileID: 2100000, guid: 4efb2efb162b548d5854266518ab3040, type: 2}
+  _baseDepth: 1
+  _moveRange: {r: 0.25, g: 0.55, b: 1, a: 0.55}
+  _path: {r: 1, g: 0.85, b: 0.25, a: 0.65}
+  _hover: {r: 1, g: 1, b: 1, a: 0.6}
+  _selected: {r: 1, g: 0.35, b: 0.25, a: 0.65}
+  _playerDeployment: {r: 0.3, g: 0.9, b: 0.4, a: 0.5}
+  _enemyDeployment: {r: 0.95, g: 0.3, b: 0.6, a: 0.5}
+--- !u!4 &203827777
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 203827775}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1 &383033352
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 383033354}
+  - component: {fileID: 383033353}
+  m_Layer: 0
+  m_Name: Battle Input
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &383033353
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 383033352}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 1abb1bf90daf744f9971a71b377d1605, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: FriendshipWarriors.Runtime::FriendshipWarriors.Controls.BattleInput
+  _actions: {fileID: -944628639613478452, guid: f5fd2532793c04c5195581c5f4ac01d2, type: 3}
+--- !u!4 &383033354
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 383033352}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1 &622428011
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 622428013}
+  - component: {fileID: 622428012}
   m_Layer: 0
   m_Name: Battle Controller
   m_TagString: Untagged
@@ -136,13 +287,13 @@ GameObject:
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
   m_IsActive: 1
---- !u!114 &197368399
+--- !u!114 &622428012
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 197368398}
+  m_GameObject: {fileID: 622428011}
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 643a1a42c034e4ae0af7d5009bc48907, type: 3}
@@ -151,11 +302,11 @@ MonoBehaviour:
   _playerControl: 0
   _enemyControl: 1
   _aiStepDelay: 0.55
-  _input: {fileID: 1359238045}
-  _gridView: {fileID: 1928628941}
-  _cursor: {fileID: 1179335018}
-  _cameraRig: {fileID: 1364052486}
-  _hud: {fileID: 502781067}
+  _input: {fileID: 383033353}
+  _gridView: {fileID: 203827776}
+  _cursor: {fileID: 40855810}
+  _cameraRig: {fileID: 1826860034}
+  _hud: {fileID: 771154897}
   _enemyLeapClearance: 2
   _timedPress:
     _duration: 1.2
@@ -167,13 +318,13 @@ MonoBehaviour:
   _spellResolvePause: 1.1
   _menuRepeatDelay: 0.35
   _menuRepeatInterval: 0.12
---- !u!4 &197368400
+--- !u!4 &622428013
 Transform:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 197368398}
+  m_GameObject: {fileID: 622428011}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
   m_LocalPosition: {x: 0, y: 0, z: 0}
@@ -182,7 +333,7 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!1 &502781066
+--- !u!1 &771154896
 GameObject:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -190,11 +341,11 @@ GameObject:
   m_PrefabAsset: {fileID: 0}
   serializedVersion: 6
   m_Component:
-  - component: {fileID: 502781071}
-  - component: {fileID: 502781070}
-  - component: {fileID: 502781069}
-  - component: {fileID: 502781068}
-  - component: {fileID: 502781067}
+  - component: {fileID: 771154901}
+  - component: {fileID: 771154900}
+  - component: {fileID: 771154899}
+  - component: {fileID: 771154898}
+  - component: {fileID: 771154897}
   m_Layer: 0
   m_Name: Battle HUD
   m_TagString: Untagged
@@ -202,25 +353,25 @@ GameObject:
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
   m_IsActive: 1
---- !u!114 &502781067
+--- !u!114 &771154897
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 502781066}
+  m_GameObject: {fileID: 771154896}
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: de05f3091d38444d09f1b5177fb8f91d, type: 3}
   m_Name: 
   m_EditorClassIdentifier: FriendshipWarriors.Runtime::FriendshipWarriors.UI.BattleHud
---- !u!114 &502781068
+--- !u!114 &771154898
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 502781066}
+  m_GameObject: {fileID: 771154896}
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: dc42784cf147c0c48a680349fa168899, type: 3}
@@ -231,13 +382,13 @@ MonoBehaviour:
   m_BlockingMask:
     serializedVersion: 2
     m_Bits: 4294967295
---- !u!114 &502781069
+--- !u!114 &771154899
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 502781066}
+  m_GameObject: {fileID: 771154896}
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 0cd44c1031e13a943bb63640046fad76, type: 3}
@@ -254,13 +405,13 @@ MonoBehaviour:
   m_DefaultSpriteDPI: 96
   m_DynamicPixelsPerUnit: 1
   m_PresetInfoIsWorld: 0
---- !u!223 &502781070
+--- !u!223 &771154900
 Canvas:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 502781066}
+  m_GameObject: {fileID: 771154896}
   m_Enabled: 1
   serializedVersion: 3
   m_RenderMode: 0
@@ -278,13 +429,13 @@ Canvas:
   m_SortingLayerID: 0
   m_SortingOrder: 0
   m_TargetDisplay: 0
---- !u!224 &502781071
+--- !u!224 &771154901
 RectTransform:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 502781066}
+  m_GameObject: {fileID: 771154896}
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
   m_LocalPosition: {x: 0, y: 0, z: 0}
   m_LocalScale: {x: 0, y: 0, z: 0}
@@ -297,7 +448,7 @@ RectTransform:
   m_AnchoredPosition: {x: 0, y: 0}
   m_SizeDelta: {x: 0, y: 0}
   m_Pivot: {x: 0, y: 0}
---- !u!1 &917350740
+--- !u!1 &1713643671
 GameObject:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -305,9 +456,193 @@ GameObject:
   m_PrefabAsset: {fileID: 0}
   serializedVersion: 6
   m_Component:
-  - component: {fileID: 917350743}
-  - component: {fileID: 917350741}
-  - component: {fileID: 917350742}
+  - component: {fileID: 1713643673}
+  - component: {fileID: 1713643672}
+  m_Layer: 0
+  m_Name: Battle Sandbox
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &1713643672
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1713643671}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 59dc44dc73c934b60834695c548720a5, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: FriendshipWarriors.Runtime::FriendshipWarriors.Dev.BattleSandbox
+  _input: {fileID: 383033353}
+  _gridView: {fileID: 203827776}
+  _cameraRig: {fileID: 1826860034}
+  _battle: {fileID: 622428012}
+  _setup: {fileID: 11400000, guid: e8fdffa071ff54de7b8ea721bd85da8d, type: 2}
+  _rosterSeed: 7
+  _starterGear:
+  - {fileID: 11400000, guid: f061f01ff753f47489a5e4bc20ff6103, type: 2}
+  - {fileID: 11400000, guid: 37c9f276dce8a4ae7ab6fbd0a5fd0230, type: 2}
+  - {fileID: 11400000, guid: 964b58f45f6f34565b17cbf28f62eaef, type: 2}
+  - {fileID: 11400000, guid: 2a4ca9a1012844d0db0b88909fbc4dfc, type: 2}
+  - {fileID: 11400000, guid: b0863baeff92e4025b72269908c501dd, type: 2}
+  - {fileID: 11400000, guid: 268639f7671154c84b16e4ee37b68906, type: 2}
+  - {fileID: 11400000, guid: e42b6eed66fcd4263b4d662d13f95f41, type: 2}
+  - {fileID: 11400000, guid: bb4bad882bc6e484ea2f7c341e3cccc3, type: 2}
+  - {fileID: 11400000, guid: c4b4ecd7ab1704c829d17853957bd3f9, type: 2}
+  - {fileID: 11400000, guid: a9b8226914a8f4a6f983689c06a39705, type: 2}
+  - {fileID: 11400000, guid: 0c1a5e9e26cd84026b4f6a09bd810a04, type: 2}
+  _itemJob: {fileID: 11400000, guid: b58661765412841a69212c216ad8a5a0, type: 2}
+  _startingItems:
+  - _item: {fileID: 11400000, guid: f4a73c171838340d7b7b3570b0123121, type: 2}
+    _count: 4
+  - _item: {fileID: 11400000, guid: 6df1b699e85d642358bce626e05a9792, type: 2}
+    _count: 2
+  - _item: {fileID: 11400000, guid: 61b18f173eecc492298c625431481733, type: 2}
+    _count: 1
+  - _item: {fileID: 11400000, guid: b92d97775477446b8a84c1a9f228cd5b, type: 2}
+    _count: 2
+  - _item: {fileID: 11400000, guid: 64bd0a33833c4473f91f149197963c4a, type: 2}
+    _count: 1
+  - _item: {fileID: 11400000, guid: 702e2743129c54b128aac49b01c021e8, type: 2}
+    _count: 1
+  - _item: {fileID: 11400000, guid: 191e8e13f883d4b07ab3d90c09b6850e, type: 2}
+    _count: 2
+  - _item: {fileID: 11400000, guid: 2708abddbbc8e4d8b85837b37e6b2684, type: 2}
+    _count: 2
+  - _item: {fileID: 11400000, guid: 1eadae612613b43bba23f55703b74bd4, type: 2}
+    _count: 2
+  - _item: {fileID: 11400000, guid: ac527cff894634be4adcfdd882b97427, type: 2}
+    _count: 1
+  - _item: {fileID: 11400000, guid: 2c8e1232e568249698177a6d66ecbf5b, type: 2}
+    _count: 1
+  _startingStatuses:
+  - _team: 0
+    _rosterIndex: 0
+    _status: 4
+  - _team: 0
+    _rosterIndex: 1
+    _status: 2
+  - _team: 0
+    _rosterIndex: 2
+    _status: 0
+  - _team: 1
+    _rosterIndex: 0
+    _status: 8
+  - _team: 1
+    _rosterIndex: 2
+    _status: 5
+  _lowMoraleEnemy: 1
+  _lowMorale: 8
+  _generatorSettings: {fileID: 11400000, guid: 16cf03401009f4e299bb7de598b065d9, type: 2}
+--- !u!4 &1713643673
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1713643671}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1 &1787905677
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1787905680}
+  - component: {fileID: 1787905679}
+  - component: {fileID: 1787905678}
+  m_Layer: 0
+  m_Name: EventSystem
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &1787905678
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1787905677}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 01614664b831546d2ae94a42149d80ac, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Unity.InputSystem::UnityEngine.InputSystem.UI.InputSystemUIInputModule
+  m_SendPointerHoverToParent: 1
+  m_MoveRepeatDelay: 0.5
+  m_MoveRepeatRate: 0.1
+  m_XRTrackingOrigin: {fileID: 0}
+  m_ActionsAsset: {fileID: -944628639613478452, guid: ca9f5fa95ffab41fb9a615ab714db018, type: 3}
+  m_PointAction: {fileID: -1654692200621890270, guid: ca9f5fa95ffab41fb9a615ab714db018, type: 3}
+  m_MoveAction: {fileID: -8784545083839296357, guid: ca9f5fa95ffab41fb9a615ab714db018, type: 3}
+  m_SubmitAction: {fileID: 392368643174621059, guid: ca9f5fa95ffab41fb9a615ab714db018, type: 3}
+  m_CancelAction: {fileID: 7727032971491509709, guid: ca9f5fa95ffab41fb9a615ab714db018, type: 3}
+  m_LeftClickAction: {fileID: 3001919216989983466, guid: ca9f5fa95ffab41fb9a615ab714db018, type: 3}
+  m_MiddleClickAction: {fileID: -2185481485913320682, guid: ca9f5fa95ffab41fb9a615ab714db018, type: 3}
+  m_RightClickAction: {fileID: -4090225696740746782, guid: ca9f5fa95ffab41fb9a615ab714db018, type: 3}
+  m_ScrollWheelAction: {fileID: 6240969308177333660, guid: ca9f5fa95ffab41fb9a615ab714db018, type: 3}
+  m_TrackedDevicePositionAction: {fileID: 6564999863303420839, guid: ca9f5fa95ffab41fb9a615ab714db018, type: 3}
+  m_TrackedDeviceOrientationAction: {fileID: 7970375526676320489, guid: ca9f5fa95ffab41fb9a615ab714db018, type: 3}
+  m_DeselectOnBackgroundClick: 1
+  m_PointerBehavior: 0
+  m_CursorLockBehavior: 0
+  m_ScrollDeltaPerTick: 6
+--- !u!114 &1787905679
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1787905677}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 76c392e42b5098c458856cdf6ecaaaa1, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.EventSystems.EventSystem
+  m_FirstSelected: {fileID: 0}
+  m_sendNavigationEvents: 1
+  m_DragThreshold: 10
+--- !u!4 &1787905680
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1787905677}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1 &1811454406
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1811454409}
+  - component: {fileID: 1811454407}
+  - component: {fileID: 1811454408}
   m_Layer: 0
   m_Name: Main Camera
   m_TagString: MainCamera
@@ -315,13 +650,13 @@ GameObject:
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
   m_IsActive: 1
---- !u!20 &917350741
+--- !u!20 &1811454407
 Camera:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 917350740}
+  m_GameObject: {fileID: 1811454406}
   m_Enabled: 1
   serializedVersion: 2
   m_ClearFlags: 1
@@ -366,30 +701,30 @@ Camera:
   m_OcclusionCulling: 1
   m_StereoConvergence: 10
   m_StereoSeparation: 0.022
---- !u!81 &917350742
+--- !u!81 &1811454408
 AudioListener:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 917350740}
+  m_GameObject: {fileID: 1811454406}
   m_Enabled: 1
---- !u!4 &917350743
+--- !u!4 &1811454409
 Transform:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 917350740}
+  m_GameObject: {fileID: 1811454406}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
   m_LocalPosition: {x: 0, y: 1, z: -10}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
-  m_Father: {fileID: 1364052485}
+  m_Father: {fileID: 1826860033}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!1 &1179335017
+--- !u!1 &1826860032
 GameObject:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -397,50 +732,55 @@ GameObject:
   m_PrefabAsset: {fileID: 0}
   serializedVersion: 6
   m_Component:
-  - component: {fileID: 1179335019}
-  - component: {fileID: 1179335018}
+  - component: {fileID: 1826860033}
+  - component: {fileID: 1826860034}
   m_Layer: 0
-  m_Name: Tile Cursor
+  m_Name: Camera Rig
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
   m_IsActive: 1
---- !u!114 &1179335018
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1179335017}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 09970eec0d5774b3693083ef0d317b8d, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: FriendshipWarriors.Runtime::FriendshipWarriors.Controls.TileCursor
-  _input: {fileID: 1359238045}
-  _gridView: {fileID: 1928628941}
-  _cameraRig: {fileID: 1364052486}
-  _camera: {fileID: 917350741}
-  _deadZone: 0.5
-  _repeatDelay: 0.3
-  _repeatInterval: 0.1
---- !u!4 &1179335019
+--- !u!4 &1826860033
 Transform:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1179335017}
+  m_GameObject: {fileID: 1826860032}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
   m_LocalPosition: {x: 0, y: 0, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
-  m_Children: []
+  m_Children:
+  - {fileID: 1811454409}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!1 &1318828196
+--- !u!114 &1826860034
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1826860032}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 873f1bcf21894400099e6c6cea79bd9b, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: FriendshipWarriors.Runtime::FriendshipWarriors.Cameras.IsoCameraRig
+  _input: {fileID: 383033353}
+  _camera: {fileID: 1811454407}
+  _lowPitch: 30
+  _highPitch: 45
+  _distance: 40
+  _minSize: 3
+  _maxSize: 10
+  _zoomStep: 0.75
+  _zoomHoldSpeed: 6
+  _stickPanSpeed: 1
+  _smoothing: 12
+--- !u!1 &1871373490
 GameObject:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -448,9 +788,9 @@ GameObject:
   m_PrefabAsset: {fileID: 0}
   serializedVersion: 6
   m_Component:
-  - component: {fileID: 1318828199}
-  - component: {fileID: 1318828198}
-  - component: {fileID: 1318828197}
+  - component: {fileID: 1871373493}
+  - component: {fileID: 1871373492}
+  - component: {fileID: 1871373491}
   m_Layer: 0
   m_Name: Directional Light
   m_TagString: Untagged
@@ -458,13 +798,13 @@ GameObject:
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
   m_IsActive: 1
---- !u!114 &1318828197
+--- !u!114 &1871373491
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1318828196}
+  m_GameObject: {fileID: 1871373490}
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 474bcb49853aa07438625e644c072ee6, type: 3}
@@ -487,13 +827,13 @@ MonoBehaviour:
   m_ShadowLayerMask: 1
   m_RenderingLayers: 1
   m_ShadowRenderingLayers: 1
---- !u!108 &1318828198
+--- !u!108 &1871373492
 Light:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1318828196}
+  m_GameObject: {fileID: 1871373490}
   m_Enabled: 1
   serializedVersion: 13
   m_Type: 1
@@ -552,13 +892,13 @@ Light:
   m_LightUnit: 1
   m_LuxAtDistance: 1
   m_EnableSpotReflector: 1
---- !u!4 &1318828199
+--- !u!4 &1871373493
 Transform:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1318828196}
+  m_GameObject: {fileID: 1871373490}
   serializedVersion: 2
   m_LocalRotation: {x: 0.40821794, y: -0.23456973, z: 0.10938166, w: 0.8754261}
   m_LocalPosition: {x: 0, y: 3, z: 0}
@@ -567,356 +907,16 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 50, y: -30, z: 0}
---- !u!1 &1359238044
-GameObject:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  serializedVersion: 6
-  m_Component:
-  - component: {fileID: 1359238046}
-  - component: {fileID: 1359238045}
-  m_Layer: 0
-  m_Name: Battle Input
-  m_TagString: Untagged
-  m_Icon: {fileID: 0}
-  m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
-  m_IsActive: 1
---- !u!114 &1359238045
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1359238044}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 1abb1bf90daf744f9971a71b377d1605, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: FriendshipWarriors.Runtime::FriendshipWarriors.Controls.BattleInput
-  _actions: {fileID: -944628639613478452, guid: f5fd2532793c04c5195581c5f4ac01d2, type: 3}
---- !u!4 &1359238046
-Transform:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1359238044}
-  serializedVersion: 2
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 1, y: 1, z: 1}
-  m_ConstrainProportionsScale: 0
-  m_Children: []
-  m_Father: {fileID: 0}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!1 &1364052484
-GameObject:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  serializedVersion: 6
-  m_Component:
-  - component: {fileID: 1364052485}
-  - component: {fileID: 1364052486}
-  m_Layer: 0
-  m_Name: Camera Rig
-  m_TagString: Untagged
-  m_Icon: {fileID: 0}
-  m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
-  m_IsActive: 1
---- !u!4 &1364052485
-Transform:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1364052484}
-  serializedVersion: 2
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 1, y: 1, z: 1}
-  m_ConstrainProportionsScale: 0
-  m_Children:
-  - {fileID: 917350743}
-  m_Father: {fileID: 0}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!114 &1364052486
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1364052484}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 873f1bcf21894400099e6c6cea79bd9b, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: FriendshipWarriors.Runtime::FriendshipWarriors.Cameras.IsoCameraRig
-  _input: {fileID: 1359238045}
-  _camera: {fileID: 917350741}
-  _lowPitch: 30
-  _highPitch: 45
-  _distance: 40
-  _minSize: 3
-  _maxSize: 10
-  _zoomStep: 0.75
-  _zoomHoldSpeed: 6
-  _stickPanSpeed: 1
-  _smoothing: 12
---- !u!1 &1884455755
-GameObject:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  serializedVersion: 6
-  m_Component:
-  - component: {fileID: 1884455757}
-  - component: {fileID: 1884455756}
-  m_Layer: 0
-  m_Name: Battle Sandbox
-  m_TagString: Untagged
-  m_Icon: {fileID: 0}
-  m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
-  m_IsActive: 1
---- !u!114 &1884455756
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1884455755}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 59dc44dc73c934b60834695c548720a5, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: FriendshipWarriors.Runtime::FriendshipWarriors.Dev.BattleSandbox
-  _input: {fileID: 1359238045}
-  _gridView: {fileID: 1928628941}
-  _cameraRig: {fileID: 1364052486}
-  _battle: {fileID: 197368399}
-  _setup: {fileID: 11400000, guid: e8fdffa071ff54de7b8ea721bd85da8d, type: 2}
-  _rosterSeed: 7
-  _starterGear:
-  - {fileID: 11400000, guid: f061f01ff753f47489a5e4bc20ff6103, type: 2}
-  - {fileID: 11400000, guid: 37c9f276dce8a4ae7ab6fbd0a5fd0230, type: 2}
-  - {fileID: 11400000, guid: 964b58f45f6f34565b17cbf28f62eaef, type: 2}
-  - {fileID: 11400000, guid: 2a4ca9a1012844d0db0b88909fbc4dfc, type: 2}
-  - {fileID: 11400000, guid: b0863baeff92e4025b72269908c501dd, type: 2}
-  - {fileID: 11400000, guid: 268639f7671154c84b16e4ee37b68906, type: 2}
-  - {fileID: 11400000, guid: e42b6eed66fcd4263b4d662d13f95f41, type: 2}
-  - {fileID: 11400000, guid: bb4bad882bc6e484ea2f7c341e3cccc3, type: 2}
-  - {fileID: 11400000, guid: c4b4ecd7ab1704c829d17853957bd3f9, type: 2}
-  - {fileID: 11400000, guid: a9b8226914a8f4a6f983689c06a39705, type: 2}
-  - {fileID: 11400000, guid: 0c1a5e9e26cd84026b4f6a09bd810a04, type: 2}
-  _itemJob: {fileID: 11400000, guid: b58661765412841a69212c216ad8a5a0, type: 2}
-  _startingItems:
-  - _item: {fileID: 11400000, guid: f4a73c171838340d7b7b3570b0123121, type: 2}
-    _count: 4
-  - _item: {fileID: 11400000, guid: 6df1b699e85d642358bce626e05a9792, type: 2}
-    _count: 2
-  - _item: {fileID: 11400000, guid: 61b18f173eecc492298c625431481733, type: 2}
-    _count: 1
-  - _item: {fileID: 11400000, guid: b92d97775477446b8a84c1a9f228cd5b, type: 2}
-    _count: 2
-  - _item: {fileID: 11400000, guid: 64bd0a33833c4473f91f149197963c4a, type: 2}
-    _count: 1
-  - _item: {fileID: 11400000, guid: 702e2743129c54b128aac49b01c021e8, type: 2}
-    _count: 1
-  - _item: {fileID: 11400000, guid: 191e8e13f883d4b07ab3d90c09b6850e, type: 2}
-    _count: 2
-  - _item: {fileID: 11400000, guid: 2708abddbbc8e4d8b85837b37e6b2684, type: 2}
-    _count: 2
-  - _item: {fileID: 11400000, guid: 1eadae612613b43bba23f55703b74bd4, type: 2}
-    _count: 2
-  - _item: {fileID: 11400000, guid: ac527cff894634be4adcfdd882b97427, type: 2}
-    _count: 1
-  - _item: {fileID: 11400000, guid: 2c8e1232e568249698177a6d66ecbf5b, type: 2}
-    _count: 1
-  _startingStatuses:
-  - _team: 0
-    _rosterIndex: 0
-    _status: 4
-  - _team: 0
-    _rosterIndex: 1
-    _status: 2
-  - _team: 0
-    _rosterIndex: 2
-    _status: 0
-  - _team: 1
-    _rosterIndex: 0
-    _status: 8
-  - _team: 1
-    _rosterIndex: 2
-    _status: 5
-  _lowMoraleEnemy: 1
-  _lowMorale: 8
-  _generatorSettings: {fileID: 11400000, guid: 16cf03401009f4e299bb7de598b065d9, type: 2}
---- !u!4 &1884455757
-Transform:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1884455755}
-  serializedVersion: 2
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 1, y: 1, z: 1}
-  m_ConstrainProportionsScale: 0
-  m_Children: []
-  m_Father: {fileID: 0}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!1 &1928628940
-GameObject:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  serializedVersion: 6
-  m_Component:
-  - component: {fileID: 1928628942}
-  - component: {fileID: 1928628941}
-  m_Layer: 0
-  m_Name: Battlefield
-  m_TagString: Untagged
-  m_Icon: {fileID: 0}
-  m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
-  m_IsActive: 1
---- !u!114 &1928628941
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1928628940}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 4c4be3b46eb094673ab57a5a1bd348cf, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: FriendshipWarriors.Runtime::FriendshipWarriors.Grid.View.GridView
-  _map: {fileID: 11400000, guid: fd632cc52b6f5485d91042e703041f2e, type: 2}
-  _palette: {fileID: 11400000, guid: 6a4cad82fd18548ed961a5515bd0d5d2, type: 2}
-  _terrainMaterial: {fileID: 2100000, guid: d9759d6621f024fd2a2e86ce3b68a88b, type: 2}
-  _highlightMaterial: {fileID: 2100000, guid: 4efb2efb162b548d5854266518ab3040, type: 2}
-  _baseDepth: 1
-  _moveRange: {r: 0.25, g: 0.55, b: 1, a: 0.55}
-  _path: {r: 1, g: 0.85, b: 0.25, a: 0.65}
-  _hover: {r: 1, g: 1, b: 1, a: 0.6}
-  _selected: {r: 1, g: 0.35, b: 0.25, a: 0.65}
-  _playerDeployment: {r: 0.3, g: 0.9, b: 0.4, a: 0.5}
-  _enemyDeployment: {r: 0.95, g: 0.3, b: 0.6, a: 0.5}
---- !u!4 &1928628942
-Transform:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1928628940}
-  serializedVersion: 2
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 1, y: 1, z: 1}
-  m_ConstrainProportionsScale: 0
-  m_Children: []
-  m_Father: {fileID: 0}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!1 &2036029489
-GameObject:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  serializedVersion: 6
-  m_Component:
-  - component: {fileID: 2036029492}
-  - component: {fileID: 2036029491}
-  - component: {fileID: 2036029490}
-  m_Layer: 0
-  m_Name: EventSystem
-  m_TagString: Untagged
-  m_Icon: {fileID: 0}
-  m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
-  m_IsActive: 1
---- !u!114 &2036029490
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 2036029489}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 01614664b831546d2ae94a42149d80ac, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Unity.InputSystem::UnityEngine.InputSystem.UI.InputSystemUIInputModule
-  m_SendPointerHoverToParent: 1
-  m_MoveRepeatDelay: 0.5
-  m_MoveRepeatRate: 0.1
-  m_XRTrackingOrigin: {fileID: 0}
-  m_ActionsAsset: {fileID: -944628639613478452, guid: ca9f5fa95ffab41fb9a615ab714db018, type: 3}
-  m_PointAction: {fileID: -1654692200621890270, guid: ca9f5fa95ffab41fb9a615ab714db018, type: 3}
-  m_MoveAction: {fileID: -8784545083839296357, guid: ca9f5fa95ffab41fb9a615ab714db018, type: 3}
-  m_SubmitAction: {fileID: 392368643174621059, guid: ca9f5fa95ffab41fb9a615ab714db018, type: 3}
-  m_CancelAction: {fileID: 7727032971491509709, guid: ca9f5fa95ffab41fb9a615ab714db018, type: 3}
-  m_LeftClickAction: {fileID: 3001919216989983466, guid: ca9f5fa95ffab41fb9a615ab714db018, type: 3}
-  m_MiddleClickAction: {fileID: -2185481485913320682, guid: ca9f5fa95ffab41fb9a615ab714db018, type: 3}
-  m_RightClickAction: {fileID: -4090225696740746782, guid: ca9f5fa95ffab41fb9a615ab714db018, type: 3}
-  m_ScrollWheelAction: {fileID: 6240969308177333660, guid: ca9f5fa95ffab41fb9a615ab714db018, type: 3}
-  m_TrackedDevicePositionAction: {fileID: 6564999863303420839, guid: ca9f5fa95ffab41fb9a615ab714db018, type: 3}
-  m_TrackedDeviceOrientationAction: {fileID: 7970375526676320489, guid: ca9f5fa95ffab41fb9a615ab714db018, type: 3}
-  m_DeselectOnBackgroundClick: 1
-  m_PointerBehavior: 0
-  m_CursorLockBehavior: 0
-  m_ScrollDeltaPerTick: 6
---- !u!114 &2036029491
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 2036029489}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 76c392e42b5098c458856cdf6ecaaaa1, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.EventSystems.EventSystem
-  m_FirstSelected: {fileID: 0}
-  m_sendNavigationEvents: 1
-  m_DragThreshold: 10
---- !u!4 &2036029492
-Transform:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 2036029489}
-  serializedVersion: 2
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 1, y: 1, z: 1}
-  m_ConstrainProportionsScale: 0
-  m_Children: []
-  m_Father: {fileID: 0}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1660057539 &9223372036854775807
 SceneRoots:
   m_ObjectHideFlags: 0
   m_Roots:
-  - {fileID: 1318828199}
-  - {fileID: 1359238046}
-  - {fileID: 1928628942}
-  - {fileID: 1364052485}
-  - {fileID: 1179335019}
-  - {fileID: 502781071}
-  - {fileID: 2036029492}
-  - {fileID: 197368400}
-  - {fileID: 1884455757}
+  - {fileID: 1871373493}
+  - {fileID: 383033354}
+  - {fileID: 203827777}
+  - {fileID: 1826860033}
+  - {fileID: 40855811}
+  - {fileID: 771154901}
+  - {fileID: 1787905680}
+  - {fileID: 622428013}
+  - {fileID: 1713643673}

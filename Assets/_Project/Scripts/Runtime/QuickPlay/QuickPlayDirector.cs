@@ -43,7 +43,7 @@ namespace FriendshipWarriors.QuickPlay
         [SerializeField] private EquipmentCatalog _equipment;
         [SerializeField] private ItemStock[] _startingItems = System.Array.Empty<ItemStock>();
         [Tooltip("Units per side. A standard match is 5 v 5.")]
-        [SerializeField, Range(1, 12)] private int _teamSize = 5;
+        [SerializeField, Range(1, 12)] private int _teamSize = Battle.Objectives.BattleSetup.StandardTeamSize;
         [Tooltip("Every unit's level, the same for both sides so matches are fair.")]
         [SerializeField, Range(1, 99)] private int _unitLevel = 5;
         [Tooltip("0 = a new random seed every match. Set one to rebuild a reported match.")]
@@ -134,7 +134,8 @@ namespace FriendshipWarriors.QuickPlay
                     inventory.Add(stock.Item, stock.Count);
                 _battle.SetInventory(team, inventory);
             }
-            _battle.Begin(_views);
+            // Quick play is a standard match: 5 v 5, defeat all enemies.
+            _battle.Begin(_views, objective: Battle.Objectives.BattleObjective.Standard);
         }
 
         /// <summary>Puts units on their deployment tiles, facing the other side as FFT battles start.</summary>
