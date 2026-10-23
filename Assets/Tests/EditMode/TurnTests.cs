@@ -171,7 +171,7 @@ namespace FriendshipWarriors.Tests
 
             turn.RecordAct();
             Assert.That(turn.NextActUsesMove, Is.True);
-            turn.RecordAct();
+            turn.RecordAct(isAttack: true);
 
             Assert.That(turn.ActsTaken, Is.EqualTo(2));
             Assert.That(turn.CanMove, Is.False);

@@ -52,12 +52,14 @@ namespace FriendshipWarriors.Units.Status
             _ => null,
         };
 
+        // Charging blocks neither (FFT, per the user 2026-10-23): a charging unit still takes its turns, moving keeps the
+        // spell, and acting cancels it (BattleController.CancelChargeToAct).
         public static bool PreventsMove(StatusEffect status) =>
-            status is StatusEffect.Stop or StatusEffect.Sleep or StatusEffect.Immobilize or StatusEffect.Charging;
+            status is StatusEffect.Stop or StatusEffect.Sleep or StatusEffect.Immobilize;
 
         /// <summary>Panic stops a unit acting: it only runs (FFT Chicken).</summary>
         public static bool PreventsAct(StatusEffect status) =>
-            status is StatusEffect.Stop or StatusEffect.Sleep or StatusEffect.Disable or StatusEffect.Panic or StatusEffect.Charging;
+            status is StatusEffect.Stop or StatusEffect.Sleep or StatusEffect.Disable or StatusEffect.Panic;
 
         /// <summary>A unit under these can't evade (FFT: sleeping, stopped or charging units have no evasion).</summary>
         public static bool RemovesEvasion(StatusEffect status) =>

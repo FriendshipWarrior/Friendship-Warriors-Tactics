@@ -64,6 +64,7 @@ namespace FriendshipWarriors.Battle.Deployment
         {
             _input.Confirm.performed += OnConfirm;
             _input.Cancel.performed += OnCancel;
+            _input.Details.performed += OnDetails;
             _cursor.Moved += OnCursorMoved;
             _cursor.Clicked += OnTileClicked;
             _hud.MenuItemClicked += OnMenuClicked;
@@ -73,6 +74,7 @@ namespace FriendshipWarriors.Battle.Deployment
         {
             _input.Confirm.performed -= OnConfirm;
             _input.Cancel.performed -= OnCancel;
+            _input.Details.performed -= OnDetails;
             _cursor.Moved -= OnCursorMoved;
             _cursor.Clicked -= OnTileClicked;
             _hud.MenuItemClicked -= OnMenuClicked;
@@ -237,8 +239,18 @@ namespace FriendshipWarriors.Battle.Deployment
             Finish();
         }
 
+        /// <summary>X / Tab: the full details (Status) of the unit under the cursor, or back to the compact panel.</summary>
+        private void OnDetails(InputAction.CallbackContext _)
+        {
+            if (!_running)
+                return;
+            _hud.SetDetailsExpanded(!_hud.DetailsExpanded);
+            Refresh();
+        }
+
         private void Finish()
         {
+            _hud.SetDetailsExpanded(false);
             var callback = _onFinished;
             _onFinished = null;
             callback?.Invoke(_placements.ToList());

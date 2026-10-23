@@ -20,6 +20,10 @@ namespace FriendshipWarriors.UI
         private const int TurnOrderRows = 8;
         private const int MenuRowHeight = 16;
         private const int UnitPanelWidth = 324;
+        // Name, level and the three bars; wide enough for the gauges row.
+        private const int CompactPanelWidth = 260;
+        // The job in the compact panel: a soft lavender from the Mana Soul palette, apart from the white name and level.
+        private const string JobColor = "#C9A7FF";
         private const int BarWidth = 72;
 
         private RectTransform _menuPanel;
@@ -28,6 +32,9 @@ namespace FriendshipWarriors.UI
         private MenuModel _menu;
 
         private readonly List<(UnityEngine.UI.Image team, TextMeshProUGUI label)> _turnRows = new();
+        private RectTransform _turnPanel;
+        private bool _detailsExpanded;
+        private Unit _shownUnit;
         private RectTransform _unitPanel;
         private TextMeshProUGUI _unitName;
         private TextMeshProUGUI _unitJob;
@@ -67,7 +74,7 @@ namespace FriendshipWarriors.UI
             _menuList = new MenuList(_menuPanel, MenuRowHeight, framed: false, hover: index => _menu?.Select(index), click: OnMenuClicked);
             _menuPanel.gameObject.SetActive(false);
 
-            var turnPanel = UiFactory.Window(transform, "Turn Order", new Vector2(1f, 1f), new Vector2(-m, -m), 168f);
+            var turnPanel = _turnPanel = UiFactory.Window(transform, "Turn Order", new Vector2(1f, 1f), new Vector2(-m, -m), 168f);
             // Tight rows: at 640x360 the list must end above the unit panel's tallest layout.
             turnPanel.GetComponent<UnityEngine.UI.VerticalLayoutGroup>().spacing = 1f;
             UiFactory.Text(turnPanel, "Title", title: true).text = "Turn Order";
@@ -158,19 +165,48 @@ namespace FriendshipWarriors.UI
                 var unit = entry.Unit;
                 team.color = TeamColor(unit.Team);
                 label.text = entry.Spell != null
-                    ? $"<color=#C9A7FF>* {entry.Spell.DisplayName}</color> <color={UiFactory.Hex(UiFactory.MutedTextColor)}>({unit.Name})</color>"
+                    ? $"<color=#C9A7FF>* {entry.Spell.DisplayName}</color>{LockText(entry.Charge)} <color={UiFactory.Hex(UiFactory.MutedTextColor)}>({unit.Name})</color>"
                     : TurnText(unit, i == 0 && unit == active);
             }
         }
 
+        /// <summary>The full unit details (FFT's Status) are showing instead of the compact name, job, level and bars.</summary>
+        public bool DetailsExpanded => _detailsExpanded;
+
+        /// <summary>
+        /// Switches the unit panel between compact (name, job, level, HP/MP/CT) and the full details. The turn order steps aside
+        /// while the details are open, so the two never crowd each other at 640x360.
+        /// </summary>
+        public void SetDetailsExpanded(bool expanded)
+        {
+            _detailsExpanded = expanded;
+            _unitInfo.gameObject.SetActive(expanded);
+            _unitPanel.sizeDelta = new Vector2(expanded ? UnitPanelWidth : CompactPanelWidth, _unitPanel.sizeDelta.y);
+            _turnPanel.gameObject.SetActive(!expanded);
+            SetUnitInfo(_shownUnit);
+        }
+
         public void SetUnitInfo(Unit unit)
         {
+            _shownUnit = unit;
             _unitPanel.gameObject.SetActive(unit != null);
             if (unit == null)
                 return;
 
             var s = unit.Stats;
             string muted = UiFactory.Hex(UiFactory.MutedTextColor);
+            if (!_detailsExpanded)
+            {
+                // Name (title font, team colour), then job and level on the smaller body font (12 px is that font's native
+                // size, the smallest crisp one), the job told apart by colour.
+                _unitName.text = $"<color={UiFactory.Hex(TeamColor(unit.Team))}>{unit.Name}</color>" +
+                                 (unit.IsKnockedOut ? $"  <color={UiFactory.Hex(UiFactory.EnemyColor)}>KO ({unit.DeathCounter})</color>" : "");
+                _unitJob.text = $"<color={JobColor}>{unit.Job.DisplayName}</color>  <color={muted}>Lv</color> {unit.Level}";
+                SetBar(_hp, unit.CurrentHp, s.MaxHp);
+                SetBar(_mp, unit.CurrentMp, s.MaxMp);
+                SetBar(_ct, Mathf.Min(unit.ChargeTime, 100), 100, unit.ChargeTime.ToString());
+                return;
+            }
             _unitName.text = $"{unit.Name}  <color={UiFactory.Hex(TeamColor(unit.Team))}>{unit.Team}</color>";
             _unitJob.text = $"{unit.Job.DisplayName}  Lv {unit.Level}  <color={muted}>Job Lv</color> {unit.JobLevel(unit.Job)}" +
                             (unit.IsKnockedOut ? $"  <color={UiFactory.Hex(UiFactory.EnemyColor)}>KO ({unit.DeathCounter})</color>" : "");
@@ -249,6 +285,15 @@ namespace FriendshipWarriors.UI
             $"<color={UiFactory.Hex(UiFactory.MutedTextColor)}>{unit.Job.DisplayName}</color>";
 
         private static string Name(Units.Abilities.AbilityDefinition ability) => ability != null ? ability.DisplayName : "-";
+
+        /// <summary>" > Vance" for a spell following a unit, " > (5,7)" for one aimed at a tile.</summary>
+        private static string LockText(Battle.Magic.ChargingAction charge)
+        {
+            if (charge == null)
+                return "";
+            string target = charge.LockedUnit != null ? charge.LockedUnit.Name : $"({charge.Target.X},{charge.Target.Y})";
+            return $" <color={UiFactory.Hex(UiFactory.TextColor)}>> {target}</color>";
+        }
 
         /// <summary>Statuses with the time they have left, e.g. "Poison (12), Silence (2 turns), Blind".</summary>
         private static string StatusText(Unit unit)
@@ -344,6 +389,9 @@ namespace FriendshipWarriors.UI
 
             _unitInfo = UiFactory.Text(_unitPanel, "Details");
             _unitPanel.gameObject.SetActive(false);
+            // Compact until the player asks for Status.
+            _unitInfo.gameObject.SetActive(false);
+            _unitPanel.sizeDelta = new Vector2(CompactPanelWidth, _unitPanel.sizeDelta.y);
         }
 
         private static (UiBar, TextMeshProUGUI, string) Gauge(Transform parent, string label, Color fill)
