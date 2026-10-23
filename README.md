@@ -4,7 +4,7 @@ An isometric, turn-based tactics RPG in the spirit of **Final Fantasy Tactics**,
 
 FFT is the reference for mechanics and presentation. Characters, story and job names are original, and every intended departure from FFT is recorded in [`CLAUDE.md`](CLAUDE.md).
 
-> **Status:** early development. The battlefield, units, turn order, combat and enemy AI are playable in a test scene with placeholder art. No story or campaign yet.
+> **Status:** early development. The battlefield, units, turn order, combat, the first job abilities and enemy AI are playable in a test scene with placeholder art. No story or campaign yet.
 
 ![Battle with the command menu, turn order and unit details](docs/images/battle-hud.png)
 
@@ -37,6 +37,7 @@ FFT is the reference for mechanics and presentation. Characters, story and job n
 - Six jobs in two trees. Advanced jobs unlock at job level 2 in their base job.
 - Five equipment slots: two hands, head, body and accessory. Each job is limited to the weapons and armor its FFT counterpart could use.
 - Ability slots as in FFT: primary and secondary commands, reaction, support and movement.
+- First abilities: the Cadet's **Drill** (FFT Squire: Grit, Shoulder Charge, Hurl Rivet, Light Pack, Diligence) and the Corpsman's **Field Kit** items (FFT Chemist: tonics, aether vials, Panacea, Revival Salts), drawn from a shared team stock. Corpsmen throw items up to 4 tiles.
 - Progression: EXP up to level 99 on a growing curve, Proficiency (our version of FFT's job points), and Commendations for mastering a job.
 
 **Turns and combat**
@@ -176,7 +177,7 @@ CLAUDE.md              Design decisions, conventions and project notes
 - [x] Turns: CT turn order, Move / Act / Wait, turn trades
 - [x] Combat: FFT formulas, five-slot gear, timed press, knock-outs
 - [x] Enemy AI
-- [ ] First job abilities: Cadet *Drill* and Corpsman *Field Kit* items (in review)
+- [x] First job abilities: Cadet *Drill* and Corpsman *Field Kit* items
 - [ ] Status effects, reactions, and the abilities that need them
 - [ ] Magic (Evoker and Warder spells, charge times)
 - [ ] Our replacement for Brave and Faith
