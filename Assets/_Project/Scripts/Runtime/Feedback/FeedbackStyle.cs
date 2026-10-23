@@ -20,9 +20,10 @@ namespace FriendshipWarriors.Feedback
         public static readonly Color32 HarmfulStatusColor = new(215, 150, 255, 255);
         public static readonly Color32 HelpfulStatusColor = new(140, 235, 255, 255);
         public static readonly Color32 LiftedStatusColor = new(225, 225, 225, 255);
+        public static readonly Color32 PickupColor = new(255, 236, 160, 255);
 
         /// <summary>The popup for a change: <paramref name="amount"/> for numbers, <paramref name="status"/> for statuses.</summary>
-        public static PopupStyle Popup(PopupKind kind, int amount = 0, StatusEffect status = default) => kind switch
+        public static PopupStyle Popup(PopupKind kind, int amount = 0, StatusEffect status = default, string text = null) => kind switch
         {
             PopupKind.Damage => new PopupStyle(amount.ToString(), DamageColor),
             // The number stays the star; the label sits small above it.
@@ -36,6 +37,7 @@ namespace FriendshipWarriors.Feedback
             PopupKind.StatusGained => new PopupStyle(StatusName(status),
                 StatusRules.IsHarmful(status) ? HarmfulStatusColor : HelpfulStatusColor, 0.7f),
             PopupKind.StatusLifted => new PopupStyle(LiftedText(status), LiftedStatusColor, 0.6f),
+            PopupKind.Pickup => new PopupStyle(text ?? "", PickupColor, 0.6f),
             _ => new PopupStyle("", DamageColor),
         };
 
@@ -74,6 +76,10 @@ namespace FriendshipWarriors.Feedback
             PopupKind.Revived => SoundCue.Revive,
             _ => SoundCue.None,
         };
+
+        /// <summary>The sound when a drop is taken: a chime for a rod, a creak for a chest.</summary>
+        public static SoundCue PickupSound(Battle.Drops.DropKind kind) =>
+            kind == Battle.Drops.DropKind.SteelRod ? SoundCue.RodTaken : SoundCue.ChestOpened;
 
         /// <summary>The sound for a battle cue (Miss, Guarded and Critical sound through their popups instead).</summary>
         public static SoundCue Sound(BattleCue cue) => cue switch

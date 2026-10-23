@@ -410,6 +410,31 @@ namespace FriendshipWarriors.Units
 
         public bool HasLearned(AbilityDefinition ability) => _learned.Contains(ability);
 
+        /// <summary>Monsters drop items instead of gear and teach nothing (FFT); set by the job.</summary>
+        public bool IsMonster => Job.IsMonster;
+
+        /// <summary>Jobs the unit has earned Prof in, plus its current and secondary job.</summary>
+        public IEnumerable<JobDefinition> KnownJobs
+        {
+            get
+            {
+                var seen = new HashSet<JobDefinition> { Job };
+                yield return Job;
+                if (SecondaryJob != null && seen.Add(SecondaryJob))
+                    yield return SecondaryJob;
+                foreach (var job in _proficiency.Keys)
+                {
+                    if (job != null && seen.Add(job))
+                        yield return job;
+                }
+            }
+        }
+
+        /// <summary>
+        /// Learns an ability for free, as from a fallen unit's steel rod (FFT's crystal). Fails if already learned.
+        /// </summary>
+        public bool Inherit(AbilityDefinition ability) => ability != null && _learned.Add(ability);
+
         /// <summary>Spends Prof from the job that teaches the ability. Fails if already learned or unaffordable.</summary>
         public bool TryLearn(AbilityDefinition ability, JobDefinition fromJob)
         {

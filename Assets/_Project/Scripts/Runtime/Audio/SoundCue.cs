@@ -19,5 +19,8 @@ namespace FriendshipWarriors.Audio
         TimedPressFail = 13,
         StatusGained = 14,
         Revive = 15,
+        DropAppears = 16,
+        RodTaken = 17,
+        ChestOpened = 18,
     }
 }

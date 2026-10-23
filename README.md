@@ -65,10 +65,16 @@ FFT is the reference for mechanics and presentation. Characters, story and job n
 - Idle, walk, attack, cast (while charging a spell), hurt and knocked-out animations, in front and back poses.
 - The parts are plain PNGs on a fixed grid, made to be edited by hand in Aseprite. See the [art guide](Assets/_Project/Art/Sprites/README.md).
 
+**Drops (FFT crystals and chests)**
+- A lost unit leaves a **glowing steel rod** (our crystal) or a **treasure chest** on its tile. Any unit, on either side, takes it by ending its move there.
+- A steel rod lets the taker **learn the fallen unit's abilities** (free, from jobs it has unlocked) or **restore HP and MP** in full.
+- A chest holds one piece of the fallen unit's gear (a monster's holds an item matched to its level). Gear found is listed as **spoils** when the battle ends.
+- The enemy AI goes for drops too: rods when it's hurt, chests when nothing better is in reach.
+
 **Battle feedback**
 - FFT-style floating numbers that bounce up over the unit: white damage, green healing, blue MP, gold criticals with *Critical!*, and *Miss*, *Guarded* and status names (*Poison*, *Regen lifted*...). Several at once on one unit are staggered and stacked; an area spell shows on everyone together, and reactions (a counter-strike, a Self-Dose) follow a beat after the hit.
 - Struck units blink white and jolt; healed units glow; criticals shake the camera.
-- Knocked-out units flash as they drop, dim as their 3-turn counter runs down, and show the count over them. A lost unit fades away and leaves a crystal for a moment (placeholder).
+- Knocked-out units flash as they drop, dim as their 3-turn counter runs down, and show the count over them. A lost unit fades away, leaving its steel rod or treasure chest behind.
 - Sound hooks for hits, criticals, misses, blocks, heals, spells, knock-outs, timed presses and menus. Until real audio exists they play generated placeholder blips; drop clips into `Resources/Audio/SoundCues` to replace them.
 - Everything runs on the battle clock, so pausing freezes it mid-bounce.
 
@@ -93,6 +99,8 @@ FFT is the reference for mechanics and presentation. Characters, story and job n
 | **Formation:** the objective, the enemy's starting spots, and the Formation menu. | **Arranging units:** blue tiles are where your side may start. |
 | ![An area spell: four damage numbers and white hit flashes](docs/images/battle-feedback-area.png) | ![A hit followed by a Self-Dose heal](docs/images/battle-feedback-reaction.png) |
 | **Battle feedback:** an area spell hits four enemies at once. | **Reactions follow the hit:** 14 damage, then the green Self-Dose heal a beat later. |
+| ![A Cadet on a fallen Corpsman's steel rod, choosing to learn or restore](docs/images/drops-steel-rod.png) | ![A Vanguard opening a treasure chest](docs/images/drops-chest.png) |
+| **Steel rod:** learn the fallen unit's abilities, or restore HP and MP. | **Treasure chest:** a piece of the fallen unit's gear, kept as spoils. |
 
 ![Every job in its starting gear on both teams: idle, walk, attack, cast, hurt and KO frames, front and back](docs/images/paper-doll.png)
 
@@ -204,8 +212,8 @@ Assets/
     Scripts/Runtime/   Game code (FriendshipWarriors.* namespaces)
       Grid/            Tiles, maps, pathfinding, map checks, random generation, mesh view
       Units/           Units, jobs, stats, abilities, equipment, sprite views
-      Battle/          Formation phase, turn order, turn flow, combat, magic, enemy AI, battle setups and objectives
-      Feedback/        Floating numbers, hit flashes, knock-out countdown (presentation only)
+      Battle/          Formation phase, turn order, turn flow, combat, magic, enemy AI, drops, battle setups and objectives
+      Feedback/        Floating numbers, hit flashes, knock-out countdown, rod and chest markers (presentation only)
       Audio/           Sound cues, placeholder blips, the sound player
       Menus/           Main menu
       QuickPlay/       Random teams and quick-play matches
@@ -248,6 +256,7 @@ CLAUDE.md              Design decisions, conventions and project notes
 - [x] Animated movement: units walk their path tile by tile, as in FFT, with walk frames, hops and leaps
 - [x] Formation phase before battle (FFT): place units, swap, choose facings
 - [x] Battle feedback: floating numbers, hit flashes, knock-out countdown, sound hooks (placeholder blips)
+- [x] Drops (FFT): lost units leave a steel rod (learn abilities or restore) or a treasure chest (gear, kept as spoils)
 - [ ] Hand-drawn character art and terrain art, real sound effects and music
 - [ ] Battle prep, party management, campaign and story. Losing a campaign battle won't be game over: the campaign carries on, unlike FFT.
 - [ ] Quick Play options: online matches, army building

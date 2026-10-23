@@ -48,7 +48,7 @@ namespace FriendshipWarriors.Battle
         {
             var priority = Units.Where(u => u.Team != unit.Team && u.Team == Team.Player && _objective.IsProtected(u.Key)).ToList();
             bool cautious = unit.Team == Team.Enemy && _objective.IsTarget(unit.Key);
-            return new AI.AiHints(priority, cautious);
+            return new AI.AiHints(priority, cautious, DropValuesFor(unit));
         }
 
         private bool IsAiControlled(Unit unit) => unit != null && ControlOf(unit.Team) == TeamControl.AI;
@@ -140,9 +140,11 @@ namespace FriendshipWarriors.Battle
         private void AiMove(GridCoord destination)
         {
             var unit = _active.Unit;
+            bool moved = false;
             // The board can't change between planning and moving, but check anyway rather than teleport.
             if (_aiRange != null && _turn.CanMove && _aiRange.CanMoveTo(destination))
             {
+                moved = true;
                 _aiRange.TryGetPath(destination, _path);
                 var lastFrom = _path.Count > 1 ? _path[^2] : unit.Coord;
                 var walk = WalkPath.ForRoute(_gridView.Grid, unit.Coord, _path, _walkSettings);
@@ -153,14 +155,16 @@ namespace FriendshipWarriors.Battle
             }
             _aiRange = null;
             _aiDestination = null;
-            // The next step waits for the walk; a shorter pause after it, since the walk itself was the show.
-            WaitForWalks(() =>
+            // The next step waits for the walk (and takes any drop it ended on); a shorter pause after it, since the
+            // walk itself was the show.
+            System.Action resume = () =>
             {
                 _cursor.SetCoord(unit.Coord, followCamera: true);
                 _phase = Phase.AiTurn;
                 _aiNextStepAt = BattleNow + _aiStepDelay * 0.5f;
                 Refresh();
-            }, follow: _active);
+            };
+            WaitForWalks(moved ? () => TakeDropsAfterMove(resume) : resume, follow: _active);
         }
 
         private void AiAttack(Unit target)

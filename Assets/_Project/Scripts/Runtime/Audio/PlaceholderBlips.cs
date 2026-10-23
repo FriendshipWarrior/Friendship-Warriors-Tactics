@@ -42,6 +42,9 @@ namespace FriendshipWarriors.Audio
             SoundCue.TimedPressFail => new Recipe(200f, 160f, 0.12f, 0.1f, 0.35f),
             SoundCue.StatusGained => new Recipe(440f, 330f, 0.2f, 0.05f, 0.35f),
             SoundCue.Revive => new Recipe(392f, 1175f, 0.4f, 0f, 0.45f),
+            SoundCue.DropAppears => new Recipe(1568f, 1760f, 0.25f, 0.02f, 0.3f),
+            SoundCue.RodTaken => new Recipe(660f, 1980f, 0.45f, 0f, 0.45f),
+            SoundCue.ChestOpened => new Recipe(180f, 520f, 0.22f, 0.3f, 0.5f),
             _ => new Recipe(0f, 0f, 0f, 0f, 0f),
         };
 
