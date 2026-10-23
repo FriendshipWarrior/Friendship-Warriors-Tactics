@@ -104,15 +104,15 @@ namespace FriendshipWarriors.Battle
             _aiSteps.Enqueue(AiFace);
             _aiSteps.Enqueue(EndTurn);
 
-            _aiNextStepAt = Time.unscaledTime + _aiStepDelay;
+            _aiNextStepAt = BattleNow + _aiStepDelay;
             Refresh();
         }
 
         private void UpdateAiTurn()
         {
-            if (_aiSteps.Count == 0 || Time.unscaledTime < _aiNextStepAt)
+            if (_aiSteps.Count == 0 || BattleNow < _aiNextStepAt)
                 return;
-            _aiNextStepAt = Time.unscaledTime + _aiStepDelay;
+            _aiNextStepAt = BattleNow + _aiStepDelay;
             _aiSteps.Dequeue().Invoke();
         }
 
@@ -120,7 +120,7 @@ namespace FriendshipWarriors.Battle
         private void ResumeAiTurn()
         {
             _phase = Phase.AiTurn;
-            _aiNextStepAt = Time.unscaledTime + _aiStepDelay;
+            _aiNextStepAt = BattleNow + _aiStepDelay;
             Refresh();
         }
 

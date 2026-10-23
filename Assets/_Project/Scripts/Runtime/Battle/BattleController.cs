@@ -92,6 +92,9 @@ namespace FriendshipWarriors.Battle
         // Magic.
         private readonly List<GridCoord> _spellArea = new();
         private float _spellContinueAt;
+        // Battle time for presses, result holds and AI steps; disabling this component (pausing) stops it.
+        private readonly BattleClock _clock = new();
+        private float BattleNow => _clock.Now(Time.unscaledTime);
 
         /// <summary>The battle is over; true when the Player team won. Raised once, after the result banner is shown.</summary>
         public event System.Action<bool> BattleEnded;
@@ -121,6 +124,8 @@ namespace FriendshipWarriors.Battle
 
         private void OnEnable()
         {
+            _clock.Resume(Time.unscaledTime);
+            _hud.SetClock(_clock);
             _input.Confirm.performed += OnConfirm;
             _input.Cancel.performed += OnCancel;
             _cursor.Moved += OnCursorMoved;
@@ -135,6 +140,7 @@ namespace FriendshipWarriors.Battle
             _cursor.Moved -= OnCursorMoved;
             _cursor.Clicked -= OnTileClicked;
             _hud.MenuItemClicked -= OnMenuClicked;
+            _clock.Pause(Time.unscaledTime);
         }
 
         /// <summary>
@@ -202,7 +208,7 @@ namespace FriendshipWarriors.Battle
                     UpdateAiTurn();
                     break;
                 case Phase.SpellResolving:
-                    if (Time.unscaledTime >= _spellContinueAt)
+                    if (BattleNow >= _spellContinueAt)
                         StartNextTurn();
                     break;
             }
@@ -456,7 +462,7 @@ namespace FriendshipWarriors.Battle
             _spellArea.Clear();
             _spellArea.AddRange(result.Area);
             _cursor.SetCoord(charge.Target, followCamera: true);
-            _spellContinueAt = Time.unscaledTime + _spellResolvePause;
+            _spellContinueAt = BattleNow + _spellResolvePause;
             Refresh();
         }
 
@@ -589,7 +595,7 @@ namespace FriendshipWarriors.Battle
 
             _phase = Phase.TimedPress;
             _pendingResult = null;
-            _pressStart = Time.unscaledTime;
+            _pressStart = BattleNow;
             _hud.ShowTimingPrompt(_pressRole == PressRole.Offense ? "Strike!" : "Brace!", _timedPress);
             _hud.SetHint("Press A / Enter / Space as the marker crosses the zone");
             Refresh();
@@ -597,10 +603,10 @@ namespace FriendshipWarriors.Battle
 
         private void UpdateTimedPress()
         {
-            float elapsed = Time.unscaledTime - _pressStart;
+            float elapsed = BattleNow - _pressStart;
             if (_pendingResult == null && elapsed > _timedPress.Duration)
                 ResolveAttack(0f, pressed: false);
-            else if (_pendingResult != null && Time.unscaledTime >= _resolveAt)
+            else if (_pendingResult != null && BattleNow >= _resolveAt)
                 FinishAttack();
         }
 
@@ -616,7 +622,7 @@ namespace FriendshipWarriors.Battle
             if (_pressRole != PressRole.None)
                 _hud.StopTimingPrompt(accuracy, pressed);
             // Hold the frozen bar briefly so the player sees how the press went.
-            _resolveAt = Time.unscaledTime + (_pressRole != PressRole.None ? 0.6f : 0f);
+            _resolveAt = BattleNow + (_pressRole != PressRole.None ? 0.6f : 0f);
             if (_pressRole == PressRole.None)
                 FinishAttack();
         }
@@ -801,8 +807,8 @@ namespace FriendshipWarriors.Battle
                 case Phase.ChooseAbilityTarget: TryAbilityTarget(_cursor.Coord); break;
                 case Phase.ChooseDestination: TryMoveTo(_cursor.Coord); break;
                 case Phase.ChooseTarget: TryTarget(_cursor.Coord); break;
-                case Phase.TimedPress when _pendingResult == null:
-                    float elapsed = Time.unscaledTime - _pressStart;
+                case Phase.TimedPress when _pendingResult == null && !_clock.IsPaused:
+                    float elapsed = BattleNow - _pressStart;
                     ResolveAttack(_timedPress.Accuracy(elapsed), pressed: true);
                     break;
                 case Phase.ChooseFacing: EndTurn(); break;
