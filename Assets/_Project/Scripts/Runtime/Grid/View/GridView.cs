@@ -179,6 +179,16 @@ namespace FriendshipWarriors.Grid.View
                     instance = Instantiate(prop.Prefab, _propRoot);
                     instance.transform.localPosition = surface;
                 }
+                else if (prop.Sprite != null)
+                {
+                    instance = new GameObject();
+                    instance.transform.SetParent(_propRoot, false);
+                    instance.transform.localPosition = surface;
+                    var art = new GameObject("Sprite").AddComponent<SpriteRenderer>();
+                    art.transform.SetParent(instance.transform, false);
+                    art.sprite = prop.Sprite;
+                    art.gameObject.AddComponent<Billboard>();
+                }
                 else
                 {
                     instance = GameObject.CreatePrimitive(prop.Shape == PropShape.Pillar ? PrimitiveType.Cylinder : PrimitiveType.Cube);

@@ -28,7 +28,14 @@ MonoBehaviour:
     _weight: 2
   - _prop: {fileID: 11400000, guid: 1898d440d552440f69d6220129a3f632, type: 2}
     _weight: 1
+  - _prop: {fileID: 11400000, guid: 5417549d77d1e4a3f9cc849790e42f4a, type: 2}
+    _weight: 1.5
+  - _prop: {fileID: 11400000, guid: f32d0554dcf8f469499c5fda947ad108, type: 2}
+    _weight: 0.6
+  - _prop: {fileID: 11400000, guid: be36a532b602a44ae89d653068ef7b21, type: 2}
+    _weight: 0.5
   _propDensity: 0.06
   _deploymentSize: 5
+  _extraDeploymentTiles: 3
   _referenceJump: 3
   _maxAttempts: 25

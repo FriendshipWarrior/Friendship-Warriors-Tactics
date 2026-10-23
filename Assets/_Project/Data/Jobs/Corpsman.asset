@@ -49,7 +49,9 @@ MonoBehaviour:
   _weaponTypes: 02000000i
   _canUseShields: 0
   _armorTypes: 0200000004000000i
+  _isMonster: 0
   _requirements: []
   _placeholderColor: {r: 0.3, g: 0.7, b: 0.5, a: 1}
   _frontSprite: {fileID: 0}
   _backSprite: {fileID: 0}
+  _sheet: {fileID: 11400000, guid: d161e4849485f4953845ea6be456cc2d, type: 2}

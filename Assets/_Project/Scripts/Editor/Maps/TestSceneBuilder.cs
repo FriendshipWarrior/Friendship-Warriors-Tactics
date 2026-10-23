@@ -47,6 +47,8 @@ namespace FriendshipWarriors.Editor.Maps
             Units.StartingJobsBuilder.CreateStartingJobs();
             Units.StartingJobsBuilder.CreateStarterEquipment();
             Setups.BattleSetupBuilder.CreateSetups();
+            // Placeholder art from the CC0 Tiny Tactics pack: unit sheets per job, sprite props, terrain colours.
+            Art.TinyTacticsArtBuilder.Build();
             AssetDatabase.SaveAssets();
 
             // NewScene unloads unreferenced assets, so everything the scene references is loaded after it.

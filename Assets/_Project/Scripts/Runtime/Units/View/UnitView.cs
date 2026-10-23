@@ -1,6 +1,7 @@
 using FriendshipWarriors.Cameras;
 using FriendshipWarriors.Grid.View;
 using FriendshipWarriors.Units.View.PaperDoll;
+using FriendshipWarriors.Units.View.Sheets;
 using FriendshipWarriors.Units.View.Walking;
 using UnityEngine;
 
@@ -10,8 +11,9 @@ namespace FriendshipWarriors.Units.View
     /// Shows a <see cref="Units.Unit"/>: a flat sprite that turns to face the camera (rotating only around the
     /// vertical axis so it stays upright), switches between front/back poses and mirrors them based on the unit's
     /// facing and the camera angle, plus a team-colored marker on the ground. Knocked-out units lie down, greyed.
-    /// Art comes from, in order: the job's hand-drawn front/back sprites, the paper-doll composite of the unit's job
-    /// and gear (animated: idle, walk, attack, cast while charging, hurt, knocked out), or the generated placeholder.
+    /// Art comes from, in order: the job's hand-drawn front/back sprites, the job's animated whole-body
+    /// <see cref="UnitSheet"/> (with a weapon swing over its attack), the paper-doll composite of the unit's job and gear
+    /// (animated: idle, walk, attack, cast while charging, hurt, knocked out), or the generated placeholder.
     /// Moves play out along a <see cref="WalkPath"/> advanced by the battle (battle time, so pausing freezes them);
     /// the unit's tile has already changed by then, only the picture is catching up.
     /// </summary>
@@ -42,6 +44,10 @@ namespace FriendshipWarriors.Units.View
         private GridView _gridView;
         private IsoCameraRig _cameraRig;
         private readonly DollAnimator _animator = new();
+        private readonly SheetAnimator _sheetAnimator = new();
+        private SpriteRenderer _weapon;
+        private ComposedSheet _sheet;
+        private JobDefinition _sheetJob;
         private DollSheet _doll;
         private int _dollLoadout;
         private int _lastHp = -1;
@@ -79,6 +85,11 @@ namespace FriendshipWarriors.Units.View
             _sprite = new GameObject("Sprite").AddComponent<SpriteRenderer>();
             _sprite.transform.SetParent(transform, false);
             _sprite.transform.localScale = new Vector3(SpriteScale, SpriteScale, 1f);
+
+            // Weapon swing over a unit sheet's attack frames; a child of the sprite so it turns and scales with it.
+            _weapon = new GameObject("Weapon").AddComponent<SpriteRenderer>();
+            _weapon.transform.SetParent(_sprite.transform, false);
+            _weapon.enabled = false;
 
             _marker = new GameObject("Team Marker").AddComponent<SpriteRenderer>();
             _marker.transform.SetParent(transform, false);
@@ -132,10 +143,18 @@ namespace FriendshipWarriors.Units.View
         }
 
         /// <summary>Plays the attack animation once (weapon swing or shot).</summary>
-        public void PlayAttack() => _animator.Play(DollAnimation.Attack, Time.time);
+        public void PlayAttack()
+        {
+            _animator.Play(DollAnimation.Attack, Time.time);
+            _sheetAnimator.Play(SheetAnimation.Attack, Time.time);
+        }
 
         /// <summary>Plays the cast gesture once (charged spells then keep the cast loop while Charging).</summary>
-        public void PlayCast() => _animator.Play(DollAnimation.Cast, Time.time);
+        public void PlayCast()
+        {
+            _animator.Play(DollAnimation.Cast, Time.time);
+            _sheetAnimator.Play(SheetAnimation.Release, Time.time);
+        }
 
         /// <summary>Snaps to the unit's tile, ending any walk.</summary>
         public void SyncPosition()
@@ -188,6 +207,20 @@ namespace FriendshipWarriors.Units.View
                 _dollResolved = true;
             }
             return _doll;
+        }
+
+        /// <summary>The job's composed whole-body sheet, or null to use the paper doll; rebuilt when the job changes.</summary>
+        private ComposedSheet CurrentSheet()
+        {
+            var job = Unit.Job;
+            if (job.Sheet == null)
+                return null;
+            if (_sheet == null || !_sheet.IsAlive || _sheetJob != job)
+            {
+                _sheet = SheetComposer.SheetFor(Unit);
+                _sheetJob = job;
+            }
+            return _sheet;
         }
 
         /// <summary>A cheap fingerprint of the status set, so the label is only rebuilt when it changes.</summary>
@@ -250,20 +283,34 @@ namespace FriendshipWarriors.Units.View
             var pose = SpriteViewMath.Resolve(facing, yaw);
             var job = Unit.Job;
             var art = pose.ShowsFront ? job.FrontSprite : job.BackSprite;
-            var doll = art == null ? CurrentDoll() : null;
+            var sheet = art == null ? CurrentSheet() : null;
+            var doll = art == null && sheet == null ? CurrentDoll() : null;
 
             if (Unit.CurrentHp < _lastHp && !down)
+            {
                 _animator.Play(DollAnimation.Hurt, Time.time);
+                _sheetAnimator.Play(SheetAnimation.Hurt, Time.time);
+            }
             _lastHp = Unit.CurrentHp;
 
-            // Knocked-out units lie down and fade to grey until revived or lost. Paper dolls have a lying frame; other
-            // art is turned on its side.
-            _sprite.transform.rotation = Quaternion.Euler(0f, yaw, down && doll == null ? 90f : 0f);
+            // Knocked-out units lie down and fade to grey until revived or lost. Sheets and paper dolls have a lying
+            // frame; other art is turned on its side.
+            _sprite.transform.rotation = Quaternion.Euler(0f, yaw, down && doll == null && sheet == null ? 90f : 0f);
             _sprite.color = down ? new Color(0.55f, 0.55f, 0.6f) : Color.white;
 
+            Sprite weapon = null;
             if (art != null)
             {
                 _sprite.sprite = art;
+            }
+            else if (sheet != null)
+            {
+                bool charging = Unit.HasStatus(Status.StatusEffect.Charging);
+                var (animation, frame) = _sheetAnimator.Current(Time.time, sheet, down, charging, CriticalHp.IsCritical(Unit),
+                    _walk != null && !down ? _walk.WalkFrame : -1);
+                _sprite.sprite = sheet.Get(animation, frame, back: !pose.ShowsFront);
+                if (animation == SheetAnimation.Attack && Unit.Weapon != null)
+                    weapon = sheet.Weapon(Unit.Weapon.WeaponType, frame, back: !pose.ShowsFront);
             }
             else if (doll != null)
             {
@@ -276,6 +323,17 @@ namespace FriendshipWarriors.Units.View
                 _sprite.sprite = PlaceholderSprites.Unit(job.PlaceholderColor, pose.ShowsFront);
             }
             _sprite.flipX = pose.FlipX;
+
+            // The swing sits just in front of the body from the front and just behind it from the back, left to the
+            // usual distance sorting.
+            _weapon.enabled = weapon != null;
+            if (weapon != null)
+            {
+                _weapon.sprite = weapon;
+                _weapon.flipX = pose.FlipX;
+                _weapon.color = _sprite.color;
+                _weapon.transform.localPosition = new Vector3(0f, 0f, pose.ShowsFront ? -0.02f : 0.02f);
+            }
 
             _statusLabel.transform.rotation = Quaternion.Euler(_cameraRig.transform.eulerAngles.x, yaw, 0f);
             _roleLabel.transform.rotation = _statusLabel.transform.rotation;

@@ -8,8 +8,8 @@ namespace FriendshipWarriors.Units
 {
     /// <summary>
     /// A job (FFT's term for a class). Holds the stat multipliers and growth constants that shape a unit's numbers,
-    /// its Move, Jump and class evasion, and what it takes to unlock. Art is optional; without it a generated
-    /// placeholder in <see cref="PlaceholderColor"/> is used.
+    /// its Move, Jump and class evasion, and what it takes to unlock. Art is optional: hand-drawn front/back sprites, else
+    /// an animated <see cref="Sheet"/>, else the paper doll tinted with <see cref="PlaceholderColor"/>.
     /// </summary>
     [CreateAssetMenu(menuName = "Friendship Warriors/Job", fileName = "Job")]
     public sealed class JobDefinition : ScriptableObject
@@ -51,6 +51,8 @@ namespace FriendshipWarriors.Units
         [SerializeField] private Sprite _frontSprite;
         [Tooltip("Back three-quarter pose, facing screen-right. Mirrored for the other side.")]
         [SerializeField] private Sprite _backSprite;
+        [Tooltip("Animated whole-body art. Overrides the paper doll (but not the two sprites above); empty uses the paper doll.")]
+        [SerializeField] private View.Sheets.UnitSheet _sheet;
 
         public string DisplayName => _displayName;
         public string Description => _description;
@@ -76,6 +78,10 @@ namespace FriendshipWarriors.Units
         public Color PlaceholderColor => _placeholderColor;
         public Sprite FrontSprite => _frontSprite;
         public Sprite BackSprite => _backSprite;
+        public View.Sheets.UnitSheet Sheet => _sheet;
+
+        /// <summary>Sets (or clears) the whole-body sheet; used by art tooling.</summary>
+        public void SetSheet(View.Sheets.UnitSheet sheet) => _sheet = sheet;
 
         /// <summary>Sets every gameplay field at once; used by tooling that generates job assets.</summary>
         public void SetAbilities(string commandName, AbilityDefinition[] abilities)

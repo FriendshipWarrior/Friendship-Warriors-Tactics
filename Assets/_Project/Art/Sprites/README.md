@@ -1,6 +1,10 @@
 # Unit sprites: the paper doll
 
-Units without a hand-drawn job sprite are drawn as a **paper doll**. A unit's sprite is a stack of part sheets
+> **Right now every job shows placeholder art from the CC0 Tiny Tactics pack** (a *Unit Sheet* on each job; see
+> `../ThirdParty/TinyTactics/README.md`). Clear a job's **Sheet** field to see its paper doll again. A unit sheet is also
+> the way to bring in your own whole-body animations later: front ¾ and back ¾ strips facing screen-right, any frame size.
+
+Units without a hand-drawn job sprite or a unit sheet are drawn as a **paper doll**. A unit's sprite is a stack of part sheets
 (body, head, face, hair, headgear, body gear, weapon, shield). The parts are painted in a few **key colours**, and each
 unit gets its own colours for those keys: its job colour, its team colour, and a skin tone, hair colour and hairstyle
 picked from its name. Change a unit's gear and its sprite changes too.

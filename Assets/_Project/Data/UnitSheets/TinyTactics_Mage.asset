@@ -1,0 +1,88 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 8a3fe53dbc0fb490ab43977509671d2c, type: 3}
+  m_Name: TinyTactics_Mage
+  m_EditorClassIdentifier: FriendshipWarriors.Runtime::FriendshipWarriors.Units.View.Sheets.UnitSheet
+  _frameSize: {x: 32, y: 32}
+  _pixelsPerUnit: 28
+  _strips:
+  - _animation: 0
+    _front: {fileID: 2800000, guid: 24a129037087a4083bba68e2eddab5d5, type: 3}
+    _back: {fileID: 2800000, guid: c8ff063d4aa7540eea980530c7426bdf, type: 3}
+    _origin: {x: 0, y: 32}
+    _frameCount: 4
+    _frameSeconds: 0.3
+  - _animation: 1
+    _front: {fileID: 2800000, guid: 24a129037087a4083bba68e2eddab5d5, type: 3}
+    _back: {fileID: 2800000, guid: c8ff063d4aa7540eea980530c7426bdf, type: 3}
+    _origin: {x: 0, y: 0}
+    _frameCount: 4
+    _frameSeconds: 0.15
+  - _animation: 2
+    _front: {fileID: 2800000, guid: 92ee5f07ff93b4f71b8f25eea84f17f7, type: 3}
+    _back: {fileID: 2800000, guid: 26abe6dd8d6a1486f96ad50d7842d411, type: 3}
+    _origin: {x: 0, y: 0}
+    _frameCount: 4
+    _frameSeconds: 0.1
+  - _animation: 3
+    _front: {fileID: 2800000, guid: 2a31c1199d85e42ab9a400c80011160d, type: 3}
+    _back: {fileID: 2800000, guid: 01caaaf1706f24b1eb987c724af0d9f7, type: 3}
+    _origin: {x: 0, y: 0}
+    _frameCount: 1
+    _frameSeconds: 0.5
+  - _animation: 4
+    _front: {fileID: 2800000, guid: d7723b882fdcd449284801f5ae17b0cf, type: 3}
+    _back: {fileID: 2800000, guid: 9633938df6fa5464ab61e37f101a8caf, type: 3}
+    _origin: {x: 0, y: 0}
+    _frameCount: 1
+    _frameSeconds: 0.4
+  - _animation: 5
+    _front: {fileID: 2800000, guid: 32c6378c65fc94b6fa494ea35bf3b8b6, type: 3}
+    _back: {fileID: 2800000, guid: 017ec746883a94a058d374ca382e4afe, type: 3}
+    _origin: {x: 0, y: 0}
+    _frameCount: 1
+    _frameSeconds: 0.35
+  - _animation: 6
+    _front: {fileID: 2800000, guid: 99669a5c0fd1e479d918c2438a6f6927, type: 3}
+    _back: {fileID: 2800000, guid: f282e34e2380e48ba806cecf88f6edb5, type: 3}
+    _origin: {x: 0, y: 0}
+    _frameCount: 1
+    _frameSeconds: 1
+  - _animation: 7
+    _front: {fileID: 2800000, guid: 30dc6048461774842bf7d164d773c763, type: 3}
+    _back: {fileID: 2800000, guid: b1ce9704bfe4046f09da45b7721d30dc, type: 3}
+    _origin: {x: 0, y: 0}
+    _frameCount: 1
+    _frameSeconds: 1
+  _recolors:
+  - _role: 0
+    _colors:
+    - serializedVersion: 2
+      rgba: 4290653401
+    - serializedVersion: 2
+      rgba: 4294917553
+    - serializedVersion: 2
+      rgba: 4286975114
+    - serializedVersion: 2
+      rgba: 4285533608
+    - serializedVersion: 2
+      rgba: 4284294471
+  - _role: 1
+    _colors:
+    - serializedVersion: 2
+      rgba: 4292252739
+    - serializedVersion: 2
+      rgba: 4289814085
+  _playerTint: {r: 0.31, g: 0.57, b: 0.98, a: 1}
+  _enemyTint: {r: 0.89, g: 0.27, b: 0.26, a: 1}
+  _hairColors: []
+  _weapons: {fileID: 11400000, guid: c513626d4084f481b9349622c2ddfb1d, type: 2}

@@ -19,3 +19,10 @@ MonoBehaviour:
   _color: {r: 0.45, g: 0.45, b: 0.48, a: 1}
   _footprint: 0.7
   _prefab: {fileID: 0}
+  _spriteTexture: {fileID: 2800000, guid: bcb1d6dd432554b5aae45353b8ae9ff4, type: 3}
+  _spriteRect:
+    x: 5
+    y: 131
+    width: 26
+    height: 27
+  _spritePixelsPerUnit: 23
