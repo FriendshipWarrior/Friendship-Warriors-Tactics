@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using System.Linq;
 using FriendshipWarriors.Battle.Abilities;
 using FriendshipWarriors.Battle.Combat;
+using FriendshipWarriors.Battle.Magic;
 using FriendshipWarriors.Battle.Reactions;
 using FriendshipWarriors.Cameras;
 using FriendshipWarriors.Controls;
@@ -25,12 +26,14 @@ namespace FriendshipWarriors.Battle
     /// what was used. Act → Attack uses FFT's physical attack rules plus the timed press: the player presses Confirm
     /// as the marker crosses the zone to try for a critical (attacking) or a block (an enemy attacking a player
     /// unit). Act → job command lists the job's learned action abilities (see <see cref="AbilityCommand"/>); items draw
-    /// from the team's <see cref="Inventory"/>. Knocked-out units count down 3 turns before they are lost. Every team
+    /// from the team's <see cref="Inventory"/>. Spells (Evocation, Warding) aim at a tile: charged ones start charging
+    /// and end the caster's turn, then resolve on the CT clock before unit turns (see <see cref="TurnOrder.NextEvent"/>).
+    /// Knocked-out units count down 3 turns before they are lost. Every team
     /// is player-controlled until enemy AI exists, but only the Player team gets timed presses (Attack only).
     /// </summary>
     public sealed partial class BattleController : MonoBehaviour
     {
-        private enum Phase { Idle, Command, ActMenu, ChooseDestination, ChooseTarget, TimedPress, ChooseFacing, BattleOver, AiTurn, AbilityMenu, ChooseAbilityTarget }
+        private enum Phase { Idle, Command, ActMenu, ChooseDestination, ChooseTarget, TimedPress, ChooseFacing, BattleOver, AiTurn, AbilityMenu, ChooseAbilityTarget, SpellResolving }
         private enum PressRole { None, Offense, Defense }
 
         private const string MoveId = "move", ActId = "act", WaitId = "wait", AttackId = "attack", PrimaryId = "primary", SecondaryId = "secondary";
@@ -49,6 +52,10 @@ namespace FriendshipWarriors.Battle
         [SerializeField] private TimedPressRules _timedPress = TimedPressRules.Default;
         [Tooltip("0 picks a new seed each battle (logged).")]
         [SerializeField] private int _battleSeed;
+
+        [Header("Magic")]
+        [Tooltip("Pause after a charged spell resolves, in seconds, so its result can be read.")]
+        [SerializeField, Min(0f)] private float _spellResolvePause = 1.1f;
 
         [Header("Menu Repeat")]
         [SerializeField, Min(0.05f)] private float _menuRepeatDelay = 0.35f;
@@ -80,6 +87,10 @@ namespace FriendshipWarriors.Battle
         private readonly Dictionary<Team, Inventory> _inventories = new();
         private readonly HashSet<GridCoord> _abilityTiles = new();
         private AbilityDefinition _ability;
+
+        // Magic.
+        private readonly List<GridCoord> _spellArea = new();
+        private float _spellContinueAt;
 
         public Unit ActiveUnit => _active != null ? _active.Unit : null;
         public TurnState Turn => _turn;
@@ -151,6 +162,10 @@ namespace FriendshipWarriors.Battle
                 case Phase.AiTurn:
                     UpdateAiTurn();
                     break;
+                case Phase.SpellResolving:
+                    if (Time.unscaledTime >= _spellContinueAt)
+                        StartNextTurn();
+                    break;
             }
         }
 
@@ -161,14 +176,34 @@ namespace FriendshipWarriors.Battle
             if (CheckBattleOver())
                 return;
 
-            // Knocked-out units still take their place in the turn order, but only to count down (FFT).
-            var next = _order.NextTurn();
-            while (next != null && next.IsKnockedOut)
+            _spellArea.Clear();
+            Unit next = null;
+            while (true)
             {
-                _order.EndTurn(next, moved: false, acted: false);
-                if (next.TickDeathCounter())
-                    RemoveLostUnit(next);
-                next = _order.NextTurn();
+                var e = _order.NextEvent();
+                if (e.Kind == TurnEventKind.None)
+                    break;
+                if (e.Kind == TurnEventKind.SpellInterrupted)
+                {
+                    _hud.ShowBanner($"{e.Charge.Caster.Name}'s {e.Charge.Spell.DisplayName} is interrupted.");
+                    Debug.Log($"[Battle] {e.Charge} interrupted.", this);
+                    continue;
+                }
+                if (e.Kind == TurnEventKind.SpellResolves)
+                {
+                    ResolveCharged(e.Charge);
+                    return;
+                }
+                // Knocked-out units still take their place in the turn order, but only to count down (FFT).
+                if (e.Unit.IsKnockedOut)
+                {
+                    _order.EndTurn(e.Unit, moved: false, acted: false);
+                    if (e.Unit.TickDeathCounter())
+                        RemoveLostUnit(e.Unit);
+                    continue;
+                }
+                next = e.Unit;
+                break;
             }
 
             _active = _views.FirstOrDefault(v => v.Unit == next);
@@ -302,6 +337,13 @@ namespace FriendshipWarriors.Battle
 
         private void TryAbilityTarget(GridCoord coord)
         {
+            if (_ability.IsSpell)
+            {
+                // Spells aim at a tile, occupied or not; revives still need someone down on it.
+                if (_abilityTiles.Contains(coord) && (_ability.Targeting != AbilityTargeting.KnockedOut || AbilityTargetAt(coord) != null))
+                    CastSpell(_ability, coord);
+                return;
+            }
             var target = AbilityTargetAt(coord);
             if (target == null)
                 return;
@@ -322,6 +364,104 @@ namespace FriendshipWarriors.Battle
             if (CheckBattleOver())
                 return;
             AfterAction();
+        }
+
+        // ------------------------------------------------------------------ Magic
+
+        /// <summary>
+        /// Casts a spell at a tile. Instant spells resolve now; charged ones start charging (the caster gains Charging,
+        /// its turn's options end without extra CT) and resolve later on the CT clock. MP is paid on casting.
+        /// </summary>
+        private void CastSpell(AbilityDefinition spell, GridCoord tile)
+        {
+            var caster = _active.Unit;
+            if (tile != caster.Coord)
+                caster.Facing = DirectionExtensions.Toward(caster.Coord, tile);
+            _turn.RecordAct();
+
+            var result = SpellCasting.Begin(caster, spell, tile, _order, _gridView.Grid, Units.ToList(), _rng, out var charge);
+            if (charge == null)
+            {
+                string message = result.Message + SpellAftermath(result);
+                Debug.Log($"[Battle] {message}", this);
+                _hud.ShowBanner(message);
+                if (CheckBattleOver())
+                    return;
+                AfterAction();
+                return;
+            }
+
+            _turn.Conclude();
+            string ticks = charge.TicksLeft == 1 ? "1 tick" : $"{charge.TicksLeft} ticks";
+            _hud.ShowBanner($"{caster.Name} begins {spell.DisplayName} (resolves in {ticks}).");
+            Debug.Log($"[Battle] {charge} begins charging ({ticks}).", this);
+            AfterAction();
+        }
+
+        /// <summary>A charged spell comes due: resolve it, show the result for a moment, then carry on with the clock.</summary>
+        private void ResolveCharged(ChargingAction charge)
+        {
+            _phase = Phase.SpellResolving;
+            _hud.HideMenu();
+            _cursor.DirectionalInputLocked = true;
+            var result = SpellResolver.Resolve(charge.Caster, charge.Spell, charge.Target, _gridView.Grid, Units.ToList(), _rng);
+            string message = result.Message + SpellAftermath(result);
+            Debug.Log($"[Battle] {message}", this);
+            _hud.ShowBanner(message);
+            _hud.SetHint($"{charge.Spell.DisplayName} resolves");
+            _spellArea.Clear();
+            _spellArea.AddRange(result.Area);
+            _cursor.SetCoord(charge.Target, followCamera: true);
+            _spellContinueAt = Time.unscaledTime + _spellResolvePause;
+            Refresh();
+        }
+
+        /// <summary>
+        /// What follows a spell: Morale loss for knock-outs, the damaged units' own reactions (non-physical, so no counter
+        /// strikes), then Counter Magic from those it hit. Returns text for the banner.
+        /// </summary>
+        private string SpellAftermath(SpellResult result)
+        {
+            string extra = "";
+            var units = Units.ToList();
+            foreach (var hit in result.Targets.Where(t => t.Hit))
+            {
+                if (hit.WasKnockedOut)
+                    OnKnockedOut(hit.Target);
+                if (hit.Damage > 0)
+                {
+                    var reaction = ReactionResolver.React(hit.Target, result.Caster, physical: false, hit.Damage, _gridView.Grid,
+                        units, InventoryOf(hit.Target.Team), _rng);
+                    if (reaction.Triggered)
+                        extra += $"   |   {reaction.Message}";
+                }
+                var counter = SpellResolver.TryCounterMagic(hit.Target, result, _gridView.Grid, units, _rng);
+                if (counter != null)
+                {
+                    extra += $"   |   {hit.Target.Name} counters: {counter.Message}";
+                    foreach (var countered in counter.Targets.Where(t => t.WasKnockedOut))
+                        OnKnockedOut(countered.Target);
+                }
+            }
+            return extra;
+        }
+
+        private string SpellPreview(GridCoord tile)
+        {
+            var caster = _active.Unit;
+            var area = new HashSet<GridCoord>(SpellArea.Tiles(_gridView.Grid, tile, _ability.AreaRadius, _ability.AreaVertical));
+            var targets = Units.Where(u => area.Contains(u.Coord) && AbilityRules.IsValidTarget(_ability, caster, u)).ToList();
+            int ticks = _ability.ChargeSpeed > 0 ? (TurnOrder.TurnThreshold + _ability.ChargeSpeed - 1) / _ability.ChargeSpeed : 0;
+            string timing = ticks > 0 ? $"resolves in {ticks} tick{(ticks == 1 ? "" : "s")}" : "instant";
+            if (targets.Count == 0)
+                return $"{_ability.DisplayName}: no one here now ({timing})";
+            var parts = targets.Select(t => _ability.Effect switch
+            {
+                AbilityEffect.Damage => $"{t.Name} ~{MagicFormulas.Damage(caster, t, _ability.Power)}",
+                AbilityEffect.RestoreHp => $"{t.Name} +{MagicFormulas.Heal(caster, t, _ability.Power)}",
+                _ => $"{t.Name} {MagicFormulas.HitChance(caster, t, _ability.Power)}%",
+            });
+            return $"{_ability.DisplayName}: {string.Join(", ", parts)} ({timing})";
         }
 
         private string AbilityPreview(Unit target)
@@ -753,6 +893,24 @@ namespace FriendshipWarriors.Battle
                 case Phase.TimedPress:
                     _gridView.SetHighlight(_target.Unit.Coord, TileHighlight.EnemyDeployment);
                     break;
+                case Phase.ChooseAbilityTarget when _ability.IsSpell:
+                    foreach (var coord in _abilityTiles)
+                        _gridView.SetHighlight(coord, TileHighlight.MoveRange);
+                    if (_abilityTiles.Contains(_cursor.Coord))
+                    {
+                        foreach (var coord in SpellArea.Tiles(_gridView.Grid, _cursor.Coord, _ability.AreaRadius, _ability.AreaVertical))
+                            _gridView.SetHighlight(coord, _ability.IsSupportAction ? TileHighlight.Path : TileHighlight.EnemyDeployment);
+                        _hud.SetHint($"{SpellPreview(_cursor.Coord)}   A / click: cast   B / Esc: back");
+                    }
+                    else
+                    {
+                        _hud.SetHint($"{_ability.DisplayName}: choose a tile in range   A / click: cast   B / Esc: back");
+                    }
+                    break;
+                case Phase.SpellResolving:
+                    foreach (var coord in _spellArea)
+                        _gridView.SetHighlight(coord, TileHighlight.EnemyDeployment);
+                    break;
                 case Phase.ChooseAbilityTarget:
                     foreach (var coord in _abilityTiles)
                         _gridView.SetHighlight(coord, _ability.IsSupportAction ? TileHighlight.MoveRange : TileHighlight.EnemyDeployment);
@@ -777,7 +935,13 @@ namespace FriendshipWarriors.Battle
             var hovered = UnitAt(_cursor.Coord);
             _hud.SetUnitInfo(hovered != null ? hovered.Unit : ActiveUnit);
             if (_order != null)
-                _hud.SetTurnOrder(_order.Preview(8, ActiveUnit).Prepend(ActiveUnit).Where(u => u != null).Take(8).ToList(), ActiveUnit);
+            {
+                var entries = new List<TurnOrderEntry>();
+                if (ActiveUnit != null && _phase != Phase.SpellResolving)
+                    entries.Add(new TurnOrderEntry(ActiveUnit));
+                entries.AddRange(_order.PreviewEntries(8, _phase != Phase.SpellResolving ? ActiveUnit : null));
+                _hud.SetTurnOrder(entries.Take(8).ToList(), ActiveUnit);
+            }
         }
     }
 }

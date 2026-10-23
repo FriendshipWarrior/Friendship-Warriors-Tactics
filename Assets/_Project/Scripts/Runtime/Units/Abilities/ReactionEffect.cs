@@ -22,5 +22,8 @@ namespace FriendshipWarriors.Units.Abilities
 
         /// <summary>When damaged, gain Regen (FFT White Mage Regenerator).</summary>
         GainRegen = 5,
+
+        /// <summary>When hit by an enemy's offensive spell, cast the same spell back at the caster (FFT Black Mage Counter Magic).</summary>
+        CounterMagic = 6,
     }
 }

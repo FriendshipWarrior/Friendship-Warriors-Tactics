@@ -82,6 +82,12 @@ namespace FriendshipWarriors.Editor.Units
             AlsoTeach(warder, Reaction("Mending Ward", 400, ReactionEffect.GainRegen, // Regenerator, 400 JP
                 "When hurt, gain Regen. Triggers at Morale %."));
 
+            // Magic (added after statuses): Evocation after FFT Black Magic, Warding after White Magic.
+            AlsoTeach(evoker, EvokerSpells());
+            AlsoTeach(evoker, Reaction("Feedback Loop", 800, ReactionEffect.CounterMagic, // Counter Magic, 800 JP
+                "When an enemy's spell hurts you, cast it straight back at them (pays its MP). Triggers at Morale %."));
+            AlsoTeach(warder, WarderSpells());
+
             // Which weapons each job wields, after its FFT counterpart (Marksman rifles use FFT's bow rules).
             Arm(cadet, false, WeaponType.Sword, WeaponType.Knife);
             Arm(corpsman, false, WeaponType.Knife);
@@ -254,6 +260,70 @@ namespace FriendshipWarriors.Editor.Units
             CureItem("Field Remedy", 700, "Cures Poison, Blind, Silence and Sleep.",                  // Remedy
                 StatusEffect.Poison, StatusEffect.Blind, StatusEffect.Silence, StatusEffect.Sleep),
         };
+
+        /// <summary>
+        /// Evocation, after FFT Black Magic (FFT name and JP in comments). Fire tiers' MP, range, area, speed, power
+        /// and JP are verified (Final Fantasy Wiki); Bolt and Ice mirror them as in FFT. Poison's hit bonus and
+        /// speed are recalled, flagged in CLAUDE.md. Area radius 1 = FFT effect 2 (a cross of five).
+        /// </summary>
+        private static AbilityDefinition[] EvokerSpells() => new[]
+        {
+            Spell("Incendiary Charge", 50, "Fire: M.Atk × 14 to a small cross.", AbilityEffect.Damage, 4, 6, 14, 25, 1, 1, SpellElement.Fire),      // Fire
+            Spell("Incendiary Blast", 200, "Fire: M.Atk × 18 to a cross.", AbilityEffect.Damage, 4, 12, 18, 20, 1, 2, SpellElement.Fire),          // Fire 2
+            Spell("Incendiary Barrage", 500, "Fire: M.Atk × 24 to a cross.", AbilityEffect.Damage, 4, 24, 24, 15, 1, 3, SpellElement.Fire),       // Fire 3
+            Spell("Voltaic Charge", 50, "Lightning: M.Atk × 14 to a small cross.", AbilityEffect.Damage, 4, 6, 14, 25, 1, 1, SpellElement.Lightning),   // Bolt
+            Spell("Voltaic Blast", 200, "Lightning: M.Atk × 18 to a cross.", AbilityEffect.Damage, 4, 12, 18, 20, 1, 2, SpellElement.Lightning),       // Bolt 2
+            Spell("Voltaic Barrage", 500, "Lightning: M.Atk × 24 to a cross.", AbilityEffect.Damage, 4, 24, 24, 15, 1, 3, SpellElement.Lightning),    // Bolt 3
+            Spell("Cryo Charge", 50, "Ice: M.Atk × 14 to a small cross.", AbilityEffect.Damage, 4, 6, 14, 25, 1, 1, SpellElement.Ice),              // Ice
+            Spell("Cryo Blast", 200, "Ice: M.Atk × 18 to a cross.", AbilityEffect.Damage, 4, 12, 18, 20, 1, 2, SpellElement.Ice),                  // Ice 2
+            Spell("Cryo Barrage", 500, "Ice: M.Atk × 24 to a cross.", AbilityEffect.Damage, 4, 24, 24, 15, 1, 3, SpellElement.Ice),               // Ice 3
+            Spell("Toxin Cloud", 150, "Poisons a small cross (hit: M.Atk + 160).", AbilityEffect.AddStatus, 4, 6, 160, 33, 1, 1,                // Poison
+                inflicts: new[] { StatusEffect.Poison }),
+        };
+
+        /// <summary>
+        /// Warding, after FFT White Magic (FFT name and JP in comments). Cure tiers' MP, power and JP are verified or
+        /// recalled as noted in CLAUDE.md; buff and Esuna speeds (34) and hit bonuses are recalled. Purge cures every
+        /// harmful status we have (FFT Esuna's list is shorter). The revives (appended last, as they came later) only
+        /// reach knocked-out units whose death counter is still running.
+        /// </summary>
+        private static AbilityDefinition[] WarderSpells() => new[]
+        {
+            Spell("Mend", 50, "Heals M.Atk × 14 in a small cross.", AbilityEffect.RestoreHp, 4, 6, 14, 25, 1, 1),                        // Cure
+            Spell("Greater Mend", 180, "Heals M.Atk × 20 in a cross.", AbilityEffect.RestoreHp, 4, 10, 20, 20, 1, 2),                   // Cura / Cure 2
+            Spell("Grand Mend", 450, "Heals M.Atk × 30 in a cross.", AbilityEffect.RestoreHp, 4, 16, 30, 15, 1, 3),                     // Curaga / Cure 3
+            Spell("Vital Ward", 350, "Grants Regen (hit: M.Atk + 170).", AbilityEffect.AddStatus, 3, 8, 170, 34, 0, 0,                  // Regen
+                inflicts: new[] { StatusEffect.Regen }),
+            Spell("Plate Ward", 70, "Grants Protect (hit: M.Atk + 200).", AbilityEffect.AddStatus, 3, 6, 200, 34, 0, 0,                 // Protect
+                inflicts: new[] { StatusEffect.Protect }),
+            Spell("Aether Ward", 70, "Grants Shell (hit: M.Atk + 200).", AbilityEffect.AddStatus, 3, 6, 200, 34, 0, 0,                  // Shell
+                inflicts: new[] { StatusEffect.Shell }),
+            Spell("Purge", 300, "Cures every harmful status in a cross; Panic by steadying Morale (hit: M.Atk + 190).",  // Esuna
+                AbilityEffect.CureStatus, 3, 18, 190, 34, 1, 2,
+                cures: new[] { StatusEffect.Poison, StatusEffect.Blind, StatusEffect.Silence, StatusEffect.Sleep, StatusEffect.Slow,
+                               StatusEffect.Stop, StatusEffect.Disable, StatusEffect.Immobilize, StatusEffect.Panic }),
+            Spell("Resuscitate", 180, "Revives a fallen unit with half its HP (hit: M.Atk + 180).", AbilityEffect.Revive, 4, 10, 180, 25, 0, 0, // Raise
+                targeting: AbilityTargeting.KnockedOut, revivePercent: 50),
+            Spell("Full Resuscitation", 500, "Revives a fallen unit with full HP (hit: M.Atk + 160).", AbilityEffect.Revive, 4, 20, 160, 10, 0, 0, // Arise / Raise 2
+                targeting: AbilityTargeting.KnockedOut, revivePercent: 100),
+        };
+
+        /// <summary>A spell: aimed at any tile within <paramref name="range"/> (height doesn't block aiming), then its area.</summary>
+        private static AbilityDefinition Spell(string displayName, int cost, string description, AbilityEffect effect, int range, int mp,
+            int power, int speed, int radius, int vertical, SpellElement element = SpellElement.None, StatusEffect[] inflicts = null,
+            AbilityTargeting targeting = AbilityTargeting.Standing, int revivePercent = 0, StatusEffect[] cures = null)
+        {
+            var ability = Ability(displayName, AbilityKind.Action, cost, TurnTrade.None, description);
+            if (!ability.IsSpell)
+            {
+                ability.SetAction(effect, targeting, 0, range, 99, mpCost: mp);
+                ability.SetSpell(power, speed, radius, vertical, element, inflicts, revivePercent);
+                if (cures != null)
+                    ability.SetCures(cures);
+                EditorUtility.SetDirty(ability);
+            }
+            return ability;
+        }
 
         private static AbilityDefinition CureItem(string displayName, int cost, string description, params StatusEffect[] cures)
         {

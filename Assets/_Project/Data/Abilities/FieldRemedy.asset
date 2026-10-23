@@ -28,6 +28,14 @@ MonoBehaviour:
   _isItem: 1
   _mpCost: 0
   _cures: 00000000080000000900000007000000i
+  _isSpell: 0
+  _power: 0
+  _chargeSpeed: 0
+  _areaRadius: 0
+  _areaVertical: 1
+  _element: 0
+  _inflicts: 
+  _revivePercent: 0
   _reaction: 0
   _moveBonus: 0
   _proficiencyBonusPercent: 0

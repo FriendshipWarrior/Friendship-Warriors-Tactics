@@ -19,5 +19,8 @@ namespace FriendshipWarriors.Units.Status
         Disable = 10,
         Immobilize = 11,
         Panic = 12,
+
+        /// <summary>Casting a spell that hasn't resolved yet (FFT Charging): can't evade, and the turn passes.</summary>
+        Charging = 13,
     }
 }

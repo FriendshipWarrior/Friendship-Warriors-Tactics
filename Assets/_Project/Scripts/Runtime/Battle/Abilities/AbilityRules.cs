@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using FriendshipWarriors.Grid;
 using FriendshipWarriors.Units;
 using FriendshipWarriors.Units.Abilities;
+using FriendshipWarriors.Units.Status;
 
 namespace FriendshipWarriors.Battle.Abilities
 {
@@ -69,10 +70,15 @@ namespace FriendshipWarriors.Battle.Abilities
         {
             if (!user.HasLearned(ability))
                 return "not learned";
+            if (ability.IsSpell && user.HasStatus(StatusEffect.Silence))
+                return "silenced";
             if (ability.IsItem && (inventory == null || inventory.Count(ability) <= 0))
                 return "none left";
             if (ability.MpCost > user.CurrentMp)
                 return "not enough MP";
+            // Spells aim at a tile and may be cast on empty ground (FFT); only revives need someone to revive.
+            if (ability.IsSpell && ability.Targeting != AbilityTargeting.KnockedOut)
+                return null;
             if (Targets(grid, ability, user, units).Count == 0)
                 return "no target";
             return null;

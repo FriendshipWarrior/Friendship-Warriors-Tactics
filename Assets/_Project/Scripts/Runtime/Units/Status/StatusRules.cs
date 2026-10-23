@@ -40,7 +40,7 @@ namespace FriendshipWarriors.Units.Status
             StatusEffect.Disable => 24,
             StatusEffect.Immobilize => 24,
             // Blind lasts until cured (PSX); Silence counts the unit's turns instead (see TurnDuration); Panic lasts
-            // while Morale stays below 10.
+            // while Morale stays below 10; Charging until the spell resolves.
             _ => UntilCured,
         };
 
@@ -53,14 +53,22 @@ namespace FriendshipWarriors.Units.Status
         };
 
         public static bool PreventsMove(StatusEffect status) =>
-            status is StatusEffect.Stop or StatusEffect.Sleep or StatusEffect.Immobilize;
+            status is StatusEffect.Stop or StatusEffect.Sleep or StatusEffect.Immobilize or StatusEffect.Charging;
 
         /// <summary>Panic stops a unit acting: it only runs (FFT Chicken).</summary>
         public static bool PreventsAct(StatusEffect status) =>
-            status is StatusEffect.Stop or StatusEffect.Sleep or StatusEffect.Disable or StatusEffect.Panic;
+            status is StatusEffect.Stop or StatusEffect.Sleep or StatusEffect.Disable or StatusEffect.Panic or StatusEffect.Charging;
 
-        /// <summary>A unit under these can't evade (FFT: sleeping or stopped units have no evasion).</summary>
-        public static bool RemovesEvasion(StatusEffect status) => status is StatusEffect.Stop or StatusEffect.Sleep;
+        /// <summary>A unit under these can't evade (FFT: sleeping, stopped or charging units have no evasion).</summary>
+        public static bool RemovesEvasion(StatusEffect status) =>
+            status is StatusEffect.Stop or StatusEffect.Sleep or StatusEffect.Charging;
+
+        /// <summary>
+        /// Statuses that end a spell being charged: the caster can no longer finish it (FFT: Stop, Sleep and
+        /// Silence; knock-outs clear every status anyway). Our reading of FFT, flagged in CLAUDE.md.
+        /// </summary>
+        public static bool InterruptsCharging(StatusEffect status) =>
+            status is StatusEffect.Stop or StatusEffect.Sleep or StatusEffect.Silence;
 
         /// <summary>Reactions don't fire while asleep, stopped, disabled (FFT) or panicking (our choice).</summary>
         public static bool BlocksReactions(StatusEffect status) =>
@@ -84,10 +92,11 @@ namespace FriendshipWarriors.Units.Status
             StatusEffect.Silence => "SIL",
             StatusEffect.Disable => "DIS",
             StatusEffect.Immobilize => "IMB",
+            StatusEffect.Charging => "CHG",
             _ => "PNC",
         };
 
         public static bool IsHarmful(StatusEffect status) =>
-            status is not (StatusEffect.Regen or StatusEffect.Protect or StatusEffect.Shell or StatusEffect.Haste);
+            status is not (StatusEffect.Regen or StatusEffect.Protect or StatusEffect.Shell or StatusEffect.Haste or StatusEffect.Charging);
     }
 }

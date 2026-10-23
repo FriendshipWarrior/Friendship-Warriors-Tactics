@@ -32,6 +32,15 @@ MonoBehaviour:
   _commandName: Warding
   _abilities:
   - {fileID: 11400000, guid: 1904359f26f774f248a51fc5c73da7ad, type: 2}
+  - {fileID: 11400000, guid: b11620165f9f2447b9cf5ec8e438fdd1, type: 2}
+  - {fileID: 11400000, guid: 4b3baae33136b495b864692226bcce7e, type: 2}
+  - {fileID: 11400000, guid: 6564252f57a884e8aa8acd78633d8288, type: 2}
+  - {fileID: 11400000, guid: 4d1eb9323328249ba85a13bae8dfd1c4, type: 2}
+  - {fileID: 11400000, guid: 9c7aa678a264640afb6ba117554ef72f, type: 2}
+  - {fileID: 11400000, guid: 6995c3a5ddc4246eb807229a935beb07, type: 2}
+  - {fileID: 11400000, guid: 9902fd535a6594060a688be9f8ffb37f, type: 2}
+  - {fileID: 11400000, guid: 29ca880e3dbaa4810bd9728a5ab7cd99, type: 2}
+  - {fileID: 11400000, guid: 751057fc1387242aea1607148f06f70f, type: 2}
   _innateAbilities: []
   _weaponTypes: 05000000i
   _canUseShields: 0

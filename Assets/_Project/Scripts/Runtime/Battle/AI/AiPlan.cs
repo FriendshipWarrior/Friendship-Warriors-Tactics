@@ -1,5 +1,6 @@
 using FriendshipWarriors.Grid;
 using FriendshipWarriors.Units;
+using FriendshipWarriors.Units.Abilities;
 
 namespace FriendshipWarriors.Battle.AI
 {
@@ -15,6 +16,12 @@ namespace FriendshipWarriors.Battle.AI
         /// <summary>Unit to attack, or null if no attack is worth making.</summary>
         public Unit Target { get; set; }
 
+        /// <summary>Spell to cast instead of attacking (after <see cref="MoveBefore"/>), or null.</summary>
+        public AbilityDefinition Spell { get; set; }
+
+        /// <summary>Tile the spell is aimed at.</summary>
+        public GridCoord SpellTile { get; set; }
+
         /// <summary>Tile to fall back to after attacking from the starting tile, or null to stay.</summary>
         public GridCoord? MoveAfter { get; set; }
 
@@ -24,6 +31,8 @@ namespace FriendshipWarriors.Battle.AI
         public double Score { get; set; }
 
         public override string ToString() =>
-            $"move {MoveBefore?.ToString() ?? "-"}, attack {Target?.Name ?? "-"}, then move {MoveAfter?.ToString() ?? "-"}, face {Facing}";
+            $"move {MoveBefore?.ToString() ?? "-"}, " +
+            (Spell != null ? $"cast {Spell.DisplayName} at {SpellTile}" : $"attack {Target?.Name ?? "-"}") +
+            $", then move {MoveAfter?.ToString() ?? "-"}, face {Facing}";
     }
 }
