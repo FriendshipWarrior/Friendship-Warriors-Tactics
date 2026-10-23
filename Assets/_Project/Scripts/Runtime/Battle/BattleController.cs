@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using System.Linq;
 using FriendshipWarriors.Battle.Abilities;
 using FriendshipWarriors.Battle.Combat;
+using FriendshipWarriors.Battle.Objectives;
 using FriendshipWarriors.Battle.Magic;
 using FriendshipWarriors.Battle.Reactions;
 using FriendshipWarriors.Cameras;
@@ -98,6 +99,18 @@ namespace FriendshipWarriors.Battle
 
         private IEnumerable<Unit> Units => _views.Select(v => v.Unit);
 
+        private readonly List<Unit> _lost = new();
+        private BattleObjective _objective = BattleObjective.Standard;
+
+        /// <summary>What this battle asks of the player (defeat all enemies unless the setup says otherwise).</summary>
+        public BattleObjective Objective => _objective;
+
+        /// <summary>Units whose death counter ran out this battle.</summary>
+        public IReadOnlyList<Unit> LostUnits => _lost;
+
+        /// <summary>The current verdict on the objective.</summary>
+        public BattleOutcome Outcome => ObjectiveEvaluator.Evaluate(_objective, Units, _lost);
+
         /// <summary>Sets the item stock a team draws from in this battle.</summary>
         public void SetInventory(Team team, Inventory inventory) => _inventories[team] = inventory;
 
@@ -126,9 +139,14 @@ namespace FriendshipWarriors.Battle
         /// swings and statuses are cleared. <paramref name="prepare"/> runs after that and before the first turn, for
         /// anything a scenario starts with (statuses, Morale).
         /// </summary>
-        public void Begin(IReadOnlyList<UnitView> views, System.Action<IReadOnlyList<Unit>> prepare = null)
+        /// <param name="objective">How this battle is won; null for the standard objective (defeat all enemies).</param>
+        public void Begin(IReadOnlyList<UnitView> views, System.Action<IReadOnlyList<Unit>> prepare = null,
+            BattleObjective objective = null)
         {
             _views = views.ToList();
+            _lost.Clear();
+            _objective = objective ?? BattleObjective.Standard;
+            _phase = Phase.Idle; // a previous battle may have ended in BattleOver
             foreach (var unit in Units)
             {
                 unit.ChargeTime = 0;
@@ -141,7 +159,25 @@ namespace FriendshipWarriors.Battle
             Debug.Log($"[Battle] Seed {seed}.", this);
             _hud.HideTimingPrompt();
             ResetAiTurn();
+            ShowObjective();
             StartNextTurn();
+        }
+
+        /// <summary>Announces the objective, keeps it on screen, and tags the target and protected units.</summary>
+        private void ShowObjective()
+        {
+            string text = ObjectiveEvaluator.Describe(_objective, Units);
+            _hud.SetObjective(text);
+            _hud.ShowBanner($"Objective: {text}", seconds: 4f);
+            foreach (var view in _views)
+            {
+                if (_objective.IsTarget(view.Unit.Key) && view.Unit.Team == Team.Enemy)
+                    view.SetRole("TARGET", new Color(1f, 0.35f, 0.3f));
+                else if (_objective.IsProtected(view.Unit.Key) && view.Unit.Team == Team.Player)
+                    view.SetRole("PROTECT", new Color(0.45f, 1f, 0.55f));
+                else
+                    view.SetRole(null, Color.white);
+            }
         }
 
         private void Update()
@@ -199,7 +235,12 @@ namespace FriendshipWarriors.Battle
                 {
                     _order.EndTurn(e.Unit, moved: false, acted: false);
                     if (e.Unit.TickDeathCounter())
+                    {
                         RemoveLostUnit(e.Unit);
+                        // Losing a protected unit can end the battle right here.
+                        if (CheckBattleOver())
+                            return;
+                    }
                     continue;
                 }
                 next = e.Unit;
@@ -617,11 +658,13 @@ namespace FriendshipWarriors.Battle
             AfterAction();
         }
 
+        /// <summary>Ends the battle if the objective is won or lost (see <see cref="ObjectiveEvaluator"/>).</summary>
         private bool CheckBattleOver()
         {
-            bool playersStanding = Units.Any(u => u.Team == Team.Player && !u.IsKnockedOut);
-            bool enemiesStanding = Units.Any(u => u.Team == Team.Enemy && !u.IsKnockedOut);
-            if (playersStanding && enemiesStanding)
+            if (_phase == Phase.BattleOver)
+                return true;
+            var outcome = Outcome;
+            if (!outcome.IsOver)
                 return false;
 
             _phase = Phase.BattleOver;
@@ -630,8 +673,10 @@ namespace FriendshipWarriors.Battle
                 unit.ClearBattleModifiers();
             _hud.HideMenu();
             _hud.HideTimingPrompt();
+            Refresh(); // bring the turn order and unit panel up to date (a just-lost unit leaves the list)
             _gridView.ClearHighlights();
-            _hud.ShowBanner(playersStanding ? "Victory!" : "Defeat...", seconds: 0f);
+            _hud.ShowBanner(outcome.Kind == BattleOutcomeKind.Victory ? $"Victory! {outcome.Reason}" : $"Defeat... {outcome.Reason}", seconds: 0f);
+            Debug.Log($"[Battle] {outcome}.", this);
             _hud.SetHint("R / Select: new map");
             return true;
         }
@@ -641,6 +686,7 @@ namespace FriendshipWarriors.Battle
         {
             var view = _views.FirstOrDefault(v => v.Unit == unit);
             _order.Remove(unit);
+            _lost.Add(unit);
             if (view != null)
             {
                 _views.Remove(view);

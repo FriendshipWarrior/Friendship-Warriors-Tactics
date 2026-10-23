@@ -75,18 +75,19 @@ Assets/
           Equipment/      # EquipmentDefinition, slots (main/off hand, head, body, accessory), weapon & armor types
           View/           # UnitView (billboard sprite), SpriteViewMath, PlaceholderSprites
         Battle/           # TurnOrder (CT), TurnState (Move/Act/Wait), BattleController (turn flow; .Ai.cs partial runs AI turns)
-          AI/             # AiPlanner, AiPlan (pure, deterministic per seed)
+          AI/             # AiPlanner, AiPlan, AiHints (objective-aware weights; pure, deterministic per seed)
           Abilities/      # AbilityCommand (job command menus + execution), AbilityRules, AbilityResolver, Knockback, Inventory
           Combat/         # CombatFormulas, AttackResolver, AttackRange, TimedPressRules, BattleRewards
           Magic/          # MagicFormulas, SpellArea, ChargingAction, SpellResolver (spells, Counter Magic)
           Reactions/      # ReactionResolver (Morale-chance reactions after damage)
+          Objectives/     # BattleSetup (team sizes, rosters, objective), RosterEntry, BattleObjective, ObjectiveEvaluator, BattleSetupValidator
         UI/               # BattleHud (uGUI + TextMeshPro, built in code), MenuModel
         Controls/         # BattleInput, TileCursor, CursorMath (gamepad + mouse/keyboard)
         Camera/           # IsoCameraRig (namespace FriendshipWarriors.Cameras)
         Dev/              # BattleSandbox and other test-scene drivers
         Core/             # planned
-      Editor/             # FriendshipWarriors.Editor.asmdef — MapEditorWindow, MapPreview, TestMapFactory, TestSceneBuilder, StartingJobsBuilder
-    Data/                 # ScriptableObject assets: maps, props, terrain palette, generator settings (later jobs, abilities, items)
+      Editor/             # FriendshipWarriors.Editor.asmdef — MapEditorWindow, MapPreview, TestMapFactory, TestSceneBuilder, StartingJobsBuilder; Setups/BattleSetupBuilder (prebuilt setups)
+    Data/                 # ScriptableObject assets: maps, props, terrain palette, generator settings, jobs, abilities, equipment; Setups/ (Battle Setup assets)
     Input/                # BattleControls.inputactions (control schemes: Keyboard&Mouse, Gamepad)
     Materials/            # Terrain.mat (URP Lit, cloned per terrain look), Highlight.mat (transparent unlit)
     Scenes/               # Battle_Test.unity (the only scene in Build Settings)
@@ -136,6 +137,7 @@ Root namespace: `FriendshipWarriors`; namespaces follow folders (e.g. `Friendshi
 - `capture game_view --save_path` writes under `Assets/`. Don't use it; take the inline image (`--max_resolution`) and decode it into the scratchpad.
 - In Play mode `Destroy` is deferred to the end of the frame: clear references to destroyed objects right away, or a same-frame rebuild reuses them.
 - Pipeline-specific flags go after `--`; the CLI's own flags (`--caller`, `--skill`, `--format`) go before it.
+- **Never edit or refresh scripts while Play mode is running** (or before a stop has finished): the domain reload nulls non-serialized references such as `UnitView.Unit` and floods the console with errors. Stop, confirm `isPlaying` is false, then edit.
 - Play-mode checks: `editor set_auto_tick` + `editor.playmode set_run_in_background` first, then `job wait` on `Time.frameCount` to prove frames advance. Afterwards revert run-in-background and confirm `PlayerSettings.runInBackground` didn't get saved as changed.
 
 ## Design Decisions
@@ -230,4 +232,13 @@ Record decisions here as they are made (date — decision — rationale).
   Evoker's Counter Magic (Feedback Loop) arrived with magic, below. Starter weapon W-Ev (recalled FFT values): saber 5, knife 5, rifle 0, rod 20, staff 15.
 - 2026-10-23 — **Cures (FFT):** First Aid (Squire *Heal*, 150, cures Blind and Silence on self or adjacent), Antitoxin (*Antidote*, 70, Poison), Eyewash (*Eye Drops*, 80, Blind), Throat Lozenge (*Echo Herbs*, 120, Silence), Field Remedy (*Remedy*, 700, Poison/Blind/Silence/Sleep — cut down to the statuses we have). Remedy's JP cost is recalled.
 - 2026-10-23 — **Enemy AI and statuses:** immobilized units don't move, disabled units approach without attacking, panicking units flee to the reachable tile farthest from the enemy, and attacks into a likely counter-strike are scored down by their expected counter damage.
+- 2026-10-24 — **Battle setup and objectives.** A battle is described by a `BattleSetup` asset (*Create → Friendship Warriors → Battle Setup*): player and enemy team sizes (**standard / quick play is 5 v 5**, `BattleSetup.StandardTeamSize`; campaign and special levels may change them, 1–12), a roster per side (`RosterEntry`: job, optional display name, optional level, and a stable **key**), a default level, and a `BattleObjective`. A side fields min(team size, roster length, deployment tiles); `BattleSetupValidator` warns about short rosters, missing jobs, duplicate keys and objective keys that don't match a fielded unit. Objectives reference units by `Unit.Key` (not name or index) so campaign scripting and online play can name them stably.
+  - **Victory conditions:** *Defeat all enemies* (standard) or *Defeat target* (one enemy, by key). **The target counts as defeated as soon as it is knocked out** (user decision); other enemies may still be standing. A target key that matches no enemy falls back to defeat-all (and the validator flags it).
+  - **Protected units** (any number of player keys, on top of either victory condition): **the player loses only when a protected unit is permanently lost** — its 3-turn death counter runs out (user decision). Being knocked out and revived is fine.
+  - **The player always loses when every Player unit is down.**
+  - **Simultaneous events** (`ObjectiveEvaluator.Evaluate`, checked after every action and death-counter tick): **winning beats everything** (user decision, 2026-10-24). (1) The victory condition met → victory, even if in the same check a protected unit was permanently lost or the last Player unit fell (e.g. a counter-attack or area spell); (2) a protected unit lost → defeat; (3) all Player units down → defeat.
+  - **Presentation:** the HUD shows the objective top left ("Defeat Commander Vael | Protect: Escort Lira"), the battle opens with an "Objective: …" banner, targets carry a red TARGET tag and protected units a green PROTECT tag, and the end banner gives the reason ("Victory! Commander Vael defeated", "Defeat... Escort Lira was lost").
+  - **AI awareness** (`AiHints`): enemies weight attacks on protected player units ×1.5 (attacks only, not spells), and an enemy target plays cautiously (threat cost ×2 when choosing tiles). Tunable constants.
+  - **User decisions (2026-10-24):** the target is defeated on KO; a protected unit only counts when permanently lost; winning beats everything when events coincide; the red TARGET and green PROTECT tags are approved; the AI weights (×1.5 on protected units, the target counting danger ×2) are approved.
+  - Prebuilt setups (*Friendship Warriors → Data → Create Battle Setups*, `Data/Setups/`): **Standard (5 v 5)**, **Defeat the Commander** (enemy Vanguard "Commander Vael", Lv 7, key `commander`) and **Escort** (player Warder "Escort Lira", key `escort`, protected). Each side fields all six jobs between them. The test scene's `BattleSandbox` takes a setup; swap it to try each objective.
 - Open questions: save system scope; AI difficulty levels; whether to add FFT's multi-layer tiles (bridges, walking under things).

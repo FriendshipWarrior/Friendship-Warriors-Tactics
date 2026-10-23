@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using FriendshipWarriors.Battle;
 using FriendshipWarriors.Battle.Abilities;
+using FriendshipWarriors.Battle.Objectives;
 using FriendshipWarriors.Cameras;
 using FriendshipWarriors.Controls;
 using FriendshipWarriors.Grid;
@@ -16,8 +17,8 @@ using UnityEngine.InputSystem;
 namespace FriendshipWarriors.Dev
 {
     /// <summary>
-    /// Test-scene setup: spawns both teams on their deployment zones and hands them to the
-    /// <see cref="BattleController"/>. Each unit gets the first starter item for each slot its job can use, learns every
+    /// Test-scene setup: spawns both teams from a <see cref="BattleSetup"/> (team sizes, rosters with keys, objective)
+    /// onto the map's deployment zones and hands them to the <see cref="BattleController"/>. Each unit gets the first starter item for each slot its job can use, learns every
     /// ability its job teaches (passives get equipped), and Player units without items of their own take the item
     /// job's command as their secondary with its first item learned. Both teams get the same item stock. R / Select
     /// rolls a random map and restarts.
@@ -29,10 +30,9 @@ namespace FriendshipWarriors.Dev
         [SerializeField] private IsoCameraRig _cameraRig;
         [SerializeField] private BattleController _battle;
 
-        [Header("Roster")]
-        [SerializeField] private JobDefinition[] _playerJobs = System.Array.Empty<JobDefinition>();
-        [SerializeField] private JobDefinition[] _enemyJobs = System.Array.Empty<JobDefinition>();
-        [SerializeField, Range(1, 99)] private int _unitLevel = 5;
+        [Header("Battle")]
+        [Tooltip("Team sizes, rosters and objective. Swap between the Standard, Commander and Escort setups to try each objective.")]
+        [SerializeField] private BattleSetup _setup;
         [SerializeField] private int _rosterSeed = 7;
         [SerializeField] private EquipmentDefinition[] _starterGear = System.Array.Empty<EquipmentDefinition>();
         [Tooltip("The job whose command uses items (Corpsman), offered to Player units as a secondary.")]
@@ -74,10 +74,18 @@ namespace FriendshipWarriors.Dev
                 Destroy(view.gameObject);
             _views.Clear();
 
+            if (_setup == null)
+            {
+                Debug.LogError("[BattleSandbox] No Battle Setup assigned.", this);
+                return;
+            }
+            foreach (var issue in BattleSetupValidator.Validate(_setup))
+                Debug.LogWarning($"[BattleSandbox] {_setup.name}: {issue}", this);
+
             var map = _gridView.Map;
             var rng = new System.Random(_rosterSeed);
-            Spawn(_playerJobs, Team.Player, map.PlayerDeployment, map.EnemyDeployment, rng);
-            Spawn(_enemyJobs, Team.Enemy, map.EnemyDeployment, map.PlayerDeployment, rng);
+            Spawn(_setup.PlayerRoster, _setup.PlayerTeamSize, Team.Player, map.PlayerDeployment, map.EnemyDeployment, rng);
+            Spawn(_setup.EnemyRoster, _setup.EnemyTeamSize, Team.Enemy, map.EnemyDeployment, map.PlayerDeployment, rng);
 
             var grid = _gridView.Grid;
             var center = GridMetrics.GridCenter(grid);
@@ -92,7 +100,7 @@ namespace FriendshipWarriors.Dev
                     inventory.Add(stock.Item, stock.Count);
                 _battle.SetInventory(team, inventory);
             }
-            _battle.Begin(_views, PrepareStatuses);
+            _battle.Begin(_views, PrepareStatuses, _setup.Objective);
         }
 
         /// <summary>Applies the test statuses and the low-Morale enemy once the battle has cleared old modifiers.</summary>
@@ -117,15 +125,24 @@ namespace FriendshipWarriors.Dev
                 nervous.AdjustMorale(_lowMorale - nervous.Morale);
         }
 
-        private void Spawn(JobDefinition[] jobs, Team team, IReadOnlyList<GridCoord> zone, IReadOnlyList<GridCoord> facingZone, System.Random rng)
+        private void Spawn(IReadOnlyList<RosterEntry> roster, int teamSize, Team team, IReadOnlyList<GridCoord> zone,
+            IReadOnlyList<GridCoord> facingZone, System.Random rng)
         {
+            int fielded = BattleSetup.Fielded(teamSize, roster.Count, zone.Count);
+            if (fielded < teamSize)
+                Debug.LogWarning($"[BattleSandbox] {team} fields {fielded} of {teamSize} (roster {roster.Count}, deployment tiles {zone.Count}).", this);
+
             // Face the other side's zone, as units do at the start of an FFT battle.
             var target = facingZone.Count > 0 ? facingZone[0] : default;
-            for (int i = 0; i < jobs.Length && i < zone.Count; i++)
+            for (int i = 0; i < fielded; i++)
             {
-                if (jobs[i] == null)
+                var entry = roster[i];
+                if (entry == null || entry.Job == null)
                     continue;
-                var unit = UnitFactory.CreateGeneric($"{jobs[i].DisplayName} {(char)('A' + i)}", team, jobs[i], _unitLevel, rng);
+                string unitName = string.IsNullOrEmpty(entry.DisplayName) ? $"{entry.Job.DisplayName} {(char)('A' + i)}" : entry.DisplayName;
+                int level = entry.Level > 0 ? entry.Level : _setup.DefaultLevel;
+                var unit = UnitFactory.CreateGeneric(unitName, team, entry.Job, level, rng);
+                unit.Key = string.IsNullOrEmpty(entry.Key) ? null : entry.Key;
                 unit.Coord = zone[i];
                 unit.Facing = DirectionExtensions.Toward(zone[i], target);
                 LearnJobAbilities(unit);
@@ -205,7 +222,9 @@ namespace FriendshipWarriors.Dev
             int seed = System.Environment.TickCount;
             if (_generatedMap == null)
                 _generatedMap = ScriptableObject.CreateInstance<BattleMapData>();
-            var result = MapGenerator.Generate(_generatorSettings, seed, _generatedMap);
+            // Zones big enough for the setup's larger side.
+            int zone = _setup != null ? System.Math.Max(_setup.PlayerTeamSize, _setup.EnemyTeamSize) : BattleSetup.StandardTeamSize;
+            var result = MapGenerator.Generate(_generatorSettings, seed, _generatedMap, zone);
             Debug.Log($"[BattleSandbox] Random map seed {seed}: {_generatedMap.Width}x{_generatedMap.Depth}, " +
                       $"{result.Attempts} attempt(s), {(result.Succeeded ? "valid" : "INVALID")}.", this);
 
