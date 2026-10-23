@@ -306,6 +306,17 @@ namespace FriendshipWarriors.Tests
         }
 
         [Test]
+        public void SupportActions_GiveTheSameLevelShare_GrowingWithTheActorsLevel()
+        {
+            var level10 = UnitAtLevel(10);
+            var level11 = UnitAtLevel(11);
+
+            Assert.That(BattleRewards.SupportExperience(level10), Is.EqualTo(BattleRewards.Experience(level10, UnitAtLevel(10))));
+            Assert.That(BattleRewards.SupportExperience(level11), Is.GreaterThan(BattleRewards.SupportExperience(level10)));
+            Assert.That(BattleRewards.SupportExperience(UnitAtLevel(99)), Is.Zero);
+        }
+
+        [Test]
         public void ExperienceIsAtLeastOne_AtMostOneLevel_AndZeroAtTheCap()
         {
             Assert.That(BattleRewards.Experience(UnitAtLevel(60), UnitAtLevel(1)), Is.EqualTo(1));

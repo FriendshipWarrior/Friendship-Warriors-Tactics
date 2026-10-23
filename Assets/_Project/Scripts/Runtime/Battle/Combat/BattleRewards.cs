@@ -25,6 +25,20 @@ namespace FriendshipWarriors.Battle.Combat
             return Math.Clamp(experience, 1, toNext);
         }
 
+        /// <summary>
+        /// EXP for an action that isn't an attack (healing, buffs, items), whoever it targets: the same-level share of
+        /// what the actor's next level costs, so it grows with the actor's level (about 6% more per level on our curve)
+        /// and support roles level at the same pace as fighting equal foes. FFT bases this on the target's level; using
+        /// the actor's own level is our change. None at level 99.
+        /// </summary>
+        public static int SupportExperience(Unit actor)
+        {
+            if (actor.Level >= Unit.MaxLevel)
+                return 0;
+            int toNext = ExperienceCurve.ToNextLevel(actor.Level);
+            return Math.Max(1, (int)Math.Round(toNext * BasePercentOfLevel / 100.0));
+        }
+
         /// <summary>Prof for a successful action: 8 + 2 × job level + level / 4 (FFT's JP formula).</summary>
         public static int Proficiency(Unit actor) => 8 + 2 * actor.JobLevel(actor.Job) + actor.Level / 4;
 
