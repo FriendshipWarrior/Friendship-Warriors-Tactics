@@ -1,5 +1,4 @@
 using System;
-using System.Collections.Generic;
 using FriendshipWarriors.Controls;
 using TMPro;
 using UnityEngine;
@@ -16,14 +15,15 @@ namespace FriendshipWarriors.UI
     public sealed class MenuScreen : MonoBehaviour
     {
         [SerializeField] private MenuInput _input;
-        [SerializeField, Min(200f)] private float _width = 520f;
+        [Tooltip("Window width in logical UI pixels (the UI is laid out on a 640x360 canvas, scaled by whole numbers).")]
+        [SerializeField, Min(64f)] private float _width = 200f;
         [SerializeField] private Vector2 _offset = Vector2.zero;
         [SerializeField, Min(0.05f)] private float _repeatDelay = 0.35f;
         [SerializeField, Min(0.02f)] private float _repeatInterval = 0.12f;
         [Tooltip("Darken everything behind the menu while it's open (pause menus).")]
         [SerializeField] private bool _dimBackground;
 
-        private readonly List<(UnityEngine.UI.Image background, TextMeshProUGUI label)> _rows = new();
+        private MenuList _list;
         private RectTransform _panel;
         private UnityEngine.UI.Image _dim;
         private TextMeshProUGUI _title;
@@ -48,9 +48,17 @@ namespace FriendshipWarriors.UI
                 _dim = UiFactory.Fill(transform, "Dim", new Color(0f, 0f, 0f, 0.45f), blocksPointer: true);
                 _dim.gameObject.SetActive(false);
             }
-            _panel = UiFactory.Panel(transform, "Menu", new Vector2(0.5f, 0.5f), _offset, _width);
-            _title = UiFactory.Text(_panel, "Title", 44, FontStyles.Bold, TextAlignmentOptions.Center);
-            _subtitle = UiFactory.Text(_panel, "Subtitle", 24, FontStyles.Normal, TextAlignmentOptions.Center);
+            PixelCanvasScaler.Ensure(GetComponentInParent<Canvas>());
+            _panel = UiFactory.Window(transform, "Menu", new Vector2(0.5f, 0.5f), _offset, _width, fitWidth: true);
+            var layout = _panel.GetComponent<UnityEngine.UI.VerticalLayoutGroup>();
+            layout.spacing = 4f;
+            // Wider sides than the HUD's windows: the pointer pokes out left of the item rows, and titles need air.
+            layout.padding = new RectOffset(26, 26, 12, 16);
+            _title = UiFactory.Text(_panel, "Title", 2, title: true, TextAlignmentOptions.Center);
+            _subtitle = UiFactory.Text(_panel, "Subtitle", alignment: TextAlignmentOptions.Center);
+            _subtitle.color = UiFactory.MutedTextColor;
+            _list = new MenuList(_panel, 22, framed: true, hover: index => _menu?.Select(index), click: OnClicked,
+                TextAlignmentOptions.Center);
             _panel.gameObject.SetActive(false);
         }
 
@@ -98,6 +106,7 @@ namespace FriendshipWarriors.UI
         {
             if (_menu == null)
                 return;
+            _list.Tick(Time.unscaledTime);
 
             float y = _input.Navigate.ReadValue<Vector2>().y;
             int direction = y > 0.5f ? -1 : y < -0.5f ? 1 : 0;
@@ -142,37 +151,15 @@ namespace FriendshipWarriors.UI
             }
         }
 
-        private void Refresh()
-        {
-            while (_rows.Count < _menu.Items.Count)
-            {
-                int index = _rows.Count;
-                _rows.Add(UiFactory.MenuRow(_panel, $"Item {index}", 64f, 34f,
-                    onHover: () => _menu?.Select(index),
-                    onClick: () =>
-                    {
-                        if (_menu != null && index < _menu.Items.Count && _menu.Items[index].Enabled)
-                        {
-                            _menu.Select(index);
-                            Audio.SoundPlayer.Play(Audio.SoundCue.MenuConfirm);
-                            ItemActivated?.Invoke(_menu.Items[index]);
-                        }
-                    }));
-            }
+        private void Refresh() => _list.Refresh(_menu);
 
-            for (int i = 0; i < _rows.Count; i++)
-            {
-                var (background, label) = _rows[i];
-                bool visible = i < _menu.Items.Count;
-                background.gameObject.SetActive(visible);
-                if (!visible)
-                    continue;
-                var item = _menu.Items[i];
-                bool selected = i == _menu.SelectedIndex;
-                label.text = item.Label;
-                background.color = selected ? UiFactory.SelectedColor : UiFactory.ItemColor;
-                label.color = !item.Enabled ? UiFactory.DisabledTextColor : selected ? UiFactory.SelectedTextColor : UiFactory.TextColor;
-            }
+        private void OnClicked(int index)
+        {
+            if (_menu == null || index >= _menu.Items.Count || !_menu.Items[index].Enabled)
+                return;
+            _menu.Select(index);
+            Audio.SoundPlayer.Play(Audio.SoundCue.MenuConfirm);
+            ItemActivated?.Invoke(_menu.Items[index]);
         }
     }
 }

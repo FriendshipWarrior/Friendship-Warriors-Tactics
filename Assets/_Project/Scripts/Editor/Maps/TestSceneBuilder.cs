@@ -49,6 +49,8 @@ namespace FriendshipWarriors.Editor.Maps
             Setups.BattleSetupBuilder.CreateSetups();
             // Placeholder art from the CC0 Tiny Tactics pack: unit sheets per job, sprite props, terrain colours.
             Art.TinyTacticsArtBuilder.Build();
+            // The pixel UI skin (Tiny RPG GUI and font packs) the HUD is drawn with.
+            UI.PixelUiBuilder.Build();
             AssetDatabase.SaveAssets();
 
             // NewScene unloads unreferenced assets, so everything the scene references is loaded after it.
@@ -148,15 +150,10 @@ namespace FriendshipWarriors.Editor.Maps
             stockSo.ApplyModifiedPropertiesWithoutUndo();
         }
 
-        /// <summary>A Screen Space Overlay canvas scaled from 1920x1080, plus the EventSystem for mouse input on UI.</summary>
+        /// <summary>A pixel-scaled Screen Space Overlay canvas, plus the EventSystem for mouse input on UI.</summary>
         private static FriendshipWarriors.UI.BattleHud CreateHud()
         {
-            var canvasGo = new GameObject("Battle HUD", typeof(Canvas), typeof(UnityEngine.UI.CanvasScaler), typeof(UnityEngine.UI.GraphicRaycaster));
-            canvasGo.GetComponent<Canvas>().renderMode = RenderMode.ScreenSpaceOverlay;
-            var scaler = canvasGo.GetComponent<UnityEngine.UI.CanvasScaler>();
-            scaler.uiScaleMode = UnityEngine.UI.CanvasScaler.ScaleMode.ScaleWithScreenSize;
-            scaler.referenceResolution = new Vector2(1920f, 1080f);
-            scaler.matchWidthOrHeight = 0.5f;
+            var canvasGo = Scenes.GameScenesBuilder.CreateCanvas("Battle HUD", 0);
             var hud = canvasGo.AddComponent<FriendshipWarriors.UI.BattleHud>();
 
             new GameObject("EventSystem", typeof(UnityEngine.EventSystems.EventSystem),

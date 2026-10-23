@@ -26,8 +26,13 @@ namespace FriendshipWarriors.Feedback
     [RequireComponent(typeof(BattleController))]
     public sealed class BattleFeedback : MonoBehaviour
     {
-        private const float CanvasFontSize = 46f;
-        private const float RowHeight = 46f;
+        // Popups, the death counter and their motion are in logical UI pixels on a whole-number pixel canvas
+        // (PixelUiScale: 640x360 or more). PopupMotion's heights were tuned in 1080p pixels, a third of which is one
+        // logical pixel. Font sizes snap so every pixel of the pixel font covers whole screen pixels (CrispFontSize).
+        private const float CanvasFontSize = 16f;
+        private const int NumbersNativePixels = 12;
+        private const float LegacyToLogical = 1f / 3f;
+        private const float RowHeight = 46f * LegacyToLogical;
         private const float GhostTime = 0.9f;
 
         /// <summary>How long after an action its reactions' feedback starts (a counter follows the hit, FFT-style).</summary>
@@ -153,10 +158,8 @@ namespace FriendshipWarriors.Feedback
             _canvasComponent = go.GetComponent<Canvas>();
             _canvasComponent.renderMode = RenderMode.ScreenSpaceOverlay;
             _canvasComponent.sortingOrder = -10; // under the HUD's menus and panels
-            var scaler = go.GetComponent<UnityEngine.UI.CanvasScaler>();
-            scaler.uiScaleMode = UnityEngine.UI.CanvasScaler.ScaleMode.ScaleWithScreenSize;
-            scaler.referenceResolution = new Vector2(1920f, 1080f);
-            scaler.matchWidthOrHeight = 0.5f;
+            // Screen space at a whole-number scale, like the HUD: never on the (possibly low-resolution) world layer.
+            FriendshipWarriors.UI.PixelCanvasScaler.Ensure(_canvasComponent);
             _canvas = (RectTransform)go.transform;
         }
 
@@ -555,7 +558,7 @@ namespace FriendshipWarriors.Feedback
             if (tracker.Counter == null)
             {
                 tracker.Counter = NewText("Death Counter");
-                tracker.Counter.fontSize = CanvasFontSize * 0.85f;
+                tracker.Counter.fontSize = Crisp(CanvasFontSize * 0.85f);
             }
             var text = tracker.Counter;
             text.gameObject.SetActive(true);
@@ -593,11 +596,11 @@ namespace FriendshipWarriors.Feedback
 
                 var text = popup.Text;
                 float punch = popup.Style.Size > 1f ? 0.45f : 0.25f;
-                text.fontSize = CanvasFontSize * popup.Style.Size * UnitView.SpriteScale / 1.25f * PopupMotion.Scale(t, punch);
+                text.fontSize = Crisp(CanvasFontSize * popup.Style.Size * UnitView.SpriteScale / 1.25f * PopupMotion.Scale(t, punch));
                 var color = (Color)popup.Style.Color;
                 color.a = PopupMotion.Alpha(t);
                 text.color = color;
-                bool visible = Place(text.rectTransform, popup.Anchor, PopupMotion.Height(t) + popup.Row * RowHeight);
+                bool visible = Place(text.rectTransform, popup.Anchor, PopupMotion.Height(t) * LegacyToLogical + popup.Row * RowHeight);
                 text.enabled = visible;
             }
         }
@@ -664,6 +667,10 @@ namespace FriendshipWarriors.Feedback
 
         // ------------------------------------------------------------------ Helpers
 
+        private float Crisp(float logicalSize) =>
+            FriendshipWarriors.UI.PixelUiScale.CrispFontSize(logicalSize, NumbersNativePixels,
+                _canvasComponent.scaleFactor > 0f ? _canvasComponent.scaleFactor : 1f);
+
         /// <summary>Puts a canvas element over a world point, raised by <paramref name="pixelsUp"/>. False when off-screen or behind.</summary>
         private bool Place(RectTransform rect, Vector3 world, float pixelsUp)
         {
@@ -673,7 +680,8 @@ namespace FriendshipWarriors.Feedback
             if (screen.z < 0f)
                 return false;
             float scale = _canvasComponent.scaleFactor > 0f ? _canvasComponent.scaleFactor : 1f;
-            rect.anchoredPosition = new Vector2(screen.x / scale, screen.y / scale + pixelsUp);
+            // Whole logical pixels, so the pixel font lands on whole screen pixels.
+            rect.anchoredPosition = new Vector2(Mathf.Round(screen.x / scale), Mathf.Round(screen.y / scale + pixelsUp));
             return true;
         }
 
@@ -699,17 +707,29 @@ namespace FriendshipWarriors.Feedback
             rect.SetParent(_canvas, false);
             rect.anchorMin = rect.anchorMax = Vector2.zero;
             rect.pivot = new Vector2(0.5f, 0f);
-            rect.sizeDelta = new Vector2(360f, 140f);
+            rect.sizeDelta = new Vector2(120f, 48f);
             var text = go.GetComponent<TextMeshProUGUI>();
             text.alignment = TextAlignmentOptions.Bottom;
-            text.fontStyle = FontStyles.Bold;
-            text.fontSize = CanvasFontSize;
+            var skin = FriendshipWarriors.UI.UiSkin.Current;
+            if (skin != null && skin.Numbers != null)
+                text.font = skin.Numbers;
+            // No faux bold: it smears the pixel font (the numbers font is drawn heavy enough).
+            text.fontStyle = FontStyles.Normal;
+            text.fontSize = Crisp(CanvasFontSize);
             text.raycastTarget = false;
             text.textWrappingMode = TextWrappingModes.NoWrap;
             text.lineSpacing = -18f;
-            // A heavy dark outline keeps numbers readable over any terrain (FFT's numbers are outlined too).
-            text.outlineWidth = 0.28f;
-            text.outlineColor = new Color32(10, 10, 20, 255);
+            // A dark outline keeps numbers readable over any terrain (FFT's numbers are outlined too). The skin's
+            // shared material draws it outside the one-pixel strokes of the pixel font.
+            if (skin != null && skin.Numbers != null && skin.NumbersOutline != null)
+            {
+                text.fontSharedMaterial = skin.NumbersOutline;
+            }
+            else
+            {
+                text.outlineWidth = 0.28f;
+                text.outlineColor = new Color32(10, 10, 20, 255);
+            }
             return text;
         }
 

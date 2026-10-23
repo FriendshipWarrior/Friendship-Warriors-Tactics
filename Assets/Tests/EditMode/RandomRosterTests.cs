@@ -61,6 +61,32 @@ namespace FriendshipWarriors.Tests
         }
 
         [Test]
+        public void Names_AreUniqueAcrossBothTeams_WhenTheySharePool()
+        {
+            for (int seed = 0; seed < 30; seed++)
+            {
+                var rng = new System.Random(seed);
+                var taken = new HashSet<string>();
+                var players = RandomRoster.Build(Team.Player, TeamSize, Level, _jobs, _equipment, rng, taken: taken);
+                var enemies = RandomRoster.Build(Team.Enemy, TeamSize, Level, _jobs, _equipment, rng, taken: taken);
+                var names = players.Concat(enemies).Select(u => u.Name).ToList();
+
+                Assert.That(names.Distinct().Count(), Is.EqualTo(names.Count), $"seed {seed}: {string.Join(", ", names)}");
+                Assert.That(taken, Is.EquivalentTo(names), $"seed {seed}: the shared pool records every name");
+            }
+        }
+
+        [Test]
+        public void TakenNames_AreSkipped_AndFallbacksDifferByTeam()
+        {
+            var names = new[] { "Vance", "Thorne" };
+            var taken = new HashSet<string> { "Vance" };
+            var team = RandomRoster.Build(Team.Enemy, 3, Level, _jobs, _equipment, new System.Random(3), names, taken);
+
+            Assert.That(team.Select(u => u.Name), Is.EqualTo(new[] { "Thorne", "Raider 2", "Raider 3" }));
+        }
+
+        [Test]
         public void Teams_AreFullSize_SameLevel_UniqueNames_FullHealth()
         {
             for (int seed = 0; seed < 30; seed++)

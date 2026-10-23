@@ -4,44 +4,43 @@ using FriendshipWarriors.Battle.Combat;
 using FriendshipWarriors.Units;
 using TMPro;
 using UnityEngine;
-using UnityEngine.EventSystems;
 
 namespace FriendshipWarriors.UI
 {
     /// <summary>
-    /// Placeholder battle HUD, built in code on a Screen Space Overlay canvas: the command menu (left), the turn
-    /// order (top right), unit details (bottom left), a controls hint (bottom), the timed-press bar (center) and a
-    /// result banner (top). Menu navigation comes from the battle flow's own input handling; the mouse can hover and
-    /// click items directly.
+    /// The battle HUD, built in code on a Screen Space Overlay canvas in the pixel-art skin (<see cref="UiSkin"/>):
+    /// the objective (top left), a banner (top centre), the turn order (top right), the command menu (left), unit
+    /// details with HP/MP/CT bars (bottom right), the timed-press bar (bottom centre) and a controls hint (bottom).
+    /// Laid out in logical pixels on a canvas of at least 640x360, scaled by whole numbers (<see cref="PixelUiScale"/>).
+    /// Menu navigation comes from the battle flow's own input handling; the mouse can hover and click items directly.
     /// </summary>
     [RequireComponent(typeof(Canvas))]
     public sealed class BattleHud : MonoBehaviour
     {
-        private static readonly Color PanelColor = new(0.07f, 0.08f, 0.11f, 0.88f);
-        private static readonly Color ItemColor = new(1f, 1f, 1f, 0.04f);
-        private static readonly Color SelectedColor = new(0.95f, 0.70f, 0.25f, 0.90f);
-        private static readonly Color TextColor = new(0.93f, 0.92f, 0.88f);
-        private static readonly Color SelectedTextColor = new(0.10f, 0.08f, 0.05f);
-        private static readonly Color DisabledTextColor = new(0.55f, 0.55f, 0.58f);
-        private static readonly Color PlayerColor = new(0.35f, 0.65f, 1f);
-        private static readonly Color EnemyColor = new(1f, 0.38f, 0.38f);
-
         private const int TurnOrderRows = 8;
+        private const int MenuRowHeight = 16;
+        private const int UnitPanelWidth = 324;
+        private const int BarWidth = 72;
 
         private RectTransform _menuPanel;
         private TextMeshProUGUI _menuTitle;
-        private readonly List<(UnityEngine.UI.Image background, TextMeshProUGUI label)> _menuRows = new();
+        private MenuList _menuList;
         private MenuModel _menu;
 
         private readonly List<(UnityEngine.UI.Image team, TextMeshProUGUI label)> _turnRows = new();
-        private TextMeshProUGUI _unitInfo;
         private RectTransform _unitPanel;
+        private TextMeshProUGUI _unitName;
+        private TextMeshProUGUI _unitJob;
+        private TextMeshProUGUI _unitInfo;
+        private (UiBar bar, TextMeshProUGUI value, string label) _hp, _mp, _ct;
         private TextMeshProUGUI _hint;
+        private RectTransform _hintPanel;
         private TextMeshProUGUI _objective;
 
         private RectTransform _timingPanel;
         private TextMeshProUGUI _timingTitle;
         private TextMeshProUGUI _timingFeedback;
+        private UiBar _timingBar;
         private RectTransform _timingZone;
         private RectTransform _timingMarker;
         private TimedPressRules _timingRules;
@@ -58,34 +57,41 @@ namespace FriendshipWarriors.UI
 
         private void Awake()
         {
-            _menuPanel = Panel("Command Menu", new Vector2(0f, 0.5f), new Vector2(40f, 60f), 340f);
-            _menuTitle = Label(_menuPanel, "Title", 30, FontStyles.Bold);
+            PixelCanvasScaler.Ensure(GetComponent<Canvas>());
+            int m = UiFactory.Margin;
+
+            // Left, centred: wide enough for the longest item ("Incendiary Barrage  24 MP  (not enough MP)").
+            // 28 px in, so the pointer that pokes out of the window stays on screen.
+            _menuPanel = UiFactory.Window(transform, "Command Menu", new Vector2(0f, 0.5f), new Vector2(m + 20, 12f), 132f, fitWidth: true);
+            _menuTitle = UiFactory.Text(_menuPanel, "Title", title: true);
+            _menuList = new MenuList(_menuPanel, MenuRowHeight, framed: false, hover: index => _menu?.Select(index), click: OnMenuClicked);
             _menuPanel.gameObject.SetActive(false);
 
-            var turnPanel = Panel("Turn Order", new Vector2(1f, 1f), new Vector2(-40f, -40f), 380f);
-            Label(turnPanel, "Title", 28, FontStyles.Bold).text = "Turn Order";
+            var turnPanel = UiFactory.Window(transform, "Turn Order", new Vector2(1f, 1f), new Vector2(-m, -m), 168f);
+            // Tight rows: at 640x360 the list must end above the unit panel's tallest layout.
+            turnPanel.GetComponent<UnityEngine.UI.VerticalLayoutGroup>().spacing = 1f;
+            UiFactory.Text(turnPanel, "Title", title: true).text = "Turn Order";
             for (int i = 0; i < TurnOrderRows; i++)
                 _turnRows.Add(TurnRow(turnPanel, i));
 
-            _unitPanel = Panel("Unit Info", new Vector2(0f, 0f), new Vector2(40f, 90f), 680f);
-            _unitInfo = Label(_unitPanel, "Details", 26, FontStyles.Normal);
-            _unitPanel.gameObject.SetActive(false);
+            BuildUnitPanel();
 
-            var hintPanel = Panel("Hint", new Vector2(0.5f, 0f), new Vector2(0f, 24f), 1200f);
-            _hint = Label(hintPanel, "Text", 24, FontStyles.Normal);
-            _hint.alignment = TextAlignmentOptions.Center;
+            // Bottom, full width: hints can be long ("Move Vance: choose a highlighted tile ...").
+            _hintPanel = UiFactory.Strip(transform, "Hint", new Vector2(0.5f, 0f), new Vector2(0f, m), PixelUiScale.ReferenceWidth - 2 * m);
+            _hint = UiFactory.Text(_hintPanel, "Text", alignment: TextAlignmentOptions.Center);
 
             BuildTimingPrompt();
 
-            // Top left: the battle's objective, always visible.
-            // 440 wide keeps it clear of the centred banner (which starts 450 px left of centre at 1920 wide).
-            var objectivePanel = Panel("Objective", new Vector2(0f, 1f), new Vector2(40f, -40f), 440f);
-            _objective = Label(objectivePanel, "Text", 24, FontStyles.Normal);
+            // Top left: the battle's objective, always visible; narrow enough to clear the centred banner.
+            var objectivePanel = UiFactory.Strip(transform, "Objective", new Vector2(0f, 1f), new Vector2(m, -m), 180f);
+            _objective = UiFactory.Text(objectivePanel, "Text");
             SetObjective("Defeat all enemies");
 
-            _bannerPanel = Panel("Banner", new Vector2(0.5f, 1f), new Vector2(0f, -40f), 900f);
-            _banner = Label(_bannerPanel, "Text", 32, FontStyles.Bold);
-            _banner.alignment = TextAlignmentOptions.Center;
+            _bannerPanel = UiFactory.Window(transform, "Banner", new Vector2(0.5f, 1f), new Vector2(0f, -m), 264f);
+            // A one-line banner is shorter than the window's 64 px corners: centre it rather than leave a gap below.
+            _bannerPanel.GetComponent<UnityEngine.UI.VerticalLayoutGroup>().childAlignment = TextAnchor.MiddleCenter;
+            _banner = UiFactory.Text(_bannerPanel, "Text", title: true, alignment: TextAlignmentOptions.Center);
+            _banner.color = UiFactory.TextColor;
             _bannerPanel.gameObject.SetActive(false);
         }
 
@@ -94,10 +100,13 @@ namespace FriendshipWarriors.UI
             if (_timingRunning)
             {
                 float t = Mathf.Clamp01((TimingNow - _timingStart) / _timingRules.Duration);
-                _timingMarker.anchorMin = _timingMarker.anchorMax = new Vector2(t, 0.5f);
+                // Whole pixels, so the marker steps crisply across the bar.
+                _timingMarker.anchoredPosition = new Vector2(Mathf.Round(t * _timingBar.InteriorWidth), 0f);
             }
             if (_bannerPanel.gameObject.activeSelf && _bannerHideTime > 0f && Time.unscaledTime >= _bannerHideTime)
                 _bannerPanel.gameObject.SetActive(false);
+            if (_menu != null)
+                _menuList.Tick(Time.unscaledTime);
         }
 
         // ------------------------------------------------------------------ Public API
@@ -130,9 +139,8 @@ namespace FriendshipWarriors.UI
                 if (!visible)
                     continue;
                 var unit = upcoming[i];
-                team.color = unit.Team == Team.Player ? PlayerColor : EnemyColor;
-                string marker = i == 0 && unit == active ? "> " : "   ";
-                label.text = $"{marker}{unit.Name}  <color=#9A9AA0>{unit.Job.DisplayName}</color>";
+                team.color = TeamColor(unit.Team);
+                label.text = TurnText(unit, i == 0 && unit == active);
             }
         }
 
@@ -148,14 +156,10 @@ namespace FriendshipWarriors.UI
                     continue;
                 var entry = upcoming[i];
                 var unit = entry.Unit;
-                team.color = unit.Team == Team.Player ? PlayerColor : EnemyColor;
-                if (entry.Spell != null)
-                {
-                    label.text = $"   <color=#C9A7FF>* {entry.Spell.DisplayName}</color>  <color=#9A9AA0>({unit.Name})</color>";
-                    continue;
-                }
-                string marker = i == 0 && unit == active ? "> " : "   ";
-                label.text = $"{marker}{unit.Name}  <color=#9A9AA0>{unit.Job.DisplayName}</color>";
+                team.color = TeamColor(unit.Team);
+                label.text = entry.Spell != null
+                    ? $"<color=#C9A7FF>* {entry.Spell.DisplayName}</color> <color={UiFactory.Hex(UiFactory.MutedTextColor)}>({unit.Name})</color>"
+                    : TurnText(unit, i == 0 && unit == active);
             }
         }
 
@@ -166,26 +170,34 @@ namespace FriendshipWarriors.UI
                 return;
 
             var s = unit.Stats;
+            string muted = UiFactory.Hex(UiFactory.MutedTextColor);
+            _unitName.text = $"{unit.Name}  <color={UiFactory.Hex(TeamColor(unit.Team))}>{unit.Team}</color>";
+            _unitJob.text = $"{unit.Job.DisplayName}  Lv {unit.Level}  <color={muted}>Job Lv</color> {unit.JobLevel(unit.Job)}" +
+                            (unit.IsKnockedOut ? $"  <color={UiFactory.Hex(UiFactory.EnemyColor)}>KO ({unit.DeathCounter})</color>" : "");
+            SetBar(_hp, unit.CurrentHp, s.MaxHp);
+            SetBar(_mp, unit.CurrentMp, s.MaxMp);
+            SetBar(_ct, Mathf.Min(unit.ChargeTime, 100), 100, unit.ChargeTime.ToString());
+
             string secondary = unit.SecondaryJob != null ? unit.SecondaryJob.CommandName : "-";
             _unitInfo.text =
-                $"<b>{unit.Name}</b>  <color=#{(unit.Team == Team.Player ? "6FA8FF" : "FF7070")}>{unit.Team}</color>\n" +
-                $"{unit.Job.DisplayName}  Lv {unit.Level}   Job Lv {unit.JobLevel(unit.Job)}   CT {unit.ChargeTime}\n" +
-                $"HP {unit.CurrentHp}/{s.MaxHp}   MP {unit.CurrentMp}/{s.MaxMp}\n" +
-                $"Speed {s.Speed}   P.Atk {s.PhysicalAttack}   M.Atk {s.MagicAttack}\n" +
-                $"Morale {unit.Morale}   Resonance {unit.Resonance}\n" +
-                $"Move {s.Move}   Jump {s.Jump}   C-Ev {s.ClassEvasion}%   Facing {unit.Facing}\n" +
-                $"EXP {unit.Experience}/{ExperienceCurve.ToNextLevel(unit.Level)}   Prof {unit.AvailableProficiency(unit.Job)}" +
-                (unit.IsKnockedOut ? $"   <color=#FF7070>KO ({unit.DeathCounter})</color>" : "") + "\n" +
-                (unit.Statuses.Count > 0 ? $"<color=#E8C25A>{StatusText(unit)}</color>\n" : "") +
-                $"<size=80%>{Gear(unit.Weapon, "Bare hands")} | {Gear(unit.Equipped(Units.Equipment.EquipmentSlot.OffHand), "-")}" +
-                $" | {Gear(unit.Head, "-")} | {Gear(unit.Body, "-")} | {Gear(unit.Accessory, "-")}</size>\n" +
-                $"<size=80%>Secondary {secondary} | Reaction {Name(unit.Reaction)} | Support {Name(unit.Support)} | Movement {Name(unit.Movement)}</size>";
+                $"Speed {s.Speed}  P.Atk {s.PhysicalAttack}  M.Atk {s.MagicAttack}  Morale {unit.Morale}  Resonance {unit.Resonance}\n" +
+                $"Move {s.Move}  Jump {s.Jump}  C-Ev {s.ClassEvasion}%  Facing {unit.Facing}  " +
+                $"EXP {unit.Experience}/{ExperienceCurve.ToNextLevel(unit.Level)}  Prof {unit.AvailableProficiency(unit.Job)}\n" +
+                (unit.Statuses.Count > 0 ? $"<color={UiFactory.Hex(UiFactory.AccentColor)}>{StatusText(unit)}</color>\n" : "") +
+                $"<color={muted}>{Gear(unit.Weapon, "Bare hands")} / {Gear(unit.Equipped(Units.Equipment.EquipmentSlot.OffHand), "-")}" +
+                $" / {Gear(unit.Head, "-")} / {Gear(unit.Body, "-")} / {Gear(unit.Accessory, "-")}</color>\n" +
+                $"<color={muted}>Secondary</color> {secondary}  <color={muted}>Reaction</color> {Name(unit.Reaction)}  " +
+                $"<color={muted}>Support</color> {Name(unit.Support)}  <color={muted}>Movement</color> {Name(unit.Movement)}";
         }
 
-        public void SetHint(string text) => _hint.text = text;
+        public void SetHint(string text)
+        {
+            _hint.text = text;
+            _hintPanel.gameObject.SetActive(!string.IsNullOrEmpty(text));
+        }
 
         /// <summary>The objective line in the top-left corner.</summary>
-        public void SetObjective(string text) => _objective.text = $"<color=#F2B340>Objective</color>  {text}";
+        public void SetObjective(string text) => _objective.text = $"<color={UiFactory.Hex(UiFactory.AccentColor)}>Objective</color>  {text}";
 
         /// <summary>The battle clock the timing bar sweeps on, so the marker freezes while the battle is paused.</summary>
         public void SetClock(Battle.BattleClock clock) => _clock = clock;
@@ -200,11 +212,12 @@ namespace FriendshipWarriors.UI
             _timingRunning = true;
             _timingTitle.text = title;
             _timingFeedback.text = " ";
-            float center = rules.PerfectTime / rules.Duration;
-            float half = rules.Tolerance / rules.Duration;
-            _timingZone.anchorMin = new Vector2(Mathf.Clamp01(center - half), 0f);
-            _timingZone.anchorMax = new Vector2(Mathf.Clamp01(center + half), 1f);
-            _timingMarker.anchorMin = _timingMarker.anchorMax = new Vector2(0f, 0.5f);
+            int width = _timingBar.InteriorWidth;
+            int from = Mathf.RoundToInt(Mathf.Clamp01((rules.PerfectTime - rules.Tolerance) / rules.Duration) * width);
+            int to = Mathf.RoundToInt(Mathf.Clamp01((rules.PerfectTime + rules.Tolerance) / rules.Duration) * width);
+            _timingZone.anchoredPosition = new Vector2(from, 0f);
+            _timingZone.sizeDelta = new Vector2(Mathf.Max(1, to - from), 0f);
+            _timingMarker.anchoredPosition = Vector2.zero;
             _timingPanel.gameObject.SetActive(true);
         }
 
@@ -229,6 +242,12 @@ namespace FriendshipWarriors.UI
             _bannerPanel.gameObject.SetActive(true);
         }
 
+        private static Color TeamColor(Team team) => team == Team.Player ? UiFactory.PlayerColor : UiFactory.EnemyColor;
+
+        private static string TurnText(Unit unit, bool acting) =>
+            $"{(acting ? $"<color={UiFactory.Hex(UiFactory.AccentColor)}>></color> " : "")}{unit.Name}  " +
+            $"<color={UiFactory.Hex(UiFactory.MutedTextColor)}>{unit.Job.DisplayName}</color>";
+
         private static string Name(Units.Abilities.AbilityDefinition ability) => ability != null ? ability.DisplayName : "-";
 
         /// <summary>Statuses with the time they have left, e.g. "Poison (12), Silence (2 turns), Blind".</summary>
@@ -246,110 +265,124 @@ namespace FriendshipWarriors.UI
 
         private static string Gear(Units.Equipment.EquipmentDefinition item, string empty) => item != null ? item.DisplayName : empty;
 
-        // ------------------------------------------------------------------ Menu rendering
+        private static void SetBar((UiBar bar, TextMeshProUGUI value, string label) gauge, int current, int max, string text = null)
+        {
+            gauge.bar.SetFraction(max > 0 ? (float)current / max : 0f);
+            gauge.value.text = $"<color={UiFactory.Hex(UiFactory.MutedTextColor)}>{gauge.label}</color> {text ?? $"{current}/{max}"}";
+        }
+
+        // ------------------------------------------------------------------ Building
 
         private void RefreshMenu()
         {
             _menuTitle.text = _menu.Title;
-            while (_menuRows.Count < _menu.Items.Count)
-                _menuRows.Add(MenuRow(_menuPanel, _menuRows.Count));
+            _menuTitle.gameObject.SetActive(!string.IsNullOrEmpty(_menu.Title));
+            _menuList.Refresh(_menu);
+        }
 
-            for (int i = 0; i < _menuRows.Count; i++)
+        private void OnMenuClicked(int index)
+        {
+            if (_menu != null && index < _menu.Items.Count && _menu.Items[index].Enabled)
             {
-                var (background, label) = _menuRows[i];
-                bool visible = i < _menu.Items.Count;
-                background.gameObject.SetActive(visible);
-                if (!visible)
-                    continue;
-
-                var item = _menu.Items[i];
-                bool selected = i == _menu.SelectedIndex;
-                label.text = item.Label;
-                background.color = selected ? SelectedColor : ItemColor;
-                label.color = !item.Enabled ? DisabledTextColor : selected ? SelectedTextColor : TextColor;
+                _menu.Select(index);
+                MenuItemClicked?.Invoke(index);
             }
-        }
-
-        private (UnityEngine.UI.Image, TextMeshProUGUI) MenuRow(RectTransform parent, int index)
-        {
-            var row = new GameObject($"Item {index}", typeof(RectTransform), typeof(UnityEngine.UI.Image), typeof(UnityEngine.UI.LayoutElement));
-            row.transform.SetParent(parent, false);
-            row.GetComponent<UnityEngine.UI.LayoutElement>().preferredHeight = 56f;
-            var background = row.GetComponent<UnityEngine.UI.Image>();
-            background.raycastTarget = true;
-
-            var label = Text(row.transform, "Label", 32, FontStyles.Normal);
-            var rect = (RectTransform)label.transform;
-            rect.anchorMin = Vector2.zero;
-            rect.anchorMax = Vector2.one;
-            rect.offsetMin = new Vector2(20f, 0f);
-            rect.offsetMax = new Vector2(-12f, 0f);
-            label.alignment = TextAlignmentOptions.MidlineLeft;
-
-            // Hover selects, click confirms: the same path a controller takes.
-            var trigger = row.AddComponent<EventTrigger>();
-            AddTrigger(trigger, EventTriggerType.PointerEnter, () => _menu?.Select(index));
-            AddTrigger(trigger, EventTriggerType.PointerClick, () =>
-            {
-                if (_menu != null && index < _menu.Items.Count && _menu.Items[index].Enabled)
-                {
-                    _menu.Select(index);
-                    MenuItemClicked?.Invoke(index);
-                }
-            });
-            return (background, label);
-        }
-
-        private static void AddTrigger(EventTrigger trigger, EventTriggerType type, Action action)
-        {
-            var entry = new EventTrigger.Entry { eventID = type };
-            entry.callback.AddListener(_ => action());
-            trigger.triggers.Add(entry);
         }
 
         private (UnityEngine.UI.Image, TextMeshProUGUI) TurnRow(RectTransform parent, int index)
         {
             var row = new GameObject($"Turn {index}", typeof(RectTransform), typeof(UnityEngine.UI.HorizontalLayoutGroup), typeof(UnityEngine.UI.LayoutElement));
             row.transform.SetParent(parent, false);
-            row.GetComponent<UnityEngine.UI.LayoutElement>().preferredHeight = 36f;
+            var element = row.GetComponent<UnityEngine.UI.LayoutElement>();
+            element.preferredHeight = element.minHeight = 12f;
             var layout = row.GetComponent<UnityEngine.UI.HorizontalLayoutGroup>();
-            layout.spacing = 10f;
+            layout.spacing = 4f;
+            layout.childAlignment = TextAnchor.MiddleLeft;
             layout.childControlWidth = layout.childControlHeight = true;
             layout.childForceExpandWidth = false;
-            layout.childForceExpandHeight = true;
+            layout.childForceExpandHeight = false;
 
             var team = new GameObject("Team", typeof(RectTransform), typeof(UnityEngine.UI.Image), typeof(UnityEngine.UI.LayoutElement));
             team.transform.SetParent(row.transform, false);
-            team.GetComponent<UnityEngine.UI.LayoutElement>().preferredWidth = 8f;
+            var chip = team.GetComponent<UnityEngine.UI.LayoutElement>();
+            chip.preferredWidth = chip.minWidth = 3f;
+            chip.preferredHeight = chip.minHeight = 8f;
             var teamImage = team.GetComponent<UnityEngine.UI.Image>();
             teamImage.raycastTarget = false;
 
-            var label = Text(row.transform, "Label", 24, FontStyles.Normal);
-            label.gameObject.AddComponent<UnityEngine.UI.LayoutElement>().flexibleWidth = 1f;
+            var label = UiFactory.Text(row.transform, "Label");
+            // One line per entry: long spell rows ("* Incendiary Barrage (Fairweather)") end in an ellipsis
+            // instead of wrapping into the row below.
+            label.textWrappingMode = TextWrappingModes.NoWrap;
+            label.overflowMode = TextOverflowModes.Ellipsis;
+            var labelElement = label.gameObject.AddComponent<UnityEngine.UI.LayoutElement>();
+            labelElement.flexibleWidth = 1f;
+            labelElement.minWidth = 0f;
             return (teamImage, label);
+        }
+
+        private void BuildUnitPanel()
+        {
+            int m = UiFactory.Margin;
+            // Bottom right, above the hint strip (two lines tall at most).
+            _unitPanel = UiFactory.Window(transform, "Unit Info", new Vector2(1f, 0f), new Vector2(-m, m + 36), UnitPanelWidth);
+            _unitName = UiFactory.Text(_unitPanel, "Name", title: true);
+            _unitName.color = UiFactory.TextColor;
+            _unitJob = UiFactory.Text(_unitPanel, "Job");
+
+            var gauges = new GameObject("Gauges", typeof(RectTransform), typeof(UnityEngine.UI.HorizontalLayoutGroup));
+            gauges.transform.SetParent(_unitPanel, false);
+            var layout = gauges.GetComponent<UnityEngine.UI.HorizontalLayoutGroup>();
+            layout.spacing = 6f;
+            layout.childAlignment = TextAnchor.MiddleLeft;
+            layout.childControlWidth = layout.childControlHeight = true;
+            layout.childForceExpandWidth = layout.childForceExpandHeight = false;
+            var skin = UiSkin.Current;
+            _hp = Gauge(gauges.transform, "HP", skin != null ? skin.HpColor : Color.green);
+            _mp = Gauge(gauges.transform, "MP", skin != null ? skin.MpColor : Color.blue);
+            _ct = Gauge(gauges.transform, "CT", skin != null ? skin.CtColor : Color.yellow);
+
+            _unitInfo = UiFactory.Text(_unitPanel, "Details");
+            _unitPanel.gameObject.SetActive(false);
+        }
+
+        private static (UiBar, TextMeshProUGUI, string) Gauge(Transform parent, string label, Color fill)
+        {
+            // "HP 34/50" above its bar.
+            var group = new GameObject(label, typeof(RectTransform), typeof(UnityEngine.UI.VerticalLayoutGroup));
+            group.transform.SetParent(parent, false);
+            var layout = group.GetComponent<UnityEngine.UI.VerticalLayoutGroup>();
+            layout.spacing = 0f;
+            layout.childControlWidth = layout.childControlHeight = true;
+            layout.childForceExpandWidth = layout.childForceExpandHeight = false;
+
+            var value = UiFactory.Text(group.transform, "Value");
+            value.textWrappingMode = TextWrappingModes.NoWrap;
+            var bar = UiFactory.Bar(group.transform, "Bar", fill, BarWidth);
+            return (bar, value, label);
         }
 
         private void BuildTimingPrompt()
         {
-            // Low on screen, above the hint, so it never covers the units the camera is centered on.
-            _timingPanel = Panel("Timing", new Vector2(0.5f, 0f), new Vector2(0f, 110f), 660f);
-            _timingTitle = Label(_timingPanel, "Title", 34, FontStyles.Bold);
-            _timingTitle.alignment = TextAlignmentOptions.Center;
+            int m = UiFactory.Margin;
+            // Low on screen and left of centre, above the hint, clear of the unit panel and the units the camera frames.
+            _timingPanel = UiFactory.Window(transform, "Timing", new Vector2(0.5f, 0f), new Vector2(-104f, m + 36), 176f);
+            _timingTitle = UiFactory.Text(_timingPanel, "Title", title: true, alignment: TextAlignmentOptions.Center);
 
-            var bar = new GameObject("Bar", typeof(RectTransform), typeof(UnityEngine.UI.Image), typeof(UnityEngine.UI.LayoutElement));
-            bar.transform.SetParent(_timingPanel, false);
-            bar.GetComponent<UnityEngine.UI.LayoutElement>().preferredHeight = 30f;
-            var track = bar.GetComponent<UnityEngine.UI.Image>();
-            track.color = new Color(1f, 1f, 1f, 0.12f);
-            track.raycastTarget = false;
+            _timingBar = UiFactory.Bar(_timingPanel, "Bar", new Color(0f, 0f, 0f, 0f), 148);
+            _timingBar.SetFraction(1f);
+            var skin = UiSkin.Current;
+            _timingZone = Block(_timingBar.Interior, "Perfect Zone", skin != null ? skin.AccentColor : new Color(0.95f, 0.70f, 0.25f));
+            _timingZone.anchorMin = Vector2.zero;
+            _timingZone.anchorMax = new Vector2(0f, 1f);
+            _timingZone.pivot = new Vector2(0f, 0.5f);
+            _timingMarker = Block(_timingBar.Interior, "Marker", Color.white);
+            _timingMarker.anchorMin = Vector2.zero;
+            _timingMarker.anchorMax = new Vector2(0f, 1f);
+            _timingMarker.pivot = new Vector2(0f, 0.5f);
+            _timingMarker.sizeDelta = new Vector2(2f, 4f);
 
-            _timingZone = Block(bar.transform, "Perfect Zone", new Color(0.95f, 0.70f, 0.25f, 0.85f));
-            _timingZone.offsetMin = _timingZone.offsetMax = Vector2.zero;
-            _timingMarker = Block(bar.transform, "Marker", Color.white);
-            _timingMarker.sizeDelta = new Vector2(8f, 44f);
-
-            _timingFeedback = Label(_timingPanel, "Feedback", 26, FontStyles.Normal);
-            _timingFeedback.alignment = TextAlignmentOptions.Center;
+            _timingFeedback = UiFactory.Text(_timingPanel, "Feedback", alignment: TextAlignmentOptions.Center);
             _timingPanel.gameObject.SetActive(false);
         }
 
@@ -361,54 +394,6 @@ namespace FriendshipWarriors.UI
             image.color = color;
             image.raycastTarget = false;
             return (RectTransform)go.transform;
-        }
-
-        // ------------------------------------------------------------------ Building blocks
-
-        /// <summary>A dark panel anchored at <paramref name="anchor"/> that grows to fit its vertically stacked content.</summary>
-        private RectTransform Panel(string panelName, Vector2 anchor, Vector2 offset, float width)
-        {
-            var go = new GameObject(panelName, typeof(RectTransform), typeof(UnityEngine.UI.Image),
-                typeof(UnityEngine.UI.VerticalLayoutGroup), typeof(UnityEngine.UI.ContentSizeFitter));
-            var rect = (RectTransform)go.transform;
-            rect.SetParent(transform, false);
-            rect.anchorMin = rect.anchorMax = rect.pivot = anchor;
-            rect.anchoredPosition = offset;
-            rect.sizeDelta = new Vector2(width, 0f);
-
-            var image = go.GetComponent<UnityEngine.UI.Image>();
-            image.color = PanelColor;
-            image.raycastTarget = false;
-
-            var layout = go.GetComponent<UnityEngine.UI.VerticalLayoutGroup>();
-            layout.padding = new RectOffset(18, 18, 14, 14);
-            layout.spacing = 6f;
-            layout.childControlWidth = layout.childControlHeight = true;
-            layout.childForceExpandWidth = true;
-            layout.childForceExpandHeight = false;
-
-            go.GetComponent<UnityEngine.UI.ContentSizeFitter>().verticalFit = UnityEngine.UI.ContentSizeFitter.FitMode.PreferredSize;
-            return rect;
-        }
-
-        private static TextMeshProUGUI Label(RectTransform parent, string labelName, float size, FontStyles style)
-        {
-            var text = Text(parent, labelName, size, style);
-            text.textWrappingMode = TextWrappingModes.Normal;
-            return text;
-        }
-
-        private static TextMeshProUGUI Text(Transform parent, string textName, float size, FontStyles style)
-        {
-            var go = new GameObject(textName, typeof(RectTransform), typeof(TextMeshProUGUI));
-            go.transform.SetParent(parent, false);
-            var text = go.GetComponent<TextMeshProUGUI>();
-            text.fontSize = size;
-            text.fontStyle = style;
-            text.color = TextColor;
-            text.raycastTarget = false;
-            text.richText = true;
-            return text;
         }
     }
 }
