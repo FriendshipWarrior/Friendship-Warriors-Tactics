@@ -315,6 +315,113 @@ namespace FriendshipWarriors.Tests
             Assert.That(lost.IsKnockedOut, Is.True);
         }
 
+        [TestCase(50, 30)]   // Raise (Resuscitate): half of 60
+        [TestCase(100, 60)]  // Arise / Raise 2 (Full Resuscitation): full HP
+        public void Revives_RestoreTheirShareOfMaxHp(int percent, int expectedHp)
+        {
+            var grid = TestGrids.Flat(4, 4);
+            var caster = UnitWith(ma: 20, resonance: 100);
+            var fallen = UnitWith(resonance: 100, hp: 60, coord: new GridCoord(1, 0));
+            fallen.TakeDamage(999);
+            var raise = Spell(AbilityEffect.Revive, 160, radius: 0, targeting: AbilityTargeting.KnockedOut, revivePercent: percent);
+
+            var result = SpellResolver.Resolve(caster, raise, fallen.Coord, grid, new[] { caster, fallen }, new System.Random(1));
+
+            Assert.That(result.Targets.Single().Revived, Is.True);
+            Assert.That(fallen.IsKnockedOut, Is.False);
+            Assert.That(fallen.CurrentHp, Is.EqualTo(expectedHp));
+        }
+
+        [Test]
+        public void Revives_DoNothingToTheLiving()
+        {
+            var grid = TestGrids.Flat(4, 4);
+            var caster = UnitWith(ma: 20, resonance: 100);
+            var hurt = UnitWith(resonance: 100, hp: 60, coord: new GridCoord(1, 0));
+            hurt.TakeDamage(40);
+            var raise = Spell(AbilityEffect.Revive, 180, radius: 0, targeting: AbilityTargeting.KnockedOut, revivePercent: 100);
+
+            var result = SpellResolver.Resolve(caster, raise, hurt.Coord, grid, new[] { caster, hurt }, new System.Random(1));
+
+            Assert.That(result.Targets, Is.Empty);
+            Assert.That(hurt.CurrentHp, Is.EqualTo(20));
+        }
+
+        [Test]
+        public void Revives_SpendMpWhenCastingStarts()
+        {
+            var grid = TestGrids.Flat(4, 4);
+            var caster = UnitWith(ma: 20, resonance: 100, mp: 30);
+            var fallen = UnitWith(resonance: 100, coord: new GridCoord(1, 0));
+            fallen.TakeDamage(999);
+            var raise = Spell(AbilityEffect.Revive, 180, speed: 25, radius: 0, mp: 10, targeting: AbilityTargeting.KnockedOut, revivePercent: 50);
+            var arise = Spell(AbilityEffect.Revive, 160, speed: 10, radius: 0, mp: 20, targeting: AbilityTargeting.KnockedOut, revivePercent: 100);
+            var order = new TurnOrder(new[] { caster, fallen });
+
+            var now = SpellCasting.Begin(caster, raise, fallen.Coord, order, grid, new[] { caster, fallen }, new System.Random(1), out var charge);
+            Assert.That(now, Is.Null, "charged, so it resolves later");
+            Assert.That(charge, Is.Not.Null);
+            Assert.That(caster.CurrentMp, Is.EqualTo(20));
+            order.CancelCharge(caster);
+
+            SpellCasting.Begin(caster, arise, fallen.Coord, order, grid, new[] { caster, fallen }, new System.Random(1), out _);
+            Assert.That(caster.CurrentMp, Is.EqualTo(0));
+            Assert.Throws<System.InvalidOperationException>(() =>
+                SpellCasting.Begin(caster, raise, fallen.Coord, order, grid, new[] { caster, fallen }, new System.Random(1), out _));
+        }
+
+        [Test]
+        public void Ai_RevivesADownedAlly()
+        {
+            var grid = TestGrids.Flat(12, 12);
+            var medic = UnitWith(ma: 12, resonance: 80, team: Team.Enemy, coord: new GridCoord(0, 0));
+            var raise = Spell(AbilityEffect.Revive, 180, radius: 0, mp: 10, targeting: AbilityTargeting.KnockedOut, revivePercent: 50);
+            Teach(medic, raise);
+            var fallen = UnitWith(resonance: 80, team: Team.Enemy, hp: 80, coord: new GridCoord(2, 0));
+            fallen.TakeDamage(999);
+            var farFoe = UnitWith(team: Team.Player, coord: new GridCoord(11, 11));
+
+            var plan = AiPlanner.Plan(grid, medic, new[] { medic, fallen, farFoe }, new MovementRules(2), new System.Random(4));
+
+            Assert.That(plan.Spell, Is.SameAs(raise));
+            Assert.That(plan.SpellTile, Is.EqualTo(fallen.Coord));
+        }
+
+        [Test]
+        public void Ai_DoesntReviveFallenEnemies()
+        {
+            var grid = TestGrids.Flat(12, 12);
+            var medic = UnitWith(ma: 12, resonance: 80, team: Team.Enemy, coord: new GridCoord(0, 0));
+            var raise = Spell(AbilityEffect.Revive, 180, radius: 0, mp: 10, targeting: AbilityTargeting.KnockedOut, revivePercent: 50);
+            Teach(medic, raise);
+            var fallenFoe = UnitWith(resonance: 80, team: Team.Player, coord: new GridCoord(2, 0));
+            fallenFoe.TakeDamage(999);
+            var farFoe = UnitWith(team: Team.Player, coord: new GridCoord(11, 11));
+
+            var plan = AiPlanner.Plan(grid, medic, new[] { medic, fallenFoe, farFoe }, new MovementRules(2), new System.Random(4));
+
+            Assert.That(plan.Spell, Is.Null);
+        }
+
+        [Test]
+        public void Purge_LiftsPanicForThisBattleOnly()
+        {
+            var grid = TestGrids.Flat(4, 4);
+            var caster = UnitWith(ma: 20, resonance: 100);
+            var ally = UnitWith(resonance: 100, morale: 70, coord: new GridCoord(1, 0));
+            ally.AdjustMorale(-65); // shaken in battle: Morale 5, panicking
+            Assert.That(ally.HasStatus(StatusEffect.Panic), Is.True);
+            var purge = Spell(AbilityEffect.CureStatus, 190, radius: 0, cures: new[] { StatusEffect.Panic });
+
+            SpellResolver.Resolve(caster, purge, ally.Coord, grid, new[] { caster, ally }, new System.Random(1));
+
+            Assert.That(ally.HasStatus(StatusEffect.Panic), Is.False);
+            Assert.That(ally.Morale, Is.EqualTo(Unit.PanicThreshold));
+            Assert.That(ally.BaseMorale, Is.EqualTo(70), "only the battle modifier moved");
+            ally.ClearBattleModifiers();
+            Assert.That(ally.Morale, Is.EqualTo(70), "back to its pre-battle Morale");
+        }
+
         [Test]
         public void Purge_CuresEveryHarmfulStatusButNotBuffs()
         {

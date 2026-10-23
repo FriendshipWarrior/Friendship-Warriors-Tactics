@@ -377,12 +377,11 @@ namespace FriendshipWarriors.Battle
             var caster = _active.Unit;
             if (tile != caster.Coord)
                 caster.Facing = DirectionExtensions.Toward(caster.Coord, tile);
-            caster.TrySpendMp(spell.MpCost);
             _turn.RecordAct();
 
-            if (spell.ChargeSpeed <= 0)
+            var result = SpellCasting.Begin(caster, spell, tile, _order, _gridView.Grid, Units.ToList(), _rng, out var charge);
+            if (charge == null)
             {
-                var result = SpellResolver.Resolve(caster, spell, tile, _gridView.Grid, Units.ToList(), _rng);
                 string message = result.Message + SpellAftermath(result);
                 Debug.Log($"[Battle] {message}", this);
                 _hud.ShowBanner(message);
@@ -392,7 +391,6 @@ namespace FriendshipWarriors.Battle
                 return;
             }
 
-            var charge = _order.BeginCharge(caster, spell, tile);
             _turn.Conclude();
             string ticks = charge.TicksLeft == 1 ? "1 tick" : $"{charge.TicksLeft} ticks";
             _hud.ShowBanner($"{caster.Name} begins {spell.DisplayName} (resolves in {ticks}).");

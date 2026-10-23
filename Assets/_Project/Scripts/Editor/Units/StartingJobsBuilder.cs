@@ -284,8 +284,8 @@ namespace FriendshipWarriors.Editor.Units
         /// <summary>
         /// Warding, after FFT White Magic (FFT name and JP in comments). Cure tiers' MP, power and JP are verified or
         /// recalled as noted in CLAUDE.md; buff and Esuna speeds (34) and hit bonuses are recalled. Purge cures every
-        /// harmful status we have (FFT Esuna's list is shorter). A Raise-style revive works (AbilityEffect.Revive with
-        /// KnockedOut targeting) but isn't taught until it's approved.
+        /// harmful status we have (FFT Esuna's list is shorter). The revives (appended last, as they came later) only
+        /// reach knocked-out units whose death counter is still running.
         /// </summary>
         private static AbilityDefinition[] WarderSpells() => new[]
         {
@@ -302,6 +302,10 @@ namespace FriendshipWarriors.Editor.Units
                 AbilityEffect.CureStatus, 3, 18, 190, 34, 1, 2,
                 cures: new[] { StatusEffect.Poison, StatusEffect.Blind, StatusEffect.Silence, StatusEffect.Sleep, StatusEffect.Slow,
                                StatusEffect.Stop, StatusEffect.Disable, StatusEffect.Immobilize, StatusEffect.Panic }),
+            Spell("Resuscitate", 180, "Revives a fallen unit with half its HP (hit: M.Atk + 180).", AbilityEffect.Revive, 4, 10, 180, 25, 0, 0, // Raise
+                targeting: AbilityTargeting.KnockedOut, revivePercent: 50),
+            Spell("Full Resuscitation", 500, "Revives a fallen unit with full HP (hit: M.Atk + 160).", AbilityEffect.Revive, 4, 20, 160, 10, 0, 0, // Arise / Raise 2
+                targeting: AbilityTargeting.KnockedOut, revivePercent: 100),
         };
 
         /// <summary>A spell: aimed at any tile within <paramref name="range"/> (height doesn't block aiming), then its area.</summary>
