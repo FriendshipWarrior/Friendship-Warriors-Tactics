@@ -53,8 +53,11 @@ namespace FriendshipWarriors.Grid.Generation
         [SerializeField, Range(0f, 0.3f)] private float _propDensity = 0.06f;
 
         [Header("Deployment")]
-        [Tooltip("Tiles per side. FFT fields 5 units.")]
+        [Tooltip("Units per side. FFT fields 5 units.")]
         [SerializeField, Range(1, 12)] private int _deploymentSize = 5;
+        [Tooltip("Extra tiles in each deployment zone beyond one per unit, so the formation phase has room to arrange " +
+                 "units (FFT zones are usually bigger than the party).")]
+        [SerializeField, Range(0, 8)] private int _extraDeploymentTiles = 3;
 
         [Header("Validation")]
         [SerializeField, Range(1, 7)] private int _referenceJump = MapValidator.DefaultReferenceJump;
@@ -74,9 +77,11 @@ namespace FriendshipWarriors.Grid.Generation
         public PropChoice[] Props => _props;
         public float PropDensity => _propDensity;
         public int DeploymentSize => _deploymentSize;
+        public int ExtraDeploymentTiles => _extraDeploymentTiles;
         public int ReferenceJump => _referenceJump;
         public int MaxAttempts => _maxAttempts;
 
         public void SetProps(PropChoice[] props) => _props = props;
+        public void SetExtraDeploymentTiles(int extra) => _extraDeploymentTiles = Mathf.Clamp(extra, 0, 8);
     }
 }

@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using FriendshipWarriors.Battle;
 using FriendshipWarriors.Battle.Abilities;
+using FriendshipWarriors.Battle.Deployment;
 using FriendshipWarriors.Battle.Objectives;
 using FriendshipWarriors.Cameras;
 using FriendshipWarriors.Controls;
@@ -20,8 +21,8 @@ namespace FriendshipWarriors.Dev
     /// Test-scene setup: spawns both teams from a <see cref="BattleSetup"/> (team sizes, rosters with keys, objective)
     /// onto the map's deployment zones and hands them to the <see cref="BattleController"/>. Each unit gets the first starter item for each slot its job can use, learns every
     /// ability its job teaches (passives get equipped), and Player units without items of their own take the item
-    /// job's command as their secondary with its first item learned. Both teams get the same item stock. R / Select
-    /// rolls a random map and restarts.
+    /// job's command as their secondary with its first item learned. Both teams get the same item stock. Human sides
+    /// arrange their units in the formation phase before turn 1. R / Select rolls a random map and restarts.
     /// </summary>
     public sealed class BattleSandbox : MonoBehaviour
     {
@@ -29,6 +30,7 @@ namespace FriendshipWarriors.Dev
         [SerializeField] private GridView _gridView;
         [SerializeField] private IsoCameraRig _cameraRig;
         [SerializeField] private BattleController _battle;
+        [SerializeField] private DeploymentController _deployment;
 
         [Header("Battle")]
         [Tooltip("Team sizes, rosters and objective. Swap between the Standard, Commander and Escort setups to try each objective.")]
@@ -70,6 +72,9 @@ namespace FriendshipWarriors.Dev
 
         private void SetUpBattle()
         {
+            // A reroll can come mid-battle or mid-formation: stop both before the old units go.
+            _deployment.Cancel();
+            _battle.Halt();
             foreach (var view in _views)
                 Destroy(view.gameObject);
             _views.Clear();
@@ -100,7 +105,15 @@ namespace FriendshipWarriors.Dev
                     inventory.Add(stock.Item, stock.Count);
                 _battle.SetInventory(team, inventory);
             }
-            _battle.Begin(_views, PrepareStatuses, _setup.Objective);
+            // Human sides arrange their units first (the formation phase), then the battle begins.
+            var objective = _setup.Objective;
+            var teams = new List<Team>();
+            foreach (var team in new[] { Team.Player, Team.Enemy })
+            {
+                if (_battle.ControlOf(team) == TeamControl.Human)
+                    teams.Add(team);
+            }
+            _deployment.Run(_views, teams, objective, _ => _battle.Begin(_views, PrepareStatuses, objective));
         }
 
         /// <summary>Applies the test statuses and the low-Morale enemy once the battle has cleared old modifiers.</summary>

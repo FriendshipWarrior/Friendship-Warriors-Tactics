@@ -190,15 +190,7 @@ namespace FriendshipWarriors.Battle
             string text = ObjectiveEvaluator.Describe(_objective, Units);
             _hud.SetObjective(text);
             _hud.ShowBanner($"Objective: {text}", seconds: 4f);
-            foreach (var view in _views)
-            {
-                if (_objective.IsTarget(view.Unit.Key) && view.Unit.Team == Team.Enemy)
-                    view.SetRole("TARGET", new Color(1f, 0.35f, 0.3f));
-                else if (_objective.IsProtected(view.Unit.Key) && view.Unit.Team == Team.Player)
-                    view.SetRole("PROTECT", new Color(0.45f, 1f, 0.55f));
-                else
-                    view.SetRole(null, Color.white);
-            }
+            ObjectiveTags.Apply(_views, _objective);
         }
 
         private void Update()
@@ -947,6 +939,9 @@ namespace FriendshipWarriors.Battle
 
         private void OnCursorMoved(GridCoord coord)
         {
+            // Between battles (and during the formation phase) the cursor belongs to someone else.
+            if (_phase == Phase.Idle && _order == null)
+                return;
             // With the mouse, pointing at a tile turns the unit toward it.
             if (_phase == Phase.ChooseFacing && coord != _active.Unit.Coord)
                 _active.Unit.Facing = DirectionExtensions.Toward(_active.Unit.Coord, coord);

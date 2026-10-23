@@ -29,8 +29,9 @@ FFT is the reference for mechanics and presentation. Characters, story and job n
 **Main menu and Quick Play**
 - A title screen with Quick Play, plus Campaign and Options (greyed out until they exist). Works with a gamepad, a keyboard or a mouse.
 - **Quick Play:** a random map and 5 random units on each side, you against the AI. Every unit has a random job, the same level, random gear its job can use, its job line's abilities learned, and random reaction, support, movement and secondary abilities. Both sides get the same item stock.
+- **Formation** (FFT): before the first turn, arrange your units on your side's blue deployment tiles while the enemy stands in view. Pick a unit, pick a tile (picking another unit's tile swaps them), choose its facing, then *Begin Battle* from the Formation menu. Beginning straight away keeps the starting spots.
 - One seed builds the whole match. It's shown in the corner, so a match can be reported and played again.
-- Pause any time (Start / P) to resume or quit to the main menu. Winning or losing returns you to the main menu.
+- Pause any time, formation included (Start / P), to resume or quit to the main menu. Winning or losing returns you to the main menu.
 
 **Battlefield**
 - FFT-style tiles: heights in half steps (1h, 1.5h, …), slopes, water depth, terrain types, deployment zones for each side, and props like trees and rocks.
@@ -81,6 +82,8 @@ FFT is the reference for mechanics and presentation. Characters, story and job n
 | **Random maps:** hills, plateaus, ponds, chasms and ramps from a seed. | **Map editor:** paint on a grid, preview in 3D, fix the reported problems. |
 | ![A Cadet leaping a chasm mid-walk](docs/images/walk-leap.png) | |
 | **Walking:** units walk their route tile by tile. Here a Cadet leaps a chasm after walking up a ramp and hopping onto a ledge. | |
+| ![The formation menu before a battle, enemies already in place](docs/images/formation-menu.png) | ![Arranging units on the blue deployment tiles](docs/images/formation.png) |
+| **Formation:** the objective, the enemy's starting spots, and the Formation menu. | **Arranging units:** blue tiles are where your side may start. |
 
 ![Every job in its starting gear on both teams: idle, walk, attack, cast, hurt and KO frames, front and back](docs/images/paper-doll.png)
 
@@ -99,6 +102,7 @@ FFT is the reference for mechanics and presentation. Characters, story and job n
 | Pan | Right stick | Middle-drag |
 | Timed press | A | Enter / Space |
 | Hurry a walk (hold) | A | Enter / Space |
+| Formation menu (Begin Battle) | B | Esc, Backspace, right click |
 | Pause | Start | P |
 | New random map (test scene) | Select | R |
 
@@ -191,7 +195,7 @@ Assets/
     Scripts/Runtime/   Game code (FriendshipWarriors.* namespaces)
       Grid/            Tiles, maps, pathfinding, map checks, random generation, mesh view
       Units/           Units, jobs, stats, abilities, equipment, sprite views
-      Battle/          Turn order, turn flow, combat, magic, enemy AI, battle setups and objectives
+      Battle/          Formation phase, turn order, turn flow, combat, magic, enemy AI, battle setups and objectives
       Menus/           Main menu
       QuickPlay/       Random teams and quick-play matches
       Controls/        Input, tile cursor
@@ -231,6 +235,7 @@ CLAUDE.md              Design decisions, conventions and project notes
 - [x] Main menu, Quick Play (random 5 v 5 from a seed), pause menu
 - [x] Paper-doll unit sprites (first drafts drawn by code, ready for hand editing)
 - [x] Animated movement: units walk their path tile by tile, as in FFT, with walk frames, hops and leaps
+- [x] Formation phase before battle (FFT): place units, swap, choose facings
 - [ ] Hand-drawn character art and terrain art
 - [ ] Battle prep, party management, campaign and story. Losing a campaign battle won't be game over: the campaign carries on, unlike FFT.
 - [ ] Quick Play options: online matches, army building

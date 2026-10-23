@@ -91,8 +91,35 @@ namespace FriendshipWarriors.Tests
 
                 Assert.That(result.Succeeded, Is.True, $"seed {seed}: {string.Join("; ", result.Issues)}");
                 Assert.That(MapValidator.Validate(map, _settings.ReferenceJump).Where(i => i.Severity == IssueSeverity.Error), Is.Empty, $"seed {seed}");
-                Assert.That(map.PlayerDeployment.Count, Is.EqualTo(_settings.DeploymentSize), $"seed {seed}");
-                Assert.That(map.EnemyDeployment.Count, Is.EqualTo(_settings.DeploymentSize), $"seed {seed}");
+                int zone = _settings.DeploymentSize + _settings.ExtraDeploymentTiles;
+                Assert.That(map.PlayerDeployment.Count, Is.EqualTo(zone), $"seed {seed}");
+                Assert.That(map.EnemyDeployment.Count, Is.EqualTo(zone), $"seed {seed}");
+            }
+        }
+
+        [Test]
+        public void DeploymentZones_HaveSpareTiles_ForTheFormationPhase()
+        {
+            var map = Generate(77, out var result);
+
+            Assert.That(result.Succeeded, Is.True);
+            Assert.That(_settings.ExtraDeploymentTiles, Is.EqualTo(3), "FFT-style zones: room for the party plus a few");
+            Assert.That(map.PlayerDeployment.Count, Is.EqualTo(_settings.DeploymentSize + 3));
+        }
+
+        [Test]
+        public void SpareTiles_DontMoveTheDefaultSpots()
+        {
+            // Units spawn on the first tiles of each zone; growing the zone only adds tiles after them.
+            for (int seed = 0; seed < 10; seed++)
+            {
+                _settings.SetExtraDeploymentTiles(0);
+                var tight = Generate(seed, out _);
+                _settings.SetExtraDeploymentTiles(3);
+                var roomy = Generate(seed, out _);
+
+                Assert.That(roomy.PlayerDeployment.Take(tight.PlayerDeployment.Count), Is.EqualTo(tight.PlayerDeployment), $"seed {seed}");
+                Assert.That(roomy.EnemyDeployment.Take(tight.EnemyDeployment.Count), Is.EqualTo(tight.EnemyDeployment), $"seed {seed}");
             }
         }
 

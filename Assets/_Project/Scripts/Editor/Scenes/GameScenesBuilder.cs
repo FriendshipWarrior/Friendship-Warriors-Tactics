@@ -136,12 +136,20 @@ namespace FriendshipWarriors.Editor.Scenes
             var menuInput = CreateMenuInput();
             var pause = CreateMenuScreen("Pause Canvas", menuInput, sortingOrder: 10);
             SetBool(pause, "_dimBackground", true);
+            var deployment = new GameObject("Deployment").AddComponent<FriendshipWarriors.Battle.Deployment.DeploymentController>();
+            Set(deployment, "_input", input);
+            Set(deployment, "_gridView", grid);
+            Set(deployment, "_cursor", cursor);
+            Set(deployment, "_cameraRig", rig);
+            Set(deployment, "_hud", hud);
+
             var director = new GameObject("Quick Play").AddComponent<QuickPlayDirector>();
             Set(director, "_battleInput", input);
             Set(director, "_menuInput", menuInput);
             Set(director, "_gridView", grid);
             Set(director, "_cameraRig", rig);
             Set(director, "_battle", battle);
+            Set(director, "_deployment", deployment);
             Set(director, "_hud", hud);
             Set(director, "_pauseMenu", pause);
             Set(director, "_generatorSettings", AssetDatabase.LoadAssetAtPath<MapGeneratorSettings>(ProjectAssets.DefaultGeneratorSettingsPath));

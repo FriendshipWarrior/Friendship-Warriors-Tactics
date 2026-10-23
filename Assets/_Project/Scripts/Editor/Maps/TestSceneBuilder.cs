@@ -96,11 +96,19 @@ namespace FriendshipWarriors.Editor.Maps
             Set(battle, "_cameraRig", rig);
             Set(battle, "_hud", hud);
 
+            var deployment = new GameObject("Deployment").AddComponent<FriendshipWarriors.Battle.Deployment.DeploymentController>();
+            Set(deployment, "_input", input);
+            Set(deployment, "_gridView", grid);
+            Set(deployment, "_cursor", cursor);
+            Set(deployment, "_cameraRig", rig);
+            Set(deployment, "_hud", hud);
+
             var sandbox = new GameObject("Battle Sandbox").AddComponent<BattleSandbox>();
             Set(sandbox, "_input", input);
             Set(sandbox, "_gridView", grid);
             Set(sandbox, "_cameraRig", rig);
             Set(sandbox, "_battle", battle);
+            Set(sandbox, "_deployment", deployment);
             Set(sandbox, "_generatorSettings", AssetDatabase.LoadAssetAtPath<MapGeneratorSettings>(ProjectAssets.DefaultGeneratorSettingsPath));
             Set(sandbox, "_setup", AssetDatabase.LoadAssetAtPath<FriendshipWarriors.Battle.Objectives.BattleSetup>(Setups.BattleSetupBuilder.StandardPath));
             SetArray(sandbox, "_starterGear", Units.StartingJobsBuilder.CreateStarterEquipment());
