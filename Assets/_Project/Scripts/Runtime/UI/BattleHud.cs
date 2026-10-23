@@ -46,6 +46,7 @@ namespace FriendshipWarriors.UI
         private RectTransform _timingMarker;
         private TimedPressRules _timingRules;
         private float _timingStart;
+        private Battle.BattleClock _clock;
         private bool _timingRunning;
 
         private RectTransform _bannerPanel;
@@ -92,7 +93,7 @@ namespace FriendshipWarriors.UI
         {
             if (_timingRunning)
             {
-                float t = Mathf.Clamp01((Time.unscaledTime - _timingStart) / _timingRules.Duration);
+                float t = Mathf.Clamp01((TimingNow - _timingStart) / _timingRules.Duration);
                 _timingMarker.anchorMin = _timingMarker.anchorMax = new Vector2(t, 0.5f);
             }
             if (_bannerPanel.gameObject.activeSelf && _bannerHideTime > 0f && Time.unscaledTime >= _bannerHideTime)
@@ -186,11 +187,16 @@ namespace FriendshipWarriors.UI
         /// <summary>The objective line in the top-left corner.</summary>
         public void SetObjective(string text) => _objective.text = $"<color=#F2B340>Objective</color>  {text}";
 
+        /// <summary>The battle clock the timing bar sweeps on, so the marker freezes while the battle is paused.</summary>
+        public void SetClock(Battle.BattleClock clock) => _clock = clock;
+
+        private float TimingNow => _clock != null ? _clock.Now(Time.unscaledTime) : Time.unscaledTime;
+
         /// <summary>Shows the sweeping timing bar; the perfect moment is the highlighted zone.</summary>
         public void ShowTimingPrompt(string title, TimedPressRules rules)
         {
             _timingRules = rules;
-            _timingStart = Time.unscaledTime;
+            _timingStart = TimingNow;
             _timingRunning = true;
             _timingTitle.text = title;
             _timingFeedback.text = " ";

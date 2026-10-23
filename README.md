@@ -4,7 +4,7 @@ An isometric, turn-based tactics RPG in the spirit of **Final Fantasy Tactics**,
 
 FFT is the reference for mechanics and presentation. Characters, story and job names are original, and every intended departure from FFT is recorded in [`CLAUDE.md`](CLAUDE.md).
 
-> **Status:** early development. The battlefield, units, turn order, combat, the first job abilities, magic and enemy AI are playable in a test scene with placeholder art. No story or campaign yet.
+> **Status:** early development. Start from the main menu and play **Quick Play**: a random map with two random 5-unit teams, you against the AI. The battlefield, units, turn order, combat, the first job abilities, magic and enemy AI are all in, with placeholder art. No story or campaign yet.
 
 ![Battle with the command menu, turn order and unit details](docs/images/battle-hud.png)
 
@@ -25,6 +25,12 @@ FFT is the reference for mechanics and presentation. Characters, story and job n
 ---
 
 ## Features
+
+**Main menu and Quick Play**
+- A title screen with Quick Play, plus Campaign and Options (greyed out until they exist). Works with a gamepad, a keyboard or a mouse.
+- **Quick Play:** a random map and 5 random units on each side, you against the AI. Every unit has a random job, the same level, random gear its job can use, its job line's abilities learned, and random reaction, support, movement and secondary abilities. Both sides get the same item stock.
+- One seed builds the whole match. It's shown in the corner, so a match can be reported and played again.
+- Pause any time (Start / P) to resume or quit to the main menu. Winning or losing returns you to the main menu.
 
 **Battlefield**
 - FFT-style tiles: heights in half steps (1h, 1.5h, …), slopes, water depth, terrain types, deployment zones for each side, and props like trees and rocks.
@@ -61,6 +67,8 @@ FFT is the reference for mechanics and presentation. Characters, story and job n
 
 | | |
 |---|---|
+| ![The main menu](docs/images/main-menu.png) | ![A quick play match](docs/images/quick-play.png) |
+| **Main menu:** Quick Play now; Campaign and Options to come. | **Quick play:** random map, random teams, and the seed in the corner. |
 | ![Timed press: the Strike! bar](docs/images/timed-press.png) | ![Units shown as sprites that face the camera](docs/images/units.png) |
 | **Timed press:** press as the marker crosses the gold zone. | **Units:** flat sprites with front and back poses, mirrored by camera angle. |
 | ![A randomly generated map](docs/images/random-map.png) | ![The map editor](docs/images/map-editor.png) |
@@ -78,6 +86,7 @@ FFT is the reference for mechanics and presentation. Characters, story and job n
 | Zoom | LT / RT | Scroll wheel, − / = |
 | Pan | Right stick | Middle-drag |
 | Timed press | A | Enter / Space |
+| Pause | Start | P |
 | New random map (test scene) | Select | R |
 
 ## Getting started
@@ -89,9 +98,11 @@ FFT is the reference for mechanics and presentation. Characters, story and job n
 **Run it**
 1. Clone the repository (run `git lfs install` once first if you haven't).
 2. Open the folder in Unity Hub and let the first import finish.
-3. Open `Assets/_Project/Scenes/Battle_Test.unity` and press **Play**.
+3. Open `Assets/_Project/Scenes/MainMenu.unity`, press **Play**, and choose **Quick Play**.
 
-Your team is the blue markers and the enemy AI controls the red ones. Pick a unit's Move, Act or Wait from the command menu. Press R or Select to try a random map. To try another objective, select **Battle Sandbox** in the scene and swap its Battle Setup.
+Your team is the blue markers and the enemy AI controls the red ones. Pick a unit's Move, Act or Wait from the command menu. Press Start or P to pause. When the battle ends you're back at the main menu.
+
+`Battle_Test.unity` is the developer sandbox: fixed test teams, and R or Select rolls a random map. To try another objective, select **Battle Sandbox** in the scene and swap its Battle Setup.
 
 ## Tools
 
@@ -100,6 +111,7 @@ All of these are under the **Friendship Warriors** menu in the Unity Editor.
 | Tool | What it does |
 |---|---|
 | **Map Editor** | Paint heights, terrain, slopes, water, props and deployment zones. Live 3D preview, map checks, undo, and a random-map generator. Double-clicking a map asset also opens it. |
+| **Dev → Rebuild Game Scenes** | Rebuilds the MainMenu and QuickPlay scenes from code and sets Build Settings (MainMenu, QuickPlay, Battle_Test). |
 | **Dev → Rebuild Battle Test Scene** | Rebuilds the test scene and its placeholder assets from code. |
 | **Data → Create Battle Setups** | Creates the prebuilt battle setups: Standard (5 v 5), Defeat the Commander and Escort. |
 | **Data → Create Starting Jobs / Create Starter Equipment** | Creates the job, ability and equipment assets. Existing assets are left alone. |
@@ -165,13 +177,15 @@ Assets/
       Grid/            Tiles, maps, pathfinding, map checks, random generation, mesh view
       Units/           Units, jobs, stats, abilities, equipment, sprite views
       Battle/          Turn order, turn flow, combat, magic, enemy AI, battle setups and objectives
+      Menus/           Main menu
+      QuickPlay/       Random teams and quick-play matches
       Controls/        Input, tile cursor
       Camera/          Isometric camera
-      UI/              Battle HUD (uGUI + TextMeshPro, built in code)
+      UI/              Battle HUD and menus (uGUI + TextMeshPro, built in code)
     Scripts/Editor/    Map editor, scene and data builders
     Data/              Maps, jobs, abilities, equipment, battle setups, props, palettes, generator settings
     Input/             Input actions (gamepad + keyboard/mouse)
-    Scenes/            Battle_Test
+    Scenes/            MainMenu, QuickPlay, Battle_Test (dev sandbox)
   Tests/EditMode/      Unit tests (NUnit)
 docs/images/           README screenshots
 CLAUDE.md              Design decisions, conventions and project notes
@@ -197,8 +211,10 @@ CLAUDE.md              Design decisions, conventions and project notes
 - [x] Morale and Resonance (our Brave and Faith)
 - [x] Magic (Evoker and Warder spells, charge times)
 - [x] Battle setups and objectives (5 v 5 standard, defeat a target, protect a character)
+- [x] Main menu, Quick Play (random 5 v 5 from a seed), pause menu
 - [ ] Character sprites and terrain art
-- [ ] Quick play menu, battle prep, party management, campaign and story
+- [ ] Battle prep, party management, campaign and story. Losing a campaign battle won't be game over: the campaign carries on, unlike FFT.
+- [ ] Quick Play options: online matches, army building
 - [ ] Save system
 - [ ] Steam builds (Windows, SteamOS, macOS)
 
