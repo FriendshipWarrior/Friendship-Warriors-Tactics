@@ -66,10 +66,80 @@ namespace FriendshipWarriors.Tests
         [TestCase(StatusEffect.Disable, 24)]
         [TestCase(StatusEffect.Immobilize, 24)]
         [TestCase(StatusEffect.Blind, StatusRules.UntilCured)]
-        [TestCase(StatusEffect.Silence, StatusRules.UntilCured)]
         public void DefaultDurations_FollowFft(StatusEffect status, int ticks)
         {
             Assert.That(StatusRules.DefaultDuration(status), Is.EqualTo(ticks));
+        }
+
+        [Test]
+        public void Silence_LastsTwoOfTheUnitsOwnTurns_NotClockTicks()
+        {
+            var unit = UnitWith();
+            unit.AddStatus(StatusEffect.Silence);
+
+            Assert.That(unit.Statuses.IsTurnBased(StatusEffect.Silence), Is.True);
+            unit.Statuses.Tick(10000);
+            Assert.That(unit.HasStatus(StatusEffect.Silence), Is.True, "the clock alone never ends it");
+
+            unit.Statuses.TickTurn();
+            Assert.That(unit.HasStatus(StatusEffect.Silence), Is.True, "one turn left");
+            Assert.That(unit.Statuses.TickTurn(), Is.EqualTo(new[] { StatusEffect.Silence }));
+            Assert.That(unit.HasStatus(StatusEffect.Silence), Is.False);
+        }
+
+        [Test]
+        public void TurnTicks_LeaveClockTimedStatusesAlone()
+        {
+            var unit = UnitWith();
+            unit.AddStatus(StatusEffect.Poison);
+
+            unit.Statuses.TickTurn();
+            unit.Statuses.TickTurn();
+
+            Assert.That(unit.Statuses.Remaining(StatusEffect.Poison), Is.EqualTo(36));
+        }
+
+        [Test]
+        public void AnyDamage_WakesASleepingUnit()
+        {
+            var unit = UnitWith();
+            unit.AddStatus(StatusEffect.Sleep);
+
+            unit.TakeDamage(1);
+
+            Assert.That(unit.HasStatus(StatusEffect.Sleep), Is.False);
+        }
+
+        [Test]
+        public void ZeroDamage_DoesNotWake()
+        {
+            var unit = UnitWith();
+            unit.AddStatus(StatusEffect.Sleep);
+
+            unit.TakeDamage(0);
+
+            Assert.That(unit.HasStatus(StatusEffect.Sleep), Is.True);
+        }
+
+        [Test]
+        public void KnockOut_ClearsEveryStatus()
+        {
+            var unit = UnitWith();
+            unit.AddStatus(StatusEffect.Poison);
+            unit.AddStatus(StatusEffect.Silence);
+            unit.AddStatus(StatusEffect.Protect);
+
+            unit.TakeDamage(99999);
+
+            Assert.That(unit.Statuses.Count, Is.Zero);
+            Assert.That(unit.Statuses.IsTurnBased(StatusEffect.Silence), Is.False);
+        }
+
+        [Test]
+        public void PoisonIsGentlerThanRegen()
+        {
+            Assert.That(StatusRules.PoisonDivisor, Is.EqualTo(16));
+            Assert.That(StatusRules.RegenDivisor, Is.EqualTo(8));
         }
 
         [Test]

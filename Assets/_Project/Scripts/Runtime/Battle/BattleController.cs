@@ -546,21 +546,22 @@ namespace FriendshipWarriors.Battle
         private void EndTurn()
         {
             var unit = _active.Unit;
-            // FFT: Poison and Regen take effect at the end of the unit's turn, max HP / 8 each.
-            int tick = unit.Stats.MaxHp / StatusRules.PoisonRegenDivisor;
+            // FFT: Poison and Regen take effect at the end of the unit's turn (Poison max HP / 16, Regen / 8).
             if (unit.HasStatus(StatusEffect.Poison) && !unit.IsKnockedOut)
             {
-                int lost = unit.TakeDamage(System.Math.Max(1, tick));
+                int lost = unit.TakeDamage(System.Math.Max(1, unit.Stats.MaxHp / StatusRules.PoisonDivisor));
                 _hud.ShowBanner($"{unit.Name}: Poison, -{lost} HP{(unit.IsKnockedOut ? $"  {unit.Name} is down!" : "")}");
                 if (unit.IsKnockedOut)
                     OnKnockedOut(unit);
             }
             if (unit.HasStatus(StatusEffect.Regen) && !unit.IsKnockedOut)
             {
-                int healed = unit.RestoreHp(System.Math.Max(1, tick));
+                int healed = unit.RestoreHp(System.Math.Max(1, unit.Stats.MaxHp / StatusRules.RegenDivisor));
                 if (healed > 0)
                     _hud.ShowBanner($"{unit.Name}: Regen, +{healed} HP");
             }
+            // Turn-counted statuses (Silence) tick down as the unit's own turn ends.
+            unit.Statuses.TickTurn();
             _order.EndTurn(unit, _turn.MoveSpent, _turn.ActSpent);
             StartNextTurn();
         }
