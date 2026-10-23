@@ -15,13 +15,17 @@ namespace FriendshipWarriors.Grid.Generation
     {
         private const int H = GridMetrics.StepsPerH;
 
-        /// <param name="deploymentSize">Tiles per deployment zone; null uses the settings (a battle setup's team size
-        /// can ask for more or fewer).</param>
+        /// <param name="deploymentSize">Units per side; null uses the settings (a battle setup's team size can ask for
+        /// more or fewer). Each zone gets <see cref="MapGeneratorSettings.ExtraDeploymentTiles"/> more tiles than that,
+        /// so the formation phase has room to arrange units; an attempt whose zone comes up short is retried. The zone
+        /// grows outward from its first tile, so on the same attempt the first <paramref name="deploymentSize"/> tiles
+        /// (the default spots) don't depend on the extra.</param>
         public static GenerationResult Generate(MapGeneratorSettings settings, int seed, BattleMapData target, int? deploymentSize = null)
         {
-            int zoneSize = deploymentSize ?? settings.DeploymentSize;
             if (settings == null) throw new ArgumentNullException(nameof(settings));
             if (target == null) throw new ArgumentNullException(nameof(target));
+            int units = deploymentSize ?? settings.DeploymentSize;
+            int zoneSize = units + settings.ExtraDeploymentTiles;
 
             List<MapIssue> issues = null;
             for (int attempt = 0; attempt < settings.MaxAttempts; attempt++)
@@ -33,6 +37,7 @@ namespace FriendshipWarriors.Grid.Generation
                 issues = MapValidator.Validate(target, settings.ReferenceJump);
                 foreach (var (zone, side) in new[] { (target.PlayerDeployment, "Player"), (target.EnemyDeployment, "Enemy") })
                 {
+                    // A short zone is an error, so a cramped attempt is retried rather than shipped.
                     if (zone.Count < zoneSize)
                         issues.Add(new MapIssue(IssueSeverity.Error, $"{side} zone has {zone.Count} of {zoneSize} tiles."));
                 }

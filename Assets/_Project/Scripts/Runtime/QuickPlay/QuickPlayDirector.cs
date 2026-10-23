@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using FriendshipWarriors.Battle;
 using FriendshipWarriors.Battle.Abilities;
+using FriendshipWarriors.Battle.Deployment;
 using FriendshipWarriors.Cameras;
 using FriendshipWarriors.Controls;
 using FriendshipWarriors.Grid;
@@ -19,7 +20,8 @@ namespace FriendshipWarriors.QuickPlay
 {
     /// <summary>
     /// Runs a quick-play match: a freshly generated map and two random teams (Player = Human, Enemy = AI), all from
-    /// one seed shown in the corner so a match can be reported and rebuilt. Start / P pauses (Resume, Quit to Main
+    /// one seed shown in the corner so a match can be reported and rebuilt. The player arranges their units in the
+    /// formation phase (<see cref="DeploymentController"/>), then the battle begins. Start / P pauses (Resume, Quit to Main
     /// Menu). When the battle ends the result banner shows briefly — or until Confirm — then it's back to the main
     /// menu; another match is just Quick Play again.
     /// </summary>
@@ -33,6 +35,7 @@ namespace FriendshipWarriors.QuickPlay
         [SerializeField] private GridView _gridView;
         [SerializeField] private IsoCameraRig _cameraRig;
         [SerializeField] private BattleController _battle;
+        [SerializeField] private DeploymentController _deployment;
         [SerializeField] private BattleHud _hud;
         [SerializeField] private MenuScreen _pauseMenu;
         [SerializeField] private string _mainMenuScene = "MainMenu";
@@ -134,8 +137,19 @@ namespace FriendshipWarriors.QuickPlay
                     inventory.Add(stock.Item, stock.Count);
                 _battle.SetInventory(team, inventory);
             }
-            // Quick play is a standard match: 5 v 5, defeat all enemies.
-            _battle.Begin(_views, objective: Battle.Objectives.BattleObjective.Standard);
+            // Quick play is a standard match: 5 v 5, defeat all enemies. The player arranges their side first.
+            var objective = Battle.Objectives.BattleObjective.Standard;
+            _deployment.Run(_views, HumanTeams(), objective, _ => _battle.Begin(_views, objective: objective));
+        }
+
+        /// <summary>Sides that get a formation phase: the human-controlled ones (AI sides keep their spawn positions).</summary>
+        private IEnumerable<Team> HumanTeams()
+        {
+            foreach (var team in new[] { Team.Player, Team.Enemy })
+            {
+                if (_battle.ControlOf(team) == TeamControl.Human)
+                    yield return team;
+            }
         }
 
         /// <summary>Puts units on their deployment tiles, facing the other side as FFT battles start.</summary>
@@ -183,6 +197,7 @@ namespace FriendshipWarriors.QuickPlay
             _paused = true;
             // Switching off the battle flow and its input freezes the battle, AI turns included.
             _battle.enabled = false;
+            _deployment.enabled = false;
             _battleInput.enabled = false;
             _pauseMenu.Show(_pauseModel, "Paused", $"Seed {Seed}");
         }
@@ -194,6 +209,7 @@ namespace FriendshipWarriors.QuickPlay
             _paused = false;
             _pauseMenu.Hide();
             _battleInput.enabled = true;
+            _deployment.enabled = true;
             _battle.enabled = true;
         }
 

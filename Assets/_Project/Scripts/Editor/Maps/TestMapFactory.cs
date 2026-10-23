@@ -24,7 +24,8 @@ namespace FriendshipWarriors.Editor.Maps
 
             map.DisplayName = "Hillside (Test)";
             map.CopyTilesFrom(BuildHillside());
-            map.SetDeployment(Rect(0, 0, 2, 1), Rect(9, 9, 11, 11));
+            // Each zone has room to spare for the formation phase (5 units, 9 tiles).
+            map.SetDeployment(Rect(0, 0, 2, 2), Rect(9, 9, 11, 11));
             map.SetProps(new[]
             {
                 new PropPlacement(new GridCoord(0, 11), tree),
