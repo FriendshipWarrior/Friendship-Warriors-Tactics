@@ -37,6 +37,7 @@ namespace FriendshipWarriors.UI
         private TextMeshProUGUI _unitInfo;
         private RectTransform _unitPanel;
         private TextMeshProUGUI _hint;
+        private TextMeshProUGUI _objective;
 
         private RectTransform _timingPanel;
         private TextMeshProUGUI _timingTitle;
@@ -74,6 +75,12 @@ namespace FriendshipWarriors.UI
             _hint.alignment = TextAlignmentOptions.Center;
 
             BuildTimingPrompt();
+
+            // Top left: the battle's objective, always visible.
+            // 440 wide keeps it clear of the centred banner (which starts 450 px left of centre at 1920 wide).
+            var objectivePanel = Panel("Objective", new Vector2(0f, 1f), new Vector2(40f, -40f), 440f);
+            _objective = Label(objectivePanel, "Text", 24, FontStyles.Normal);
+            SetObjective("Defeat all enemies");
 
             _bannerPanel = Panel("Banner", new Vector2(0.5f, 1f), new Vector2(0f, -40f), 900f);
             _banner = Label(_bannerPanel, "Text", 32, FontStyles.Bold);
@@ -175,6 +182,9 @@ namespace FriendshipWarriors.UI
         }
 
         public void SetHint(string text) => _hint.text = text;
+
+        /// <summary>The objective line in the top-left corner.</summary>
+        public void SetObjective(string text) => _objective.text = $"<color=#F2B340>Objective</color>  {text}";
 
         /// <summary>Shows the sweeping timing bar; the perfect moment is the highlighted zone.</summary>
         public void ShowTimingPrompt(string title, TimedPressRules rules)

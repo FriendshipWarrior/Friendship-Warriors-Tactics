@@ -46,6 +46,7 @@ namespace FriendshipWarriors.Editor.Maps
             CreateGeneratorSettings(tree, rock);
             Units.StartingJobsBuilder.CreateStartingJobs();
             Units.StartingJobsBuilder.CreateStarterEquipment();
+            Setups.BattleSetupBuilder.CreateSetups();
             AssetDatabase.SaveAssets();
 
             // NewScene unloads unreferenced assets, so everything the scene references is loaded after it.
@@ -94,15 +95,13 @@ namespace FriendshipWarriors.Editor.Maps
             Set(battle, "_cameraRig", rig);
             Set(battle, "_hud", hud);
 
-            var (playerJobs, enemyJobs) = Units.StartingJobsBuilder.TestRoster();
             var sandbox = new GameObject("Battle Sandbox").AddComponent<BattleSandbox>();
             Set(sandbox, "_input", input);
             Set(sandbox, "_gridView", grid);
             Set(sandbox, "_cameraRig", rig);
             Set(sandbox, "_battle", battle);
             Set(sandbox, "_generatorSettings", AssetDatabase.LoadAssetAtPath<MapGeneratorSettings>(ProjectAssets.DefaultGeneratorSettingsPath));
-            SetArray(sandbox, "_playerJobs", playerJobs.ToArray());
-            SetArray(sandbox, "_enemyJobs", enemyJobs.ToArray());
+            Set(sandbox, "_setup", AssetDatabase.LoadAssetAtPath<FriendshipWarriors.Battle.Objectives.BattleSetup>(Setups.BattleSetupBuilder.StandardPath));
             SetArray(sandbox, "_starterGear", Units.StartingJobsBuilder.CreateStarterEquipment());
             Set(sandbox, "_itemJob", Units.StartingJobsBuilder.Load("Corpsman"));
             var stock = Units.StartingJobsBuilder.TestItemStock();

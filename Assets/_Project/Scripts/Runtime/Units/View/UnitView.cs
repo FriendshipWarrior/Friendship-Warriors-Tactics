@@ -17,6 +17,7 @@ namespace FriendshipWarriors.Units.View
         private SpriteRenderer _sprite;
         private SpriteRenderer _marker;
         private TMPro.TextMeshPro _statusLabel;
+        private TMPro.TextMeshPro _roleLabel;
         private int _shownStatusVersion = -1;
         private GridView _gridView;
         private IsoCameraRig _cameraRig;
@@ -60,8 +61,27 @@ namespace FriendshipWarriors.Units.View
             _statusLabel.outlineColor = Color.black;
             _statusLabel.rectTransform.sizeDelta = new Vector2(4f, 1f);
 
+            // Objective role (TARGET / PROTECT), above the status codes.
+            _roleLabel = new GameObject("Role").AddComponent<TMPro.TextMeshPro>();
+            _roleLabel.transform.SetParent(transform, false);
+            _roleLabel.transform.localPosition = new Vector3(0f, 1.75f, 0f);
+            _roleLabel.fontSize = 2.4f;
+            _roleLabel.fontStyle = TMPro.FontStyles.Bold;
+            _roleLabel.alignment = TMPro.TextAlignmentOptions.Center;
+            _roleLabel.outlineWidth = 0.25f;
+            _roleLabel.outlineColor = Color.black;
+            _roleLabel.rectTransform.sizeDelta = new Vector2(4f, 1f);
+            _roleLabel.text = "";
+
             SyncPosition();
             UpdateSprite();
+        }
+
+        /// <summary>Shows a role tag over the unit (e.g. TARGET, PROTECT); null or empty hides it.</summary>
+        public void SetRole(string text, Color color)
+        {
+            _roleLabel.text = text ?? "";
+            _roleLabel.color = color;
         }
 
         /// <summary>Snaps to the unit's tile; call after the unit moves.</summary>
@@ -80,6 +100,9 @@ namespace FriendshipWarriors.Units.View
 
         private void UpdateSprite()
         {
+            // A script reload during Play mode drops the (unserialized) unit binding; stay inert instead of throwing.
+            if (Unit == null || _cameraRig == null)
+                return;
             float yaw = _cameraRig.transform.eulerAngles.y;
             // Knocked-out units lie on their side and fade to grey until revived or lost.
             bool down = Unit.IsKnockedOut;
@@ -93,6 +116,7 @@ namespace FriendshipWarriors.Units.View
             _sprite.flipX = pose.FlipX;
 
             _statusLabel.transform.rotation = Quaternion.Euler(_cameraRig.transform.eulerAngles.x, yaw, 0f);
+            _roleLabel.transform.rotation = _statusLabel.transform.rotation;
             int version = StatusVersion();
             if (version != _shownStatusVersion)
             {

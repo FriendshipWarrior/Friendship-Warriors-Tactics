@@ -40,6 +40,15 @@ namespace FriendshipWarriors.Battle
                 _enemyControl = control;
         }
 
+        /// <summary>The objective, seen from an AI unit: the other side's protected units are priority targets, and a
+        /// unit the other side must defeat plays it safe.</summary>
+        private AI.AiHints AiHintsFor(Unit unit)
+        {
+            var priority = Units.Where(u => u.Team != unit.Team && u.Team == Team.Player && _objective.IsProtected(u.Key)).ToList();
+            bool cautious = unit.Team == Team.Enemy && _objective.IsTarget(unit.Key);
+            return new AI.AiHints(priority, cautious);
+        }
+
         private bool IsAiControlled(Unit unit) => unit != null && ControlOf(unit.Team) == TeamControl.AI;
 
         /// <summary>Who drives this turn: the AI for AI teams, and for panicking units of any team (FFT Chicken).</summary>
@@ -67,7 +76,7 @@ namespace FriendshipWarriors.Battle
             _cursor.DirectionalInputLocked = true;
 
             var unit = _active.Unit;
-            _aiPlan = AiPlanner.Plan(_gridView.Grid, unit, Units.ToList(), new MovementRules(_enemyLeapClearance), _rng);
+            _aiPlan = AiPlanner.Plan(_gridView.Grid, unit, Units.ToList(), new MovementRules(_enemyLeapClearance), _rng, AiHintsFor(unit));
             Debug.Log($"[Battle] {unit.Name} (AI) plans: {_aiPlan}.", this);
             _hud.SetHint($"{unit.Name}'s turn");
 

@@ -473,9 +473,5 @@ namespace FriendshipWarriors.Editor.Units
             return job;
         }
 
-        /// <summary>The starting roster for the test scene: three per side, mixing base and advanced jobs.</summary>
-        public static (List<JobDefinition> player, List<JobDefinition> enemy) TestRoster() => (
-            new List<JobDefinition> { Load("Cadet"), Load("Vanguard"), Load("Warder") },
-            new List<JobDefinition> { Load("Marksman"), Load("Corpsman"), Load("Evoker") });
     }
 }

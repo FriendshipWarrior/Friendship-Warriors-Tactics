@@ -15,8 +15,11 @@ namespace FriendshipWarriors.Grid.Generation
     {
         private const int H = GridMetrics.StepsPerH;
 
-        public static GenerationResult Generate(MapGeneratorSettings settings, int seed, BattleMapData target)
+        /// <param name="deploymentSize">Tiles per deployment zone; null uses the settings (a battle setup's team size
+        /// can ask for more or fewer).</param>
+        public static GenerationResult Generate(MapGeneratorSettings settings, int seed, BattleMapData target, int? deploymentSize = null)
         {
+            int zoneSize = deploymentSize ?? settings.DeploymentSize;
             if (settings == null) throw new ArgumentNullException(nameof(settings));
             if (target == null) throw new ArgumentNullException(nameof(target));
 
@@ -24,14 +27,14 @@ namespace FriendshipWarriors.Grid.Generation
             for (int attempt = 0; attempt < settings.MaxAttempts; attempt++)
             {
                 var rng = new Random(unchecked(seed * 486187739 + attempt * 16777619));
-                BuildAttempt(settings, rng, target);
+                BuildAttempt(settings, rng, target, zoneSize);
                 target.DisplayName = $"Random Map {seed}";
 
                 issues = MapValidator.Validate(target, settings.ReferenceJump);
                 foreach (var (zone, side) in new[] { (target.PlayerDeployment, "Player"), (target.EnemyDeployment, "Enemy") })
                 {
-                    if (zone.Count < settings.DeploymentSize)
-                        issues.Add(new MapIssue(IssueSeverity.Error, $"{side} zone has {zone.Count} of {settings.DeploymentSize} tiles."));
+                    if (zone.Count < zoneSize)
+                        issues.Add(new MapIssue(IssueSeverity.Error, $"{side} zone has {zone.Count} of {zoneSize} tiles."));
                 }
                 if (issues.All(i => i.Severity != IssueSeverity.Error))
                     return new GenerationResult(true, seed, attempt + 1, issues);
@@ -39,7 +42,7 @@ namespace FriendshipWarriors.Grid.Generation
             return new GenerationResult(false, seed, settings.MaxAttempts, issues);
         }
 
-        private static void BuildAttempt(MapGeneratorSettings s, Random rng, BattleMapData target)
+        private static void BuildAttempt(MapGeneratorSettings s, Random rng, BattleMapData target, int zoneSize)
         {
             int width = Range(rng, s.WidthRange);
             int depth = Range(rng, s.DepthRange);
@@ -60,8 +63,8 @@ namespace FriendshipWarriors.Grid.Generation
             AddRamps(grid, rng, s.RampChance);
 
             bool alongX = rng.NextDouble() < 0.5;
-            var player = PickDeployment(grid, alongX, nearStart: true, s.DeploymentSize);
-            var enemy = PickDeployment(grid, alongX, nearStart: false, s.DeploymentSize);
+            var player = PickDeployment(grid, alongX, nearStart: true, zoneSize);
+            var enemy = PickDeployment(grid, alongX, nearStart: false, zoneSize);
 
             target.CopyTilesFrom(grid);
             target.SetDeployment(player, enemy);

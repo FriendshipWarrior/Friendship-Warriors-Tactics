@@ -45,7 +45,8 @@ FFT is the reference for mechanics and presentation. Characters, story and job n
 - Turn trades (our addition): *Rapid Fire* gives up the Move to Act twice; *Double Time* gives up the Act to Move twice.
 - FFT's damage and hit formulas. Attacking from the side or back strips away evasion.
 - **Timed press** (our addition): press as a marker crosses the bar for a chance at a critical hit when attacking, or a block when defending. The closer to perfect, the better the chance, but it never reaches 100%.
-- Knock-outs with FFT's 3-turn countdown, victory and defeat.
+- Knock-outs with FFT's 3-turn countdown.
+- **Battle setups and objectives:** a standard match is 5 v 5 and won by defeating every enemy. Campaign and special battles can change the team sizes and the objective: defeat one named enemy, or win while keeping a protected character from being lost for good. The objective is shown on screen, with TARGET and PROTECT tags over the units involved, and enemies play to it.
 - **Status effects** on FFT's battle clock: Poison, Regen, Protect, Shell, Haste, Slow, Stop, Sleep, Blind, Silence, Disable, Immobilize and Panic.
 - **Magic** on FFT's charge-time clock: the Evoker's *Evocation* (fire, ice and lightning in three tiers, Toxin Cloud) and the Warder's *Warding* (three tiers of Mend, Vital Ward, Plate Ward, Aether Ward, Purge, and the revives Resuscitate and Full Resuscitation). Spells target a tile, hit everyone in their area, cost MP, and resolve on the turn order after a charge, during which the caster can't dodge. Knock-outs, Stop, Sleep and Silence cut a spell off. Damage and hit rates scale with caster and target Resonance.
 - **Reactions** that trigger at Morale %: Counter Charge, Self-Dose, Guard Stance, Adrenaline and Mending Ward, and the Evoker's Feedback Loop (Counter Magic). Plus cures: First Aid and the Corpsman's Antitoxin, Eyewash, Throat Lozenge and Field Remedy.
@@ -90,7 +91,7 @@ FFT is the reference for mechanics and presentation. Characters, story and job n
 2. Open the folder in Unity Hub and let the first import finish.
 3. Open `Assets/_Project/Scenes/Battle_Test.unity` and press **Play**.
 
-Your team is the blue markers and the enemy AI controls the red ones. Pick a unit's Move, Act or Wait from the command menu. Press R or Select to try a random map.
+Your team is the blue markers and the enemy AI controls the red ones. Pick a unit's Move, Act or Wait from the command menu. Press R or Select to try a random map. To try another objective, select **Battle Sandbox** in the scene and swap its Battle Setup.
 
 ## Tools
 
@@ -100,6 +101,7 @@ All of these are under the **Friendship Warriors** menu in the Unity Editor.
 |---|---|
 | **Map Editor** | Paint heights, terrain, slopes, water, props and deployment zones. Live 3D preview, map checks, undo, and a random-map generator. Double-clicking a map asset also opens it. |
 | **Dev → Rebuild Battle Test Scene** | Rebuilds the test scene and its placeholder assets from code. |
+| **Data → Create Battle Setups** | Creates the prebuilt battle setups: Standard (5 v 5), Defeat the Commander and Escort. |
 | **Data → Create Starting Jobs / Create Starter Equipment** | Creates the job, ability and equipment assets. Existing assets are left alone. |
 
 ## How the game works
@@ -137,6 +139,15 @@ Every clock tick, each unit's CT (charge time) rises by its Speed. At 100 the un
 </details>
 
 <details>
+<summary><b>Objectives</b></summary>
+
+- **Defeat all enemies:** the standard objective.
+- **Defeat a target:** win as soon as that enemy is knocked out.
+- **Protect:** lose if a protected character is lost for good (their 3-turn countdown runs out). Being knocked out and revived in time is fine.
+- You always lose if your whole team is down. If the last enemy and your last unit fall in the same action, you win; losing a protected character always counts first.
+</details>
+
+<details>
 <summary><b>Progression</b></summary>
 
 - **EXP per action:** a percentage of what your next level costs. Same-level targets give 10%; stronger targets more, weaker targets less.
@@ -153,12 +164,12 @@ Assets/
     Scripts/Runtime/   Game code (FriendshipWarriors.* namespaces)
       Grid/            Tiles, maps, pathfinding, map checks, random generation, mesh view
       Units/           Units, jobs, stats, abilities, equipment, sprite views
-      Battle/          Turn order, turn flow, combat, enemy AI
+      Battle/          Turn order, turn flow, combat, magic, enemy AI, battle setups and objectives
       Controls/        Input, tile cursor
       Camera/          Isometric camera
       UI/              Battle HUD (uGUI + TextMeshPro, built in code)
     Scripts/Editor/    Map editor, scene and data builders
-    Data/              Maps, jobs, abilities, equipment, props, palettes, generator settings
+    Data/              Maps, jobs, abilities, equipment, battle setups, props, palettes, generator settings
     Input/             Input actions (gamepad + keyboard/mouse)
     Scenes/            Battle_Test
   Tests/EditMode/      Unit tests (NUnit)
@@ -185,8 +196,9 @@ CLAUDE.md              Design decisions, conventions and project notes
 - [x] Status effects, reactions, cures
 - [x] Morale and Resonance (our Brave and Faith)
 - [x] Magic (Evoker and Warder spells, charge times)
+- [x] Battle setups and objectives (5 v 5 standard, defeat a target, protect a character)
 - [ ] Character sprites and terrain art
-- [ ] Battle prep, party management, campaign and story
+- [ ] Quick play menu, battle prep, party management, campaign and story
 - [ ] Save system
 - [ ] Steam builds (Windows, SteamOS, macOS)
 

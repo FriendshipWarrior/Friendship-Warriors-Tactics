@@ -59,6 +59,13 @@ namespace FriendshipWarriors.Units
         }
 
         public string Name { get; }
+
+        /// <summary>
+        /// Stable identity a battle setup uses to point at this unit (an objective's target, a character to protect).
+        /// Set from the roster entry; campaign data and, later, online play reference units by it rather than by name
+        /// or spawn order. Null when nothing needs to refer to the unit.
+        /// </summary>
+        public string Key { get; set; }
         public Team Team { get; }
         public int Level { get; private set; }
 

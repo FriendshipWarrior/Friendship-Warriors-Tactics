@@ -49,8 +49,12 @@ namespace FriendshipWarriors.Battle.AI
 
         /// <param name="units">Everyone still on the field (knocked-out units included; they block tiles).</param>
         /// <param name="rng">The battle's seeded random, used only to break ties so plans stay deterministic.</param>
-        public static AiPlan Plan(BattleGrid grid, Unit actor, IReadOnlyList<Unit> units, MovementRules rules, Random rng)
+        /// <param name="hints">Objective-driven nudges (priority targets, caution); null for none.</param>
+        public static AiPlan Plan(BattleGrid grid, Unit actor, IReadOnlyList<Unit> units, MovementRules rules, Random rng,
+            AiHints hints = null)
         {
+            hints ??= AiHints.None;
+            double threatCost = ThreatCost * (hints.Cautious ? AiHints.CautiousThreatWeight : 1.0);
             var origin = actor.Coord;
             var stats = actor.Stats;
             var positions = new List<GridCoord> { origin };
@@ -87,7 +91,7 @@ namespace FriendshipWarriors.Battle.AI
                     {
                         foreach (var tile in AbilityRules.TargetTiles(grid, spell, actor))
                         {
-                            double score = SpellScore(grid, actor, spell, tile, units) - Threat(position, actor, enemies) * ThreatCost
+                            double score = SpellScore(grid, actor, spell, tile, units) - Threat(position, actor, enemies) * threatCost
                                            + rng.NextDouble() * 0.01;
                             if (score > bestScore && score > 0.5)
                             {
@@ -105,7 +109,10 @@ namespace FriendshipWarriors.Battle.AI
                         if (!targets.Contains(enemy.Coord))
                             continue;
                         // Tiny random jitter breaks ties without letting chance override real differences.
-                        double score = AttackScore(actor, enemy) - Threat(position, actor, enemies) * ThreatCost + rng.NextDouble() * 0.01;
+                        double attack = AttackScore(actor, enemy);
+                        if (attack > 0 && hints.IsPriority(enemy))
+                            attack *= AiHints.PriorityTargetWeight;
+                        double score = attack - Threat(position, actor, enemies) * threatCost + rng.NextDouble() * 0.01;
                         if (score > bestScore)
                         {
                             bestScore = score;
