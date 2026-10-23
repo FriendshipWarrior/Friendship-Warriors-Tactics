@@ -112,11 +112,13 @@ namespace FriendshipWarriors.UI
                 _heldDirection = direction;
                 _nextRepeat = now + _repeatDelay;
                 _menu.MoveSelection(direction);
+                Audio.SoundPlayer.Play(Audio.SoundCue.MenuMove);
             }
             else if (now >= _nextRepeat)
             {
                 _nextRepeat = now + _repeatInterval;
                 _menu.MoveSelection(direction);
+                Audio.SoundPlayer.Play(Audio.SoundCue.MenuMove);
             }
         }
 
@@ -125,13 +127,19 @@ namespace FriendshipWarriors.UI
             if (_menu == null || Time.unscaledTime < _ignoreInputUntil)
                 return;
             if (_menu.Selected is { Enabled: true } item)
+            {
+                Audio.SoundPlayer.Play(Audio.SoundCue.MenuConfirm);
                 ItemActivated?.Invoke(item);
+            }
         }
 
         private void OnBack(InputAction.CallbackContext _)
         {
             if (_menu != null && Time.unscaledTime >= _ignoreInputUntil)
+            {
+                Audio.SoundPlayer.Play(Audio.SoundCue.MenuCancel);
                 BackPressed?.Invoke();
+            }
         }
 
         private void Refresh()
@@ -146,6 +154,7 @@ namespace FriendshipWarriors.UI
                         if (_menu != null && index < _menu.Items.Count && _menu.Items[index].Enabled)
                         {
                             _menu.Select(index);
+                            Audio.SoundPlayer.Play(Audio.SoundCue.MenuConfirm);
                             ItemActivated?.Invoke(_menu.Items[index]);
                         }
                     }));

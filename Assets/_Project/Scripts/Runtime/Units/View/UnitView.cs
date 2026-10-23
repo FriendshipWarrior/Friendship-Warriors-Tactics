@@ -58,6 +58,9 @@ namespace FriendshipWarriors.Units.View
 
         public bool IsWalking => _walk != null;
 
+        /// <summary>The unit's art, for effects drawn over it (hit flashes). Its colour and frame are set every frame.</summary>
+        public SpriteRenderer Sprite => _sprite;
+
         public static UnitView Create(Unit unit, GridView gridView, IsoCameraRig cameraRig, Transform parent)
         {
             var go = new GameObject(unit.Name);

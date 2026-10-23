@@ -65,6 +65,13 @@ FFT is the reference for mechanics and presentation. Characters, story and job n
 - Idle, walk, attack, cast (while charging a spell), hurt and knocked-out animations, in front and back poses.
 - The parts are plain PNGs on a fixed grid, made to be edited by hand in Aseprite. See the [art guide](Assets/_Project/Art/Sprites/README.md).
 
+**Battle feedback**
+- FFT-style floating numbers that bounce up over the unit: white damage, green healing, blue MP, gold criticals with *Critical!*, and *Miss*, *Guarded* and status names (*Poison*, *Regen lifted*...). Several at once on one unit are staggered and stacked; an area spell shows on everyone together, and reactions (a counter-strike, a Self-Dose) follow a beat after the hit.
+- Struck units blink white and jolt; healed units glow; criticals shake the camera.
+- Knocked-out units flash as they drop, dim as their 3-turn counter runs down, and show the count over them. A lost unit fades away and leaves a crystal for a moment (placeholder).
+- Sound hooks for hits, criticals, misses, blocks, heals, spells, knock-outs, timed presses and menus. Until real audio exists they play generated placeholder blips; drop clips into `Resources/Audio/SoundCues` to replace them.
+- Everything runs on the battle clock, so pausing freezes it mid-bounce.
+
 **Tools**
 - An in-Unity map editor with a live 3D preview and map checks.
 - A seeded random map generator for quick play.
@@ -84,6 +91,8 @@ FFT is the reference for mechanics and presentation. Characters, story and job n
 | **Walking:** units walk their route tile by tile. Here a Cadet leaps a chasm after walking up a ramp and hopping onto a ledge. | |
 | ![The formation menu before a battle, enemies already in place](docs/images/formation-menu.png) | ![Arranging units on the blue deployment tiles](docs/images/formation.png) |
 | **Formation:** the objective, the enemy's starting spots, and the Formation menu. | **Arranging units:** blue tiles are where your side may start. |
+| ![An area spell: four damage numbers and white hit flashes](docs/images/battle-feedback-area.png) | ![A hit followed by a Self-Dose heal](docs/images/battle-feedback-reaction.png) |
+| **Battle feedback:** an area spell hits four enemies at once. | **Reactions follow the hit:** 14 damage, then the green Self-Dose heal a beat later. |
 
 ![Every job in its starting gear on both teams: idle, walk, attack, cast, hurt and KO frames, front and back](docs/images/paper-doll.png)
 
@@ -196,6 +205,8 @@ Assets/
       Grid/            Tiles, maps, pathfinding, map checks, random generation, mesh view
       Units/           Units, jobs, stats, abilities, equipment, sprite views
       Battle/          Formation phase, turn order, turn flow, combat, magic, enemy AI, battle setups and objectives
+      Feedback/        Floating numbers, hit flashes, knock-out countdown (presentation only)
+      Audio/           Sound cues, placeholder blips, the sound player
       Menus/           Main menu
       QuickPlay/       Random teams and quick-play matches
       Controls/        Input, tile cursor
@@ -203,8 +214,8 @@ Assets/
       UI/              Battle HUD and menus (uGUI + TextMeshPro, built in code)
     Scripts/Editor/    Map editor, scene and data builders, paper-doll part generator
     Data/              Maps, jobs, abilities, equipment, battle setups, props, palettes, generator settings
-    Art/               Paper-doll part PNGs, key palette, art guide (Sprites/README.md)
-    Resources/         Sprite part catalog (loaded at runtime)
+    Art/               Paper-doll part PNGs, key palette, art guide (Sprites/README.md), shaders
+    Resources/         Sprite part catalog, sound cue set, hit-flash material (loaded at runtime)
     Input/             Input actions (gamepad + keyboard/mouse)
     Scenes/            MainMenu, QuickPlay, Battle_Test (dev sandbox)
   Tests/EditMode/      Unit tests (NUnit)
@@ -236,7 +247,8 @@ CLAUDE.md              Design decisions, conventions and project notes
 - [x] Paper-doll unit sprites (first drafts drawn by code, ready for hand editing)
 - [x] Animated movement: units walk their path tile by tile, as in FFT, with walk frames, hops and leaps
 - [x] Formation phase before battle (FFT): place units, swap, choose facings
-- [ ] Hand-drawn character art and terrain art
+- [x] Battle feedback: floating numbers, hit flashes, knock-out countdown, sound hooks (placeholder blips)
+- [ ] Hand-drawn character art and terrain art, real sound effects and music
 - [ ] Battle prep, party management, campaign and story. Losing a campaign battle won't be game over: the campaign carries on, unlike FFT.
 - [ ] Quick Play options: online matches, army building
 - [ ] Save system
