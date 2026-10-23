@@ -1,0 +1,47 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ee45c9ab1511445b187e0e15c10376b9, type: 3}
+  m_Name: SpritePartCatalog
+  m_EditorClassIdentifier: FriendshipWarriors.Runtime::FriendshipWarriors.Units.View.PaperDoll.SpritePartCatalog
+  _body: {fileID: 2800000, guid: f3c49fa0c16134b7ea0851f7cf759e7e, type: 3}
+  _head: {fileID: 2800000, guid: 075eaa455645b4683b59858c3bad58fc, type: 3}
+  _face: {fileID: 2800000, guid: 52a5e2d9eb4a943cf8ddff8522e72a33, type: 3}
+  _hairStyles:
+  - {fileID: 2800000, guid: 73a0e98052032447c846c431cd6a82a1, type: 3}
+  - {fileID: 2800000, guid: ac267945901e546c8b200ee0a0f70437, type: 3}
+  - {fileID: 2800000, guid: 6fa129c3cabb342adba0e290bff81666, type: 3}
+  - {fileID: 2800000, guid: a62cc405ba7014aeea6e939c4d45b12d, type: 3}
+  _headgear:
+  - _type: 2
+    _sheet: {fileID: 2800000, guid: 1cb0d07ff769c40109b4f2ae9b68e6a8, type: 3}
+  - _type: 1
+    _sheet: {fileID: 2800000, guid: 3e5aa5874a04d4b339b6ab0864a4ccef, type: 3}
+  _bodyGear:
+  - _type: 4
+    _sheet: {fileID: 2800000, guid: 3dc27c440b7cc49de9fb44efa7f82608, type: 3}
+  - _type: 3
+    _sheet: {fileID: 2800000, guid: 31174d28addb64405bceae18e332f8f9, type: 3}
+  - _type: 5
+    _sheet: {fileID: 2800000, guid: ef72a11bc7b434979a07dbab9ab4975b, type: 3}
+  _weapons:
+  - _type: 1
+    _sheet: {fileID: 2800000, guid: 8f371d32aa45a4a1da5de4e449a93358, type: 3}
+  - _type: 2
+    _sheet: {fileID: 2800000, guid: 0ecab641d67aa4cd1887f99d51cb9c48, type: 3}
+  - _type: 3
+    _sheet: {fileID: 2800000, guid: 46dc64a8adb384ac5b7629f95bd05f91, type: 3}
+  - _type: 4
+    _sheet: {fileID: 2800000, guid: f6b326246b73048619db961a35bad71e, type: 3}
+  - _type: 5
+    _sheet: {fileID: 2800000, guid: 024af7544d1c74839bcc85dbf1b74d8b, type: 3}
+  _shield: {fileID: 2800000, guid: e07ef84ea1ff84571ad3f08d760d3b60, type: 3}
+  _itemOverrides: []
