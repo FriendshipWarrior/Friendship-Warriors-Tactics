@@ -23,6 +23,9 @@ namespace FriendshipWarriors.Units.View
         /// <summary>Height of the status codes above the unit's feet, scaled with the art so they clear the head.</summary>
         public const float StatusLabelHeight = 1.45f * SpriteScale;
 
+        /// <summary>Height of the TARGET / PROTECT tag, above the status tags.</summary>
+        public const float RoleLabelHeight = 1.75f * SpriteScale;
+
         private static readonly Color PlayerColor = new(0.35f, 0.65f, 1f);
         private static readonly Color EnemyColor = new(1f, 0.35f, 0.35f);
 
@@ -84,7 +87,7 @@ namespace FriendshipWarriors.Units.View
             // Objective role (TARGET / PROTECT), above the status codes.
             _roleLabel = new GameObject("Role").AddComponent<TMPro.TextMeshPro>();
             _roleLabel.transform.SetParent(transform, false);
-            _roleLabel.transform.localPosition = new Vector3(0f, 1.75f, 0f);
+            _roleLabel.transform.localPosition = new Vector3(0f, RoleLabelHeight, 0f);
             _roleLabel.fontSize = 2.4f;
             _roleLabel.fontStyle = TMPro.FontStyles.Bold;
             _roleLabel.alignment = TMPro.TextAlignmentOptions.Center;
