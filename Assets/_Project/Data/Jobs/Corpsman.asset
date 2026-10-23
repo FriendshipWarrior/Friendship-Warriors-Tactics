@@ -30,7 +30,17 @@ MonoBehaviour:
   _jump: 3
   _classEvasion: 5
   _commandName: Field Kit
-  _abilities: []
+  _abilities:
+  - {fileID: 11400000, guid: f4a73c171838340d7b7b3570b0123121, type: 2}
+  - {fileID: 11400000, guid: 6df1b699e85d642358bce626e05a9792, type: 2}
+  - {fileID: 11400000, guid: 61b18f173eecc492298c625431481733, type: 2}
+  - {fileID: 11400000, guid: b92d97775477446b8a84c1a9f228cd5b, type: 2}
+  - {fileID: 11400000, guid: 64bd0a33833c4473f91f149197963c4a, type: 2}
+  - {fileID: 11400000, guid: 702e2743129c54b128aac49b01c021e8, type: 2}
+  - {fileID: 11400000, guid: 191e8e13f883d4b07ab3d90c09b6850e, type: 2}
+  - {fileID: 11400000, guid: ac97e72b9f36a4f7f87e89d6135c2860, type: 2}
+  _innateAbilities:
+  - {fileID: 11400000, guid: ac97e72b9f36a4f7f87e89d6135c2860, type: 2}
   _weaponTypes: 02000000i
   _canUseShields: 0
   _armorTypes: 0200000004000000i

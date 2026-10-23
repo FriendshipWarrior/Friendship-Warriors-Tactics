@@ -79,6 +79,68 @@ namespace FriendshipWarriors.Units
 
         public bool IsKnockedOut => CurrentHp <= 0;
 
+        /// <summary>P.Atk added by in-battle effects (e.g. the Squire-style Accumulate). Cleared when a battle ends.</summary>
+        public int PhysicalAttackBonus { get; private set; }
+
+        public void AddPhysicalAttackBonus(int amount) => PhysicalAttackBonus += amount;
+
+        /// <summary>Drops everything that only lasts for one battle.</summary>
+        public void ClearBattleModifiers() => PhysicalAttackBonus = 0;
+
+        /// <summary>Whether the unit can throw items at range: an innate or equipped ability that throws items.</summary>
+        public bool ThrowsItems
+        {
+            get
+            {
+                foreach (var ability in Job.InnateAbilities)
+                {
+                    if (ability != null && ability.ThrowsItems)
+                        return true;
+                }
+                return (Support != null && Support.ThrowsItems) || (Movement != null && Movement.ThrowsItems) ||
+                       (Reaction != null && Reaction.ThrowsItems);
+            }
+        }
+
+        /// <summary>Restores HP up to the maximum; nothing while knocked out. Returns the amount restored.</summary>
+        public int RestoreHp(int amount)
+        {
+            if (IsKnockedOut || amount <= 0)
+                return 0;
+            int restored = Math.Min(amount, Stats.MaxHp - CurrentHp);
+            CurrentHp += restored;
+            return restored;
+        }
+
+        /// <summary>Restores MP up to the maximum; nothing while knocked out. Returns the amount restored.</summary>
+        public int RestoreMp(int amount)
+        {
+            if (IsKnockedOut || amount <= 0)
+                return 0;
+            int restored = Math.Min(amount, Stats.MaxMp - CurrentMp);
+            CurrentMp += restored;
+            return restored;
+        }
+
+        /// <summary>Spends MP. Returns false (spending nothing) if there isn't enough.</summary>
+        public bool TrySpendMp(int amount)
+        {
+            if (amount > CurrentMp)
+                return false;
+            CurrentMp -= amount;
+            return true;
+        }
+
+        /// <summary>Brings a knocked-out unit back with <paramref name="hp"/> HP, if its death counter hasn't run out.</summary>
+        public bool Revive(int hp)
+        {
+            if (!IsKnockedOut || IsGone)
+                return false;
+            CurrentHp = Math.Clamp(hp, 1, Stats.MaxHp);
+            DeathCounter = 0;
+            return true;
+        }
+
         /// <summary>Turns left before a knocked-out unit is gone. Only meaningful while knocked out.</summary>
         public int DeathCounter { get; private set; }
 
@@ -179,9 +241,9 @@ namespace FriendshipWarriors.Units
                     Math.Min(StatFormulas.MaxHpOrMp, StatFormulas.Shown(Raw.Hp, m.Hp, StatFormulas.MaxHpOrMp) + GearBonus(i => i.HpBonus)),
                     Math.Min(StatFormulas.MaxHpOrMp, StatFormulas.Shown(Raw.Mp, m.Mp, StatFormulas.MaxHpOrMp) + GearBonus(i => i.MpBonus)),
                     StatFormulas.Shown(Raw.Speed, m.Speed, StatFormulas.MaxOtherStat),
-                    StatFormulas.Shown(Raw.PhysicalAttack, m.PhysicalAttack, StatFormulas.MaxOtherStat),
+                    Math.Min(StatFormulas.MaxOtherStat, StatFormulas.Shown(Raw.PhysicalAttack, m.PhysicalAttack, StatFormulas.MaxOtherStat) + PhysicalAttackBonus),
                     StatFormulas.Shown(Raw.MagicAttack, m.MagicAttack, StatFormulas.MaxOtherStat),
-                    Job.Move,
+                    Job.Move + (Movement != null ? Movement.MoveBonus : 0),
                     Job.Jump,
                     Job.ClassEvasion);
             }

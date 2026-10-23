@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using FriendshipWarriors.Battle;
+using FriendshipWarriors.Battle.Abilities;
 using FriendshipWarriors.Cameras;
 using FriendshipWarriors.Controls;
 using FriendshipWarriors.Grid;
@@ -16,9 +17,10 @@ namespace FriendshipWarriors.Dev
 {
     /// <summary>
     /// Test-scene setup: spawns both teams on their deployment zones and hands them to the
-    /// <see cref="BattleController"/>. Each unit gets the first starter item for each slot its job can use, and units
-    /// whose job teaches a turn-trade ability start with it learned and equipped. R / Select rolls a random map and
-    /// restarts.
+    /// <see cref="BattleController"/>. Each unit gets the first starter item for each slot its job can use, learns every
+    /// ability its job teaches (passives get equipped), and Player units without items of their own take the item
+    /// job's command as their secondary with its first item learned. Both teams get the same item stock. R / Select
+    /// rolls a random map and restarts.
     /// </summary>
     public sealed class BattleSandbox : MonoBehaviour
     {
@@ -33,6 +35,9 @@ namespace FriendshipWarriors.Dev
         [SerializeField, Range(1, 99)] private int _unitLevel = 5;
         [SerializeField] private int _rosterSeed = 7;
         [SerializeField] private EquipmentDefinition[] _starterGear = System.Array.Empty<EquipmentDefinition>();
+        [Tooltip("The job whose command uses items (Corpsman), offered to Player units as a secondary.")]
+        [SerializeField] private JobDefinition _itemJob;
+        [SerializeField] private ItemStock[] _startingItems = System.Array.Empty<ItemStock>();
 
         [Header("Random Maps")]
         [SerializeField] private MapGeneratorSettings _generatorSettings;
@@ -73,6 +78,13 @@ namespace FriendshipWarriors.Dev
             if (map.PlayerDeployment.Count > 0)
                 _cameraRig.Focus(_gridView.SurfaceCenter(map.PlayerDeployment[0]), snap: true);
 
+            foreach (var team in new[] { Team.Player, Team.Enemy })
+            {
+                var inventory = new Inventory();
+                foreach (var stock in _startingItems)
+                    inventory.Add(stock.Item, stock.Count);
+                _battle.SetInventory(team, inventory);
+            }
             _battle.Begin(_views);
         }
 
@@ -87,7 +99,9 @@ namespace FriendshipWarriors.Dev
                 var unit = UnitFactory.CreateGeneric($"{jobs[i].DisplayName} {(char)('A' + i)}", team, jobs[i], _unitLevel, rng);
                 unit.Coord = zone[i];
                 unit.Facing = DirectionExtensions.Toward(zone[i], target);
-                EquipTurnTrades(unit);
+                LearnJobAbilities(unit);
+                if (team == Team.Player)
+                    GiveItemSecondary(unit);
                 EquipStarterGear(unit);
                 unit.RestoreFully();
                 _views.Add(UnitView.Create(unit, _gridView, _cameraRig, _unitRoot));
@@ -114,16 +128,40 @@ namespace FriendshipWarriors.Dev
             }
         }
 
-        /// <summary>Grants enough Prof to learn the job's turn-trade abilities, then learns and equips them.</summary>
-        private static void EquipTurnTrades(Unit unit)
+        /// <summary>Grants the Prof to learn everything the job teaches, learns it, and equips passives into empty slots.</summary>
+        private static void LearnJobAbilities(Unit unit)
         {
             foreach (var ability in unit.Job.Abilities)
             {
-                if (ability == null || ability.TurnTrade == TurnTrade.None)
+                if (ability == null)
                     continue;
                 unit.GainProficiency(ability.LearnCost);
-                if (unit.TryLearn(ability, unit.Job))
+                if (!unit.TryLearn(ability, unit.Job) || ability.Kind == AbilityKind.Action)
+                    continue;
+                bool slotFree = ability.Kind switch
+                {
+                    AbilityKind.Support => unit.Support == null,
+                    AbilityKind.Movement => unit.Movement == null,
+                    _ => unit.Reaction == null,
+                };
+                if (slotFree)
                     unit.TryEquip(ability);
+            }
+        }
+
+        /// <summary>Teaches the item job's first item and sets that job as the secondary, so Act lists it too.</summary>
+        private void GiveItemSecondary(Unit unit)
+        {
+            if (_itemJob == null || unit.Job == _itemJob || unit.SecondaryJob != null)
+                return;
+            foreach (var ability in _itemJob.Abilities)
+            {
+                if (ability == null || !ability.IsItem)
+                    continue;
+                unit.GainProficiency(ability.LearnCost, _itemJob);
+                unit.TryLearn(ability, _itemJob);
+                unit.TrySetSecondary(_itemJob);
+                return;
             }
         }
 

@@ -40,7 +40,13 @@ namespace FriendshipWarriors.Battle.Combat
         }
 
         /// <summary>Prof for a successful action: 8 + 2 × job level + level / 4 (FFT's JP formula).</summary>
-        public static int Proficiency(Unit actor) => 8 + 2 * actor.JobLevel(actor.Job) + actor.Level / 4;
+        public static int Proficiency(Unit actor)
+        {
+            int prof = 8 + 2 * actor.JobLevel(actor.Job) + actor.Level / 4;
+            // A support ability like FFT's Gained JP Up (×1.5) scales it.
+            int bonus = actor.Support != null ? actor.Support.ProficiencyBonusPercent : 0;
+            return prof * (100 + bonus) / 100;
+        }
 
         /// <summary>Allies on the field get a quarter of an action's Prof in their own current job (FFT).</summary>
         public static int SpilloverProficiency(int earned) => earned / 4;

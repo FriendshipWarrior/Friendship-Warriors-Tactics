@@ -52,8 +52,16 @@ namespace FriendshipWarriors.Editor.Units
                 "Forced march: give up this turn's Act to Move a second time.");
             var rapidFire = Ability("Rapid Fire", AbilityKind.Support, 400, TurnTrade.MoveForAct,
                 "Hold position and keep firing: give up this turn's Move to Act a second time.");
-            Teach(cadet, "Drill");
-            Teach(corpsman, "Field Kit");
+            Teach(cadet, "Drill", CadetAbilities());
+            var longToss = Passive("Long Toss", AbilityKind.Support, 350, "Throw items up to 4 tiles away instead of handing them over (FFT: Throw Item).", throwsItems: true);
+            var corpsmanAbilities = new List<AbilityDefinition>(CorpsmanItems()) { longToss };
+            Teach(corpsman, "Field Kit", corpsmanAbilities.ToArray());
+            if (corpsman.InnateAbilities.Count == 0)
+            {
+                // FFT's Chemist always has Throw Item.
+                corpsman.SetInnateAbilities(new[] { longToss });
+                EditorUtility.SetDirty(corpsman);
+            }
             Teach(vanguard, "Assault", doubleTime);
             Teach(marksman, "Marksmanship", rapidFire);
             Teach(evoker, "Evocation");
@@ -195,6 +203,85 @@ namespace FriendshipWarriors.Editor.Units
             ability = ScriptableObject.CreateInstance<AbilityDefinition>();
             ability.Define(displayName, description, kind, cost, trade);
             AssetDatabase.CreateAsset(ability, path);
+            return ability;
+        }
+
+        /// <summary>
+        /// Drill, after FFT's Squire Basic Skill (FFT name and JP cost in comments). Damage multipliers are unverified:
+        /// sources disagree, so the melee Dash uses ×1–4 and the thrown stone ×1–2.
+        /// </summary>
+        private static AbilityDefinition[] CadetAbilities() => new[]
+        {
+            Action("Grit", 300, "Steel yourself: P.Atk +1 until the battle ends. Stacks.", // Accumulate, 300 JP
+                AbilityEffect.BoostPhysicalAttack, AbilityTargeting.Self, 0, 0, 0, amount: 1),
+            Action("Shoulder Charge", 80, "Barrel into an adjacent unit for P.Atk × 1–4 damage; may knock it back.", // Dash, 80 JP
+                AbilityEffect.Damage, AbilityTargeting.Standing, 1, 1, 3, random: new Vector2Int(1, 4), knockback: true),
+            Action("Hurl Rivet", 90, "Throw a rivet up to 4 tiles for P.Atk × 1–2 damage; may knock the target back.", // Throw Stone, 90 JP
+                AbilityEffect.Damage, AbilityTargeting.Standing, 1, 4, 99, random: new Vector2Int(1, 2), knockback: true),
+            Passive("Light Pack", AbilityKind.Movement, 200, "Travel light: Move +1.", moveBonus: 1), // Move +1, 200 JP
+            Passive("Diligence", AbilityKind.Support, 200, "Earn 50% more Prof.", proficiencyBonusPercent: 50), // Gained JP Up, 200 JP
+        };
+
+        /// <summary>Field Kit items, after FFT's Chemist Item list (FFT name, amount and JP cost in comments).</summary>
+        private static AbilityDefinition[] CorpsmanItems() => new[]
+        {
+            Item("Tonic", 30, "Restores 30 HP.", AbilityEffect.RestoreHp, 30),                     // Potion
+            Item("Strong Tonic", 200, "Restores 70 HP.", AbilityEffect.RestoreHp, 70),             // Hi-Potion
+            Item("Grand Tonic", 300, "Restores 150 HP.", AbilityEffect.RestoreHp, 150),            // X-Potion
+            Item("Aether Vial", 300, "Restores 20 MP.", AbilityEffect.RestoreMp, 20),              // Ether
+            Item("Aether Flask", 400, "Restores 50 MP.", AbilityEffect.RestoreMp, 50),             // Hi-Ether
+            Item("Panacea", 900, "Restores all HP and MP.", AbilityEffect.RestoreAll, 0),          // Elixir
+            Item("Revival Salts", 90, "Revives a knocked-out unit with a little HP.", AbilityEffect.Revive, 0, AbilityTargeting.KnockedOut), // Phoenix Down
+        };
+
+        /// <summary>Starting stock for each team in the test scene.</summary>
+        public static Battle.Abilities.ItemStock[] TestItemStock() => new[]
+        {
+            new Battle.Abilities.ItemStock(LoadAbility("Tonic"), 4),
+            new Battle.Abilities.ItemStock(LoadAbility("Strong Tonic"), 2),
+            new Battle.Abilities.ItemStock(LoadAbility("Grand Tonic"), 1),
+            new Battle.Abilities.ItemStock(LoadAbility("Aether Vial"), 2),
+            new Battle.Abilities.ItemStock(LoadAbility("Aether Flask"), 1),
+            new Battle.Abilities.ItemStock(LoadAbility("Panacea"), 1),
+            new Battle.Abilities.ItemStock(LoadAbility("Revival Salts"), 2),
+        };
+
+        public static AbilityDefinition LoadAbility(string displayName) =>
+            AssetDatabase.LoadAssetAtPath<AbilityDefinition>($"{AbilitiesFolder}/{displayName.Replace(" ", "")}.asset");
+
+        private static AbilityDefinition Action(string displayName, int cost, string description, AbilityEffect effect,
+            AbilityTargeting targeting, int minRange, int maxRange, int reach, int amount = 0, Vector2Int? random = null, bool knockback = false)
+        {
+            var ability = Ability(displayName, AbilityKind.Action, cost, TurnTrade.None, description);
+            if (ability.Effect == AbilityEffect.None)
+            {
+                ability.SetAction(effect, targeting, minRange, maxRange, reach, amount, random, knockback);
+                EditorUtility.SetDirty(ability);
+            }
+            return ability;
+        }
+
+        private static AbilityDefinition Item(string displayName, int cost, string description, AbilityEffect effect, int amount,
+            AbilityTargeting targeting = AbilityTargeting.Standing)
+        {
+            var ability = Ability(displayName, AbilityKind.Action, cost, TurnTrade.None, description);
+            if (ability.Effect == AbilityEffect.None)
+            {
+                ability.SetAction(effect, targeting, 0, 1, 99, amount, isItem: true);
+                EditorUtility.SetDirty(ability);
+            }
+            return ability;
+        }
+
+        private static AbilityDefinition Passive(string displayName, AbilityKind kind, int cost, string description,
+            int moveBonus = 0, int proficiencyBonusPercent = 0, bool throwsItems = false)
+        {
+            var ability = Ability(displayName, kind, cost, TurnTrade.None, description);
+            if (ability.MoveBonus == 0 && ability.ProficiencyBonusPercent == 0 && !ability.ThrowsItems)
+            {
+                ability.SetPassive(moveBonus, proficiencyBonusPercent, throwsItems);
+                EditorUtility.SetDirty(ability);
+            }
             return ability;
         }
 

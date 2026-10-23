@@ -30,6 +30,8 @@ namespace FriendshipWarriors.Units
         [Tooltip("Name of this job's command in the Act menu (FFT: Squire's \"Fundaments\", Chemist's \"Items\").")]
         [SerializeField] private string _commandName = "Skills";
         [SerializeField] private AbilityDefinition[] _abilities = Array.Empty<AbilityDefinition>();
+        [Tooltip("Passives this job always has, equipped or not (FFT's Chemist always throws items).")]
+        [SerializeField] private AbilityDefinition[] _innateAbilities = Array.Empty<AbilityDefinition>();
 
         [Header("Equipment")]
         [SerializeField] private WeaponType[] _weaponTypes = Array.Empty<WeaponType>();
@@ -59,6 +61,9 @@ namespace FriendshipWarriors.Units
         public bool CanUseShields => _canUseShields;
         public IReadOnlyList<ArmorType> ArmorTypes => _armorTypes;
         public IReadOnlyList<AbilityDefinition> Abilities => _abilities;
+        public IReadOnlyList<AbilityDefinition> InnateAbilities => _innateAbilities;
+
+        public void SetInnateAbilities(AbilityDefinition[] abilities) => _innateAbilities = abilities;
         public Color PlaceholderColor => _placeholderColor;
         public Sprite FrontSprite => _frontSprite;
         public Sprite BackSprite => _backSprite;

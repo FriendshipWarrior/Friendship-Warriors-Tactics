@@ -1,0 +1,32 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 543719730e767434f830b98c96e89378, type: 3}
+  m_Name: ShoulderCharge
+  m_EditorClassIdentifier: FriendshipWarriors.Runtime::FriendshipWarriors.Units.Abilities.AbilityDefinition
+  _displayName: Shoulder Charge
+  _description: "Barrel into an adjacent unit for P.Atk \xD7 1\u20134 damage; may knock it back."
+  _kind: 0
+  _learnCost: 80
+  _turnTrade: 0
+  _effect: 1
+  _targeting: 1
+  _minRange: 1
+  _maxRange: 1
+  _verticalReach: 3
+  _amount: 0
+  _randomMultiplier: {x: 1, y: 4}
+  _knockback: 1
+  _isItem: 0
+  _mpCost: 0
+  _moveBonus: 0
+  _proficiencyBonusPercent: 0
+  _throwsItems: 0
