@@ -55,13 +55,13 @@ FFT is the reference for mechanics and presentation. Characters, story and job n
 - FFT's speed-based turn order (CT). The command menu has Move, Act, Wait and Status, with Move and Act in either order.
 - **Move, then confirm** (our addition): after a unit walks to its tile, Confirm keeps the move and Cancel puts it back where it started with the Move unspent. Nothing the move would trigger, such as taking a drop, happens until it's confirmed.
 - **Compact unit panel:** name, job, level and the HP/MP/CT bars. **Status** (in the command menu, or X / Tab on any unit) opens the full details, and the cursor can roam the field to inspect anyone.
-- Turn trades (our addition): *Rapid Fire* gives up the Move to Act twice; *Double Time* gives up the Act to Move twice.
+- Turn trades (our addition): *Rapid Fire* gives up the Move to attack a second time (the first act can be anything, the second only Attack; none after starting a charged spell); *Double Time* gives up the Act to Move twice.
 - FFT's damage and hit formulas. Attacking from the side or back strips away evasion.
 - **Timed press** (our addition): press as a marker crosses the bar for a chance at a critical hit when attacking, or a block when defending. The closer to perfect, the better the chance, but it never reaches 100%.
 - Knock-outs with FFT's 3-turn countdown.
 - **Battle setups and objectives:** a standard match is 5 v 5 and won by defeating every enemy. Campaign and special battles can change the team sizes and the objective: defeat one named enemy, or win while keeping a protected character from being lost for good. The objective is shown on screen, with TARGET and PROTECT tags over the units involved, and enemies play to it.
 - **Status effects** on FFT's battle clock: Poison, Regen, Protect, Shell, Haste, Slow, Stop, Sleep, Blind, Silence, Disable, Immobilize and Panic.
-- **Magic** on FFT's charge-time clock: the Evoker's *Evocation* (fire, ice and lightning in three tiers, Toxin Cloud) and the Warder's *Warding* (three tiers of Mend, Vital Ward, Plate Ward, Aether Ward, Purge, and the revives Resuscitate and Full Resuscitation). Spells hit everyone in their area, cost MP, and resolve on the turn order after a charge, during which the caster can't dodge. As in FFT, a charged spell **locks onto a unit** (it follows them wherever they go) or **onto a tile** (it stays put); switch with X / L while aiming. A charging caster can still move (this turn or its next) and keeps the spell; acting cancels it, and its MP stays spent. Knock-outs, Stop, Sleep and Silence cut a spell off. Damage and hit rates scale with caster and target Resonance.
+- **Magic** on FFT's charge-time clock: the Evoker's *Evocation* (fire, ice and lightning in three tiers, Toxin Cloud) and the Warder's *Warding* (three tiers of Mend, Vital Ward, Plate Ward, Aether Ward, Purge, and the revives Resuscitate and Full Resuscitation). Spells hit everyone in their area, cost MP, and resolve on the turn order after a charge, during which the caster can't dodge. As in FFT, a charged spell **locks onto a unit** (it follows them wherever they go) or **onto a tile** (it stays put); switch with X / L while aiming. A charging caster can still move (this turn or its next) and keeps the spell; acting cancels it, and its MP stays spent. An enemy AI that a spell is following tries to drag it into your side: it ends its turn where the blast also catches your units. Knock-outs, Stop, Sleep and Silence cut a spell off. Damage and hit rates scale with caster and target Resonance.
 - **Reactions** that trigger at Morale %: Counter Charge, Self-Dose, Guard Stance, Adrenaline and Mending Ward, and the Evoker's Feedback Loop (Counter Magic). Plus cures: First Aid and the Corpsman's Antitoxin, Eyewash, Throat Lozenge and Field Remedy.
 - Enemy AI that weighs damage, knock-outs and attack angle, retreats after attacking, faces your nearest unit, and casts spells: area damage away from its own side, heals for hurt allies.
 
@@ -119,8 +119,8 @@ FFT is the reference for mechanics and presentation. Characters, story and job n
 | **Pixel UI at 1920×1080** (×3), the compact unit panel: name, job, level and bars. | **Status** opens the full details for any unit. |
 | ![Move here? Confirm or Cancel after the walk](docs/images/move-confirm.png) | ![Aiming a charged spell locked onto a unit](docs/images/spell-lock.png) |
 | **Move confirm:** Cancel puts the unit back with its Move unspent. | **Spell lock:** X / L switches between following the unit and staying on the tile. |
-| ![A charging Evoker's Act menu warning that acting cancels the spell](docs/images/act-cancels-charge.png) | |
-| **Charging:** the unit can still move; acting cancels the spell. | |
+| ![A charging Evoker's Act menu warning that acting cancels the spell](docs/images/act-cancels-charge.png) | ![Rapid Fire's second act: Attack only](docs/images/rapid-fire.png) |
+| **Charging:** the unit can still move; acting cancels the spell. | **Rapid Fire:** after any first act, the second can only be Attack. |
 
 ![Every job on both teams in Tiny Tactics art: idle, walk, attack, charging, cast, hurt, weak and KO, front and back](docs/images/unit-sheets.png)
 

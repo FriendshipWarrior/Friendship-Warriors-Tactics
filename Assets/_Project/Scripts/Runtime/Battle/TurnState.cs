@@ -4,8 +4,9 @@ namespace FriendshipWarriors.Battle
 {
     /// <summary>
     /// What the active unit may still do this turn. As in FFT, a turn has one Move and one Act in either order, and
-    /// Wait ends it. Turn-trade abilities (our addition) let a spent part be stood in for by the unused one: act twice
-    /// by giving up the Move, or move twice by giving up the Act.
+    /// Wait ends it. Turn-trade abilities (our addition) let a spent part be stood in for by the unused one: attack a
+    /// second time by giving up the Move (Rapid Fire: the first act can be anything, the second only Attack), or move
+    /// twice by giving up the Act (Double Time).
     /// </summary>
     public sealed class TurnState
     {
@@ -56,6 +57,12 @@ namespace FriendshipWarriors.Battle
         /// <summary>The next Act would use up the Move.</summary>
         public bool NextActUsesMove => ActSpent && CanAct;
 
+        /// <summary>Rapid Fire (user decision, 2026-10-23): the act bought with the Move can only be Attack.</summary>
+        public bool NextActIsAttackOnly => NextActUsesMove;
+
+        /// <summary>Whether an act of this kind is allowed now: any act normally, only Attack as Rapid Fire's second.</summary>
+        public bool CanActWith(bool isAttack) => CanAct && (isAttack || !NextActIsAttackOnly);
+
         public bool IsFinished => !CanMove && !CanAct;
 
         public void RecordMove()
@@ -69,10 +76,13 @@ namespace FriendshipWarriors.Battle
             MovesTaken++;
         }
 
-        public void RecordAct()
+        /// <param name="isAttack">The act is Attack (the only act Rapid Fire's second act may be).</param>
+        public void RecordAct(bool isAttack = false)
         {
             if (!CanAct)
                 throw new InvalidOperationException("No action left this turn.");
+            if (!isAttack && NextActIsAttackOnly)
+                throw new InvalidOperationException("Rapid Fire: the second act can only be Attack.");
             if (!ActSpent)
                 ActSpent = true;
             else

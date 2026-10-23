@@ -155,9 +155,11 @@ namespace FriendshipWarriors.Battle.AI
             }
             else
             {
-                // Nothing to hit: a drop within reach beats closing in, if it's worth the danger of standing there.
-                var pickup = BestPickup(positions, origin, actor, enemies, hints, threatCost);
-                var approach = pickup ?? ClosestToEnemies(grid, positions, origin, actor, units, enemies, rules, rng);
+                // Nothing to hit: leading a spell that follows it onto the enemy comes first, then a drop within reach,
+                // if worth the danger of standing there; otherwise close in.
+                var lure = BestLure(positions, origin, actor, enemies, hints, threatCost);
+                var pickup = lure == null ? BestPickup(positions, origin, actor, enemies, hints, threatCost) : null;
+                var approach = lure ?? pickup ?? ClosestToEnemies(grid, positions, origin, actor, units, enemies, rules, rng);
                 if (approach != origin)
                     plan.MoveBefore = approach;
             }
@@ -166,8 +168,9 @@ namespace FriendshipWarriors.Battle.AI
             plan.Facing = FacingTowardNearest(final, enemies, actor.Facing);
             return plan;
 
-            // A drop is only taken by moving onto it, so standing on one already is worth nothing.
-            double PickupValue(GridCoord position) => position != origin ? hints.TileValue(position) : 0.0;
+            // A drop is only taken by moving onto it, so standing on one already is worth nothing. Where a spell that
+            // follows the unit will land counts wherever it ends up, staying put included.
+            double PickupValue(GridCoord position) => (position != origin ? hints.TileValue(position) : 0.0) + hints.StandValue(position);
         }
 
         /// <summary>Learned spells (current job and secondary) the unit has the MP and the voice to cast now.</summary>
@@ -337,6 +340,32 @@ namespace FriendshipWarriors.Battle.AI
                 if (cost < bestCost - 0.5 * threatCost)
                 {
                     bestCost = cost;
+                    best = position;
+                }
+            }
+            return best;
+        }
+
+        /// <summary>
+        /// Where to stand when an enemy spell is following this unit: the reachable tile (staying put included) whose
+        /// <see cref="AiHints.StandValue"/> beats the danger of standing there by the most, or null if none is positive.
+        /// </summary>
+        private static GridCoord? BestLure(List<GridCoord> positions, GridCoord origin, Unit actor, List<Unit> enemies,
+            AiHints hints, double threatCost)
+        {
+            if (hints.StandValues.Count == 0)
+                return null;
+            GridCoord? best = null;
+            double bestScore = 0.0;
+            foreach (var position in positions)
+            {
+                double value = hints.StandValue(position);
+                if (value <= 0.0)
+                    continue;
+                double score = value + (position != origin ? hints.TileValue(position) : 0.0) - Threat(position, actor, enemies) * threatCost;
+                if (score > bestScore)
+                {
+                    bestScore = score;
                     best = position;
                 }
             }

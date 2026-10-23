@@ -369,7 +369,7 @@ namespace FriendshipWarriors.Battle
             var charge = _order.ChargeOf(_active.Unit);
             if (charge != null && _turn.CanAct)
                 return $"Act (cancels {charge.Spell.DisplayName})";
-            return _turn.NextActUsesMove ? "Act (uses Move)" : "Act";
+            return _turn.NextActIsAttackOnly ? "Act (uses Move: Attack only)" : "Act";
         }
 
         /// <summary>
@@ -403,6 +403,8 @@ namespace FriendshipWarriors.Battle
 
         private MenuItem CommandItem(string id, JobDefinition job)
         {
+            if (_turn.NextActIsAttackOnly)
+                return new MenuItem(id, $"{job.CommandName} (Rapid Fire: Attack only)", false);
             bool any = AbilityCommand.LearnedActions(_active.Unit, job).Count > 0;
             return new MenuItem(id, any ? job.CommandName : $"{job.CommandName} (none learned)", any);
         }
@@ -477,7 +479,7 @@ namespace FriendshipWarriors.Battle
                 return;
             }
             var target = AbilityTargetAt(coord);
-            if (target == null)
+            if (target == null || !_turn.CanActWith(isAttack: false))
                 return;
             var user = _active.Unit;
             if (target.Unit != user)
@@ -494,7 +496,7 @@ namespace FriendshipWarriors.Battle
                 message += AfterDamage(target.Unit, user, wasDown, result.Outcome.Damage);
             Debug.Log($"[Battle] {message} ({result.Outcome.HitChance}% to hit).", this);
             _hud.ShowBanner(message);
-            _turn.RecordAct();
+            _turn.RecordAct(isAttack: false);
             PushDisplacedUnits();
             if (CheckBattleOver())
                 return;
@@ -510,11 +512,13 @@ namespace FriendshipWarriors.Battle
         /// </summary>
         private void CastSpell(AbilityDefinition spell, GridCoord tile, Unit lockOn = null)
         {
+            if (!_turn.CanActWith(isAttack: false))
+                return;
             var caster = _active.Unit;
             if (tile != caster.Coord)
                 caster.Facing = DirectionExtensions.Toward(caster.Coord, tile);
             CancelChargeToAct(caster);
-            _turn.RecordAct();
+            _turn.RecordAct(isAttack: false);
             _active.PlayCast();
             Cue?.Invoke(caster, BattleCue.CastStarted);
 
@@ -882,7 +886,7 @@ namespace FriendshipWarriors.Battle
             Debug.Log($"[Battle] {attacker.Name} attacks {target.Name} from the {result.Angle.ToString().ToLowerInvariant()} " +
                       $"({result.HitChance}% to hit): {result}.", this);
             _hud.ShowBanner($"{attacker.Name} > {target.Name}: {outcome}");
-            _turn.RecordAct();
+            _turn.RecordAct(isAttack: true);
             PushDisplacedUnits();
             if (CheckBattleOver())
                 return;

@@ -48,7 +48,8 @@ namespace FriendshipWarriors.Battle
         {
             var priority = Units.Where(u => u.Team != unit.Team && u.Team == Team.Player && _objective.IsProtected(u.Key)).ToList();
             bool cautious = unit.Team == Team.Enemy && _objective.IsTarget(unit.Key);
-            return new AI.AiHints(priority, cautious, DropValuesFor(unit));
+            var lure = AI.AiSpellLure.Values(_gridView.Grid, unit, Units.ToList(), _order.Charging);
+            return new AI.AiHints(priority, cautious, DropValuesFor(unit), lure);
         }
 
         private bool IsAiControlled(Unit unit) => unit != null && ControlOf(unit.Team) == TeamControl.AI;

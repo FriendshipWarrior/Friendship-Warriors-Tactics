@@ -4,6 +4,7 @@ using FriendshipWarriors.Battle;
 using FriendshipWarriors.Battle.AI;
 using FriendshipWarriors.Battle.Magic;
 using FriendshipWarriors.Grid;
+using FriendshipWarriors.Grid.Pathfinding;
 using FriendshipWarriors.Units;
 using FriendshipWarriors.Units.Abilities;
 using FriendshipWarriors.Units.Status;
@@ -277,6 +278,100 @@ namespace FriendshipWarriors.Tests
             new TentativeMove(caster, turn, new GridCoord(2, 3), Direction.East).Confirm();
 
             Assert.That(charge.Target, Is.EqualTo(new GridCoord(2, 3)));
+        }
+
+        // ------------------------------------------------------------------ Rapid Fire: attack twice
+
+        [Test]
+        public void RapidFire_FirstActCanBeAnything_TheSecondOnlyAttack()
+        {
+            var turn = new TurnState(canTradeMoveForAct: true);
+
+            Assert.That(turn.CanActWith(isAttack: false), Is.True, "the first act can be an ability or item");
+            turn.RecordAct(isAttack: false);
+
+            Assert.That(turn.NextActIsAttackOnly, Is.True);
+            Assert.That(turn.CanActWith(isAttack: false), Is.False);
+            Assert.That(turn.CanActWith(isAttack: true), Is.True);
+            Assert.Throws<System.InvalidOperationException>(() => turn.RecordAct(isAttack: false), "the rules refuse it, not just the menu");
+            turn.RecordAct(isAttack: true);
+            Assert.That(turn.ActsTaken, Is.EqualTo(2));
+            Assert.That(turn.CanMove, Is.False, "the Move paid for the second attack");
+        }
+
+        [Test]
+        public void RapidFire_AfterStartingACharge_OffersNoSecondAct_AndKeepsTheMove()
+        {
+            var turn = new TurnState(canTradeMoveForAct: true);
+            turn.RecordAct(isAttack: false);
+            turn.StopActing();
+
+            Assert.That(turn.CanActWith(isAttack: true), Is.False);
+            Assert.That(turn.NextActIsAttackOnly, Is.False);
+            Assert.That(turn.CanMove, Is.True);
+            Assert.That(turn.MoveSpent, Is.False);
+        }
+
+        // ------------------------------------------------------------------ AI led by a spell that follows it
+
+        private ChargingAction LockedCharge(Unit caster, Unit on, int radius)
+        {
+            var order = new TurnOrder(new[] { caster, on });
+            return order.BeginCharge(caster, Spell(radius: radius), on.Coord, lockOn: on);
+        }
+
+        [Test]
+        public void SpellLure_ValuesTilesThatCatchItsEnemies_NotItsAllies()
+        {
+            var grid = TestGrids.FromRows("00000", "00000", "00000");
+            var ai = UnitAt(new GridCoord(0, 1), Team.Enemy);
+            var caster = UnitAt(new GridCoord(4, 0));
+            var foe = UnitAt(new GridCoord(2, 1));
+            var friend = UnitAt(new GridCoord(4, 2), Team.Enemy);
+            var units = new List<Unit> { ai, caster, foe, friend };
+            var charge = LockedCharge(caster, ai, radius: 1);
+
+            var values = AiSpellLure.Values(grid, ai, units, new[] { charge });
+            double V(int x, int y) => values.TryGetValue(new GridCoord(x, y), out double v) ? v : 0.0;
+
+            Assert.That(V(1, 1), Is.GreaterThan(0.0), "next to an enemy");
+            Assert.That(V(4, 1), Is.LessThan(V(3, 0)), "(4,1) also catches the AI's ally, which cancels the caster out");
+            Assert.That(V(4, 1), Is.EqualTo(0.0));
+            Assert.That(AiSpellLure.AreaValue(grid, ai, caster, charge.Spell, new GridCoord(4, 3), units), Is.EqualTo(0.0), "off the map");
+            Assert.That(V(0, 0), Is.EqualTo(0.0), "nobody else in reach");
+        }
+
+        [Test]
+        public void SpellLure_IgnoresSingleTargetAndTileLockedSpells()
+        {
+            var grid = TestGrids.FromRows("00000", "00000");
+            var ai = UnitAt(new GridCoord(0, 0), Team.Enemy);
+            var caster = UnitAt(new GridCoord(4, 0));
+            var foe = UnitAt(new GridCoord(2, 1));
+            var units = new List<Unit> { ai, caster, foe };
+            var single = LockedCharge(caster, ai, radius: 0);
+            var tileLocked = new TurnOrder(new[] { caster, ai }).BeginCharge(caster, Spell(radius: 1), ai.Coord);
+
+            Assert.That(AiSpellLure.Values(grid, ai, units, new[] { single }), Is.Empty);
+            Assert.That(AiSpellLure.Values(grid, ai, units, new[] { tileLocked }), Is.Empty);
+        }
+
+        [Test]
+        public void AiTargetedByAFollowingAreaSpell_WalksIntoTheEnemyCluster()
+        {
+            var grid = TestGrids.FromRows("0000000", "0000000", "0000000", "0000000", "0000000", "0000000", "0000000");
+            var ai = UnitAt(new GridCoord(0, 3), Team.Enemy);
+            ai.AddStatus(StatusEffect.Disable); // can't attack, so where it stands is the whole plan
+            var caster = UnitAt(new GridCoord(0, 6));   // the nearest enemy: plain approach would head here
+            var pairA = UnitAt(new GridCoord(4, 2));
+            var pairB = UnitAt(new GridCoord(4, 4));
+            var units = new List<Unit> { ai, caster, pairA, pairB };
+            var charge = LockedCharge(caster, ai, radius: 1);
+            var hints = new AiHints(new HashSet<Unit>(), cautious: false, standValues: AiSpellLure.Values(grid, ai, units, new[] { charge }));
+
+            var plan = AiPlanner.Plan(grid, ai, units, MovementRules.Default, new System.Random(3), hints);
+
+            Assert.That(plan.MoveBefore, Is.EqualTo(new GridCoord(4, 3)), "between the two enemies, so both are caught");
         }
 
         [Test]
