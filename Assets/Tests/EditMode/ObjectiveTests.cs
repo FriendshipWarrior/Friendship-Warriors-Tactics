@@ -203,7 +203,7 @@ namespace FriendshipWarriors.Tests
         }
 
         [Test]
-        public void ProtectedLost_BeatsAnyVictoryInTheSameCheck()
+        public void VictoryInTheSameCheck_BeatsAProtectedUnitLost()
         {
             var escort = Soldier("Escort", Team.Player, "escort");
             Lose(escort);
@@ -211,7 +211,37 @@ namespace FriendshipWarriors.Tests
             KnockOut(e);
             var objective = new BattleObjective(VictoryCondition.DefeatAllEnemies, "", "escort");
 
-            Assert.That(Evaluate(objective, new[] { Soldier("P", Team.Player), e }, escort).Kind, Is.EqualTo(BattleOutcomeKind.Defeat));
+            Assert.That(Evaluate(objective, new[] { Soldier("P", Team.Player), e }, escort).Kind, Is.EqualTo(BattleOutcomeKind.Victory));
+        }
+
+        [Test]
+        public void TargetDownInTheSameCheck_BeatsAProtectedUnitLostAndTheLastPlayerDown()
+        {
+            var escort = Soldier("Escort", Team.Player, "escort");
+            Lose(escort);
+            var p = Soldier("P", Team.Player);
+            KnockOut(p);
+            var commander = Soldier("Commander", Team.Enemy, "commander");
+            KnockOut(commander);
+            var objective = new BattleObjective(VictoryCondition.DefeatTarget, "commander", "escort");
+
+            var outcome = Evaluate(objective, new[] { p, commander, Soldier("E", Team.Enemy) }, escort);
+
+            Assert.That(outcome.Kind, Is.EqualTo(BattleOutcomeKind.Victory));
+            Assert.That(outcome.Reason, Is.EqualTo("Commander defeated"));
+        }
+
+        [Test]
+        public void ProtectedLost_WithoutVictory_IsADefeatEvenWithPlayersStanding()
+        {
+            var escort = Soldier("Escort", Team.Player, "escort");
+            Lose(escort);
+            var objective = new BattleObjective(VictoryCondition.DefeatAllEnemies, "", "escort");
+
+            var outcome = Evaluate(objective, new[] { Soldier("P", Team.Player), Soldier("E", Team.Enemy) }, escort);
+
+            Assert.That(outcome.Kind, Is.EqualTo(BattleOutcomeKind.Defeat));
+            Assert.That(outcome.Reason, Is.EqualTo("Escort was lost"));
         }
 
         [Test]

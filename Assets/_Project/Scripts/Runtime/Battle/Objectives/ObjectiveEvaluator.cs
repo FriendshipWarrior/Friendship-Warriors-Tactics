@@ -8,10 +8,10 @@ namespace FriendshipWarriors.Battle.Objectives
     /// Decides whether a battle is won, lost or still going. Checked in a fixed order so simultaneous events always
     /// resolve the same way:
     /// <list type="number">
-    /// <item>A protected unit permanently lost (death counter ran out) → defeat. This always wins, because losing a
-    /// character the level depends on can't be undone.</item>
-    /// <item>The victory condition met (the target knocked out, or every enemy knocked out or lost) → victory, even if
-    /// the player's last unit fell in the same action: the objective was achieved.</item>
+    /// <item>The victory condition met (the target knocked out, or every enemy knocked out or lost) → victory. Winning
+    /// beats everything else in the same check, even a protected unit lost or the player's last unit falling (user
+    /// decision).</item>
+    /// <item>A protected unit permanently lost (death counter ran out) → defeat.</item>
     /// <item>No Player-team unit left standing → defeat (FFT).</item>
     /// </list>
     /// Pure and deterministic: it only reads the units.
@@ -26,12 +26,6 @@ namespace FriendshipWarriors.Battle.Objectives
             var field = units.ToList();
             var gone = lost.ToList();
 
-            foreach (var unit in gone)
-            {
-                if (unit.Team == Team.Player && objective.IsProtected(unit.Key))
-                    return BattleOutcome.Defeat($"{unit.Name} was lost");
-            }
-
             var target = objective.Victory == VictoryCondition.DefeatTarget ? FindTarget(objective, field, gone) : null;
             if (target != null)
             {
@@ -42,6 +36,12 @@ namespace FriendshipWarriors.Battle.Objectives
             {
                 // Defeat All, or a Defeat Target battle whose target never took the field: every enemy down wins.
                 return BattleOutcome.Victory("All enemies defeated");
+            }
+
+            foreach (var unit in gone)
+            {
+                if (unit.Team == Team.Player && objective.IsProtected(unit.Key))
+                    return BattleOutcome.Defeat($"{unit.Name} was lost");
             }
 
             if (!field.Any(u => u.Team == Team.Player && !u.IsKnockedOut))

@@ -144,7 +144,7 @@ Every clock tick, each unit's CT (charge time) rises by its Speed. At 100 the un
 - **Defeat all enemies:** the standard objective.
 - **Defeat a target:** win as soon as that enemy is knocked out.
 - **Protect:** lose if a protected character is lost for good (their 3-turn countdown runs out). Being knocked out and revived in time is fine.
-- You always lose if your whole team is down. If the last enemy and your last unit fall in the same action, you win; losing a protected character always counts first.
+- You always lose if your whole team is down. If you meet the objective in the same action that loses a protected character or your last unit, you still win.
 </details>
 
 <details>
