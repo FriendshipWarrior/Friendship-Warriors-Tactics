@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using System.Linq;
+using FriendshipWarriors.Battle.Abilities;
 using FriendshipWarriors.Battle.Combat;
 using FriendshipWarriors.Cameras;
 using FriendshipWarriors.Controls;
@@ -21,15 +22,16 @@ namespace FriendshipWarriors.Battle
     /// use of the other. Wait — or using up both — ends the turn with a facing choice, and CT is spent according to
     /// what was used. Act → Attack uses FFT's physical attack rules plus the timed press: the player presses Confirm
     /// as the marker crosses the zone to try for a critical (attacking) or a block (an enemy attacking a player
-    /// unit). Knocked-out units count down 3 turns before they are lost. Every team is player-controlled until enemy
-    /// AI exists, but only the Player team gets timed presses.
+    /// unit). Act → job command lists the job's learned action abilities (see <see cref="AbilityCommand"/>); items draw
+    /// from the team's <see cref="Inventory"/>. Knocked-out units count down 3 turns before they are lost. Every team
+    /// is player-controlled until enemy AI exists, but only the Player team gets timed presses (Attack only).
     /// </summary>
     public sealed partial class BattleController : MonoBehaviour
     {
-        private enum Phase { Idle, Command, ActMenu, ChooseDestination, ChooseTarget, TimedPress, ChooseFacing, BattleOver, AiTurn }
+        private enum Phase { Idle, Command, ActMenu, ChooseDestination, ChooseTarget, TimedPress, ChooseFacing, BattleOver, AiTurn, AbilityMenu, ChooseAbilityTarget }
         private enum PressRole { None, Offense, Defense }
 
-        private const string MoveId = "move", ActId = "act", WaitId = "wait", AttackId = "attack";
+        private const string MoveId = "move", ActId = "act", WaitId = "wait", AttackId = "attack", PrimaryId = "primary", SecondaryId = "secondary";
 
         [SerializeField] private BattleInput _input;
         [SerializeField] private GridView _gridView;
@@ -70,11 +72,23 @@ namespace FriendshipWarriors.Battle
         private float _resolveAt;
         private AttackResult? _pendingResult;
 
+        // Job commands (abilities and items).
+        private readonly MenuModel _abilityMenu = new("Skills");
+        private readonly AbilityCommand _abilities = new();
+        private readonly Dictionary<Team, Inventory> _inventories = new();
+        private readonly HashSet<GridCoord> _abilityTiles = new();
+        private AbilityDefinition _ability;
+
         public Unit ActiveUnit => _active != null ? _active.Unit : null;
         public TurnState Turn => _turn;
         public TurnOrder Order => _order;
 
         private IEnumerable<Unit> Units => _views.Select(v => v.Unit);
+
+        /// <summary>Sets the item stock a team draws from in this battle.</summary>
+        public void SetInventory(Team team, Inventory inventory) => _inventories[team] = inventory;
+
+        public Inventory InventoryOf(Team team) => _inventories.TryGetValue(team, out var inventory) ? inventory : null;
 
         private void OnEnable()
         {
@@ -99,7 +113,10 @@ namespace FriendshipWarriors.Battle
         {
             _views = views.ToList();
             foreach (var unit in Units)
+            {
                 unit.ChargeTime = 0;
+                unit.ClearBattleModifiers();
+            }
             _order = new TurnOrder(Units);
             int seed = _battleSeed != 0 ? _battleSeed : System.Environment.TickCount;
             _rng = new System.Random(seed);
@@ -115,6 +132,7 @@ namespace FriendshipWarriors.Battle
             {
                 case Phase.Command:
                 case Phase.ActMenu:
+                case Phase.AbilityMenu:
                     ReadMenuNavigation();
                     break;
                 case Phase.ChooseFacing:
@@ -188,17 +206,19 @@ namespace FriendshipWarriors.Battle
             _phase = Phase.ActMenu;
             var unit = _active.Unit;
             _actMenu.Title = "Act";
-            var items = new List<MenuItem>
-            {
-                new(AttackId, "Attack"),
-                new("primary", $"{unit.Job.CommandName} (no abilities yet)", false),
-            };
+            var items = new List<MenuItem> { new(AttackId, "Attack"), CommandItem(PrimaryId, unit.Job) };
             if (unit.SecondaryJob != null)
-                items.Add(new MenuItem("secondary", $"{unit.SecondaryJob.CommandName} (no abilities yet)", false));
+                items.Add(CommandItem(SecondaryId, unit.SecondaryJob));
             _actMenu.SetItems(items);
             _hud.ShowMenu(_actMenu);
             _hud.SetHint("A / Enter: select   B / Esc: back");
             Refresh();
+        }
+
+        private MenuItem CommandItem(string id, JobDefinition job)
+        {
+            bool any = AbilityCommand.LearnedActions(_active.Unit, job).Count > 0;
+            return new MenuItem(id, any ? job.CommandName : $"{job.CommandName} (none learned)", any);
         }
 
         private void Activate(string id)
@@ -209,7 +229,86 @@ namespace FriendshipWarriors.Battle
                 case ActId: OpenActMenu(); break;
                 case WaitId: BeginFacing(); break;
                 case AttackId: BeginTarget(); break;
+                case PrimaryId: OpenAbilityMenu(_active.Unit.Job); break;
+                case SecondaryId: OpenAbilityMenu(_active.Unit.SecondaryJob); break;
+                default:
+                    var ability = _abilities.Listed(id);
+                    if (ability != null)
+                        BeginAbilityTarget(ability);
+                    break;
             }
+        }
+
+        // ------------------------------------------------------------------ Job commands
+
+        private void OpenAbilityMenu(JobDefinition job)
+        {
+            _phase = Phase.AbilityMenu;
+            _cursor.DirectionalInputLocked = true;
+            _abilities.BuildMenu(_abilityMenu, job, _active.Unit, _gridView.Grid, Units, InventoryOf(_active.Unit.Team));
+            _hud.ShowMenu(_abilityMenu);
+            _hud.SetHint("A / Enter: select   B / Esc: back");
+            Refresh();
+        }
+
+        private void BeginAbilityTarget(AbilityDefinition ability)
+        {
+            _ability = ability;
+            _abilityTiles.Clear();
+            _abilityTiles.UnionWith(AbilityRules.TargetTiles(_gridView.Grid, ability, _active.Unit));
+            _phase = Phase.ChooseAbilityTarget;
+            _hud.HideMenu();
+            _cursor.DirectionalInputLocked = false;
+            // Self-only abilities start on the user, ready to confirm.
+            if (ability.Targeting == AbilityTargeting.Self)
+                _cursor.SetCoord(_active.Unit.Coord, followCamera: true);
+            Refresh();
+        }
+
+        private UnitView AbilityTargetAt(GridCoord coord)
+        {
+            if (!_abilityTiles.Contains(coord))
+                return null;
+            var view = _views.FirstOrDefault(v => v.Unit.Coord == coord && AbilityRules.IsValidTarget(_ability, _active.Unit, v.Unit));
+            return view;
+        }
+
+        private void TryAbilityTarget(GridCoord coord)
+        {
+            var target = AbilityTargetAt(coord);
+            if (target == null)
+                return;
+            var user = _active.Unit;
+            if (target.Unit != user)
+                user.Facing = DirectionExtensions.Toward(user.Coord, coord);
+
+            var result = AbilityCommand.Execute(_ability, user, target.Unit, _gridView.Grid, Units, InventoryOf(user.Team), _rng);
+            if (result.KnockedTo != null)
+                target.SyncPosition();
+            Debug.Log($"[Battle] {result.Message} ({result.Outcome.HitChance}% to hit).", this);
+            _hud.ShowBanner(result.Message);
+            _turn.RecordAct();
+            if (CheckBattleOver())
+                return;
+            AfterAction();
+        }
+
+        private string AbilityPreview(Unit target)
+        {
+            var user = _active.Unit;
+            var outcome = _ability.Effect switch
+            {
+                AbilityEffect.Damage => $"{CombatFormulas.HitChance(user, target)}% to hit, " +
+                                        $"{user.Stats.PhysicalAttack * _ability.RandomMultiplier.x}-{user.Stats.PhysicalAttack * _ability.RandomMultiplier.y} damage" +
+                                        (_ability.Knockback ? ", may knock back" : ""),
+                AbilityEffect.BoostPhysicalAttack => $"P.Atk +{_ability.Amount} for this battle",
+                AbilityEffect.RestoreHp => $"+{_ability.Amount} HP",
+                AbilityEffect.RestoreMp => $"+{_ability.Amount} MP",
+                AbilityEffect.RestoreAll => "full HP and MP",
+                AbilityEffect.Revive => "revive",
+                _ => "",
+            };
+            return $"{_ability.DisplayName} on {target.Name}: {outcome}";
         }
 
         private void BeginDestination()
@@ -353,6 +452,9 @@ namespace FriendshipWarriors.Battle
                 return false;
 
             _phase = Phase.BattleOver;
+            // In-battle boosts end with the battle.
+            foreach (var unit in Units)
+                unit.ClearBattleModifiers();
             _hud.HideMenu();
             _hud.HideTimingPrompt();
             _gridView.ClearHighlights();
@@ -415,6 +517,8 @@ namespace FriendshipWarriors.Battle
             {
                 case Phase.Command when _commandMenu.Selected is { Enabled: true } item: Activate(item.Id); break;
                 case Phase.ActMenu when _actMenu.Selected is { Enabled: true } item: Activate(item.Id); break;
+                case Phase.AbilityMenu when _abilityMenu.Selected is { Enabled: true } item: Activate(item.Id); break;
+                case Phase.ChooseAbilityTarget: TryAbilityTarget(_cursor.Coord); break;
                 case Phase.ChooseDestination: TryMoveTo(_cursor.Coord); break;
                 case Phase.ChooseTarget: TryTarget(_cursor.Coord); break;
                 case Phase.TimedPress when _pendingResult == null:
@@ -440,12 +544,18 @@ namespace FriendshipWarriors.Battle
                 case Phase.ChooseFacing when !_turn.IsFinished:
                     OpenCommandMenu();
                     break;
+                case Phase.AbilityMenu:
+                    OpenActMenu();
+                    break;
+                case Phase.ChooseAbilityTarget:
+                    OpenAbilityMenu(_abilities.Job);
+                    break;
             }
         }
 
         private void OnMenuClicked(int index)
         {
-            var menu = _phase == Phase.Command ? _commandMenu : _phase == Phase.ActMenu ? _actMenu : null;
+            var menu = OpenMenu;
             if (menu != null && index < menu.Items.Count && menu.Items[index].Enabled)
                 Activate(menu.Items[index].Id);
         }
@@ -456,9 +566,18 @@ namespace FriendshipWarriors.Battle
             {
                 case Phase.ChooseDestination: TryMoveTo(coord); break;
                 case Phase.ChooseTarget: TryTarget(coord); break;
+                case Phase.ChooseAbilityTarget: TryAbilityTarget(coord); break;
                 case Phase.ChooseFacing: EndTurn(); break;
             }
         }
+
+        private MenuModel OpenMenu => _phase switch
+        {
+            Phase.Command => _commandMenu,
+            Phase.ActMenu => _actMenu,
+            Phase.AbilityMenu => _abilityMenu,
+            _ => null,
+        };
 
         private void OnCursorMoved(GridCoord coord)
         {
@@ -473,7 +592,7 @@ namespace FriendshipWarriors.Battle
         {
             float y = _input.MoveCursor.ReadValue<Vector2>().y;
             int direction = y > 0.5f ? -1 : y < -0.5f ? 1 : 0;
-            var menu = _phase == Phase.Command ? _commandMenu : _actMenu;
+            var menu = OpenMenu;
             float now = Time.unscaledTime;
 
             if (direction == 0)
@@ -544,6 +663,14 @@ namespace FriendshipWarriors.Battle
                 case Phase.TimedPress:
                     _gridView.SetHighlight(_target.Unit.Coord, TileHighlight.EnemyDeployment);
                     break;
+                case Phase.ChooseAbilityTarget:
+                    foreach (var coord in _abilityTiles)
+                        _gridView.SetHighlight(coord, _ability.IsSupportAction ? TileHighlight.MoveRange : TileHighlight.EnemyDeployment);
+                    var abilityTarget = AbilityTargetAt(_cursor.Coord);
+                    _hud.SetHint(abilityTarget != null
+                        ? $"{AbilityPreview(abilityTarget.Unit)}   A / click: use   B / Esc: back"
+                        : $"{_ability.DisplayName}: choose a target   A / click: use   B / Esc: back");
+                    break;
                 case Phase.ChooseFacing:
                     _gridView.SetHighlight(_active.Unit.Coord + _active.Unit.Facing.ToStep(), TileHighlight.Path);
                     break;
@@ -554,7 +681,7 @@ namespace FriendshipWarriors.Battle
 
             if (_active != null)
                 _gridView.SetHighlight(_active.Unit.Coord, TileHighlight.Selected);
-            if (_phase is Phase.ChooseDestination or Phase.ChooseTarget)
+            if (_phase is Phase.ChooseDestination or Phase.ChooseTarget or Phase.ChooseAbilityTarget)
                 _gridView.SetHighlight(_cursor.Coord, TileHighlight.Hover);
 
             var hovered = UnitAt(_cursor.Coord);

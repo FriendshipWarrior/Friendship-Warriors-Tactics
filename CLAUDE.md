@@ -72,6 +72,7 @@ Assets/
           View/           # UnitView (billboard sprite), SpriteViewMath, PlaceholderSprites
         Battle/           # TurnOrder (CT), TurnState (Move/Act/Wait), BattleController (turn flow; .Ai.cs partial runs AI turns)
           AI/             # AiPlanner, AiPlan (pure, deterministic per seed)
+          Abilities/      # AbilityCommand (job command menus + execution), AbilityRules, AbilityResolver, Knockback, Inventory
           Combat/         # CombatFormulas, AttackResolver, AttackRange, TimedPressRules, BattleRewards
         UI/               # BattleHud (uGUI + TextMeshPro, built in code), MenuModel
         Controls/         # BattleInput, TileCursor, CursorMath (gamepad + mouse/keyboard)
@@ -163,6 +164,26 @@ Record decisions here as they are made (date — decision — rationale).
 - 2026-10-22 — **Combat (FFT):** weapon damage = Sword/Rod P.Atk×WP, Knife and Rifle (FFT bow) ⌊(P.Atk+Speed)/2⌋×WP, Staff M.Atk×WP, bare hands ⌊P.Atk×Brave/100⌋×P.Atk with Brave standing in at 70. Hit% = 100 × (100−C-Ev)% front only × (100−S-Ev)% front/side × (100−A-Ev)% always. Critical: 5% base, raises XA by 0…XA−1 (recalled; knockback not modelled). Melee reaches the 4 neighbours within 3h; rifles 1–5 tiles (FFT bows' height bonus and line of fire not modelled). Rewards per successful action: Prof 8 + 2×job level + level/4 (verified), allies get ¼; EXP keeps FFT's 10 + (target level − actor level) but as a percentage of what the actor's next level costs (decided 2026-10-22): a same-level target is worth a tenth of a level at any level, stronger targets more, weaker less; at least 1 EXP, at most one level, none at 99. Non-attack actions (heals, buffs, items) give the same-level share — 10% of the actor's own next level, whoever the target — so support roles level at the same pace (FFT uses the target's level; ours is the actor's). KO at 0 HP with a 3-turn death counter, then the unit is lost (recalled). Victory/defeat when one team has nobody standing.
 - 2026-10-22 — **Timed press (intended departure):** a marker sweeps a bar (1.2 s, perfect at 0.8 s, ±0.3 s window). Accuracy 0–1 is how close the press is to perfect; the chance it grants scales with accuracy², capped below 100%: block up to 60% when an enemy attacks a Player-team unit (blocked = no damage), critical up to 5% + 45% when a Player-team unit attacks. Order: evasion, then block, then critical. Tunable in `TimedPressRules` on the BattleController.
 - 2026-10-23 — **Enemy AI:** each team is Human- or AI-controlled (`BattleController` Team Control; default Player = Human, Enemy = AI). `AiPlanner` (pure C#) plans the whole turn: every reachable tile (including staying) × every enemy in Attack range there, scored by expected damage (hit% × damage, capped at the target's HP) + a knock-out bonus (hit% × target max HP) + side (+2) / back (+4) bonuses − 1.5 per enemy that could reach the tile next turn. Attacks from its own tile are followed by a retreat to a less threatened tile (attack-then-move, as FFT's AI often does); otherwise it moves then attacks. With no attack available it walks toward the nearest enemy by walking distance. It ends facing the nearest enemy. Ties are broken with the battle's seeded RNG, so plans are deterministic. FFT's actual AI logic isn't public — these weights are ours, tune freely. Not yet: AI turn trades (Rapid Fire / Double Time), abilities, healing allies, retreating when hurt. AI turns play back as paced steps (~0.55 s apart) with the camera following; only human-controlled sides get timed presses (Brace! when the AI attacks a human unit).
+- 2026-10-23 — **First job abilities (FFT mechanics, our names — user to approve or rename):**
+
+  | Ours | FFT original | Kind | Effect | Prof (FFT JP) |
+  |---|---|---|---|---|
+  | **Drill** command | Squire *Basic Skill* | | | |
+  | Grit | Accumulate | action, self | P.Atk +1 until the battle ends, stacks | 300 |
+  | Shoulder Charge | Dash | action, range 1 | P.Atk × 1–4 damage, may knock back | 80 |
+  | Hurl Rivet | Throw Stone | action, range 1–4 | P.Atk × 1–2 damage, may knock back | 90 |
+  | Light Pack | Move +1 | movement | Move +1 | 200 |
+  | Diligence | Gained JP Up | support | +50% Prof | 200 |
+  | **Field Kit** command | Chemist *Item* | | | |
+  | Tonic / Strong Tonic / Grand Tonic | Potion / Hi-Potion / X-Potion | item | +30 / +70 / +150 HP | 30 / 200 / 300 |
+  | Aether Vial / Aether Flask | Ether / Hi-Ether | item | +20 / +50 MP | 300 / 400 |
+  | Panacea | Elixir | item | full HP and MP | 900 |
+  | Revival Salts | Phoenix Down | item | revives a KO'd unit (death counter still running) with 1–20 HP | 90 |
+  | Long Toss | Throw Item | support (innate to Corpsman) | items reach 4 tiles instead of 1 | 350 |
+
+  Rules: items come from a per-team shared stock and always land; damage abilities are physical (evaded exactly like Attack); knockback pushes one tile straight away with a 50% chance (FFT's Brave formula with the 70 stand-in), blocked by higher ground, gaps, blocked or occupied tiles and the map edge, and may drop to lower ground (no fall damage yet). Offensive abilities give level-based EXP, everything else support EXP; Prof as for Attack, with Diligence's bonus. **The timed press stays Attack-only** (FFT abilities have no equivalent; revisit if wanted). Unusable entries are greyed out with the reason (none left, not enough MP, no target).
+  Unverified: Dash ×1–4 and Throw Stone ×1–2 multipliers (sources disagree; one gives Throw Stone ×1–4), Phoenix Down's 1–20 HP, Hi-Ether/Elixir JP costs, Dash's 3h vertical reach.
+  Deferred: Heal (cures Blind/Silence) and status-cure items (Antidote, Eye Drops, Echo Herbs, Maiden's Kiss, Soft, Holy Water, Remedy) need status effects; Counter Tackle (reaction) needs reactions and Brave; knockback fall damage.
 - 2026-10-22 — **Battle UI:** uGUI + TextMeshPro, built in code by `BattleHud` on a Screen Space Overlay canvas scaled from 1920x1080 (readable on Steam Deck's 1280x800). Menus are driven by `MenuModel` and the battle's own input (D-pad/stick/keys, A/B); the mouse can hover and click. Placeholder styling.
 - 2026-10-22 — **Unit visuals:** a placeholder object with a camera-facing sprite (rotates on the vertical axis only). Two drawn poses per job (front ¾ and back ¾, facing screen-right) mirrored to cover all four views. Set `FrontSprite`/`BackSprite` on a job to replace the generated placeholder.
 - Open questions: save system scope; AI difficulty levels; whether to add FFT's multi-layer tiles (bridges, walking under things).

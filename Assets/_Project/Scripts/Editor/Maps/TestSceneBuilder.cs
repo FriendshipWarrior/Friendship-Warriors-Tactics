@@ -103,6 +103,18 @@ namespace FriendshipWarriors.Editor.Maps
             SetArray(sandbox, "_playerJobs", playerJobs.ToArray());
             SetArray(sandbox, "_enemyJobs", enemyJobs.ToArray());
             SetArray(sandbox, "_starterGear", Units.StartingJobsBuilder.CreateStarterEquipment());
+            Set(sandbox, "_itemJob", Units.StartingJobsBuilder.Load("Corpsman"));
+            var stock = Units.StartingJobsBuilder.TestItemStock();
+            var stockSo = new SerializedObject(sandbox);
+            var stockProperty = stockSo.FindProperty("_startingItems");
+            stockProperty.arraySize = stock.Length;
+            for (int i = 0; i < stock.Length; i++)
+            {
+                var element = stockProperty.GetArrayElementAtIndex(i);
+                element.FindPropertyRelative("_item").objectReferenceValue = stock[i].Item;
+                element.FindPropertyRelative("_count").intValue = stock[i].Count;
+            }
+            stockSo.ApplyModifiedPropertiesWithoutUndo();
         }
 
         /// <summary>A Screen Space Overlay canvas scaled from 1920x1080, plus the EventSystem for mouse input on UI.</summary>

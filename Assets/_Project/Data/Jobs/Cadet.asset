@@ -30,7 +30,13 @@ MonoBehaviour:
   _jump: 3
   _classEvasion: 5
   _commandName: Drill
-  _abilities: []
+  _abilities:
+  - {fileID: 11400000, guid: 5de4a4f0e801d4593ae2b9bf1c63c76c, type: 2}
+  - {fileID: 11400000, guid: 09bb59b50556b456283915dcc2c04d84, type: 2}
+  - {fileID: 11400000, guid: 8c9ad6607c8e74c7a94c335562a000f7, type: 2}
+  - {fileID: 11400000, guid: 81b75328c1e044b94a1fa9e380a473c8, type: 2}
+  - {fileID: 11400000, guid: 061c31d49b8924556a80ec366db2051c, type: 2}
+  _innateAbilities: []
   _weaponTypes: 0100000002000000i
   _canUseShields: 0
   _armorTypes: 0200000004000000i

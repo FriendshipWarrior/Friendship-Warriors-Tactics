@@ -1,0 +1,32 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 543719730e767434f830b98c96e89378, type: 3}
+  m_Name: Panacea
+  m_EditorClassIdentifier: FriendshipWarriors.Runtime::FriendshipWarriors.Units.Abilities.AbilityDefinition
+  _displayName: Panacea
+  _description: Restores all HP and MP.
+  _kind: 0
+  _learnCost: 900
+  _turnTrade: 0
+  _effect: 5
+  _targeting: 1
+  _minRange: 0
+  _maxRange: 1
+  _verticalReach: 99
+  _amount: 0
+  _randomMultiplier: {x: 1, y: 1}
+  _knockback: 0
+  _isItem: 1
+  _mpCost: 0
+  _moveBonus: 0
+  _proficiencyBonusPercent: 0
+  _throwsItems: 0
