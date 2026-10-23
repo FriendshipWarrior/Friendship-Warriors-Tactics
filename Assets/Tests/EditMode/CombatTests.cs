@@ -266,10 +266,52 @@ namespace FriendshipWarriors.Tests
             var target = UnitWith(team: Team.Enemy);
             target.GainExperience(ExperienceCurve.TotalFor(11));
 
-            Assert.That(BattleRewards.Experience(actor, target), Is.EqualTo(10 + 11 - 8));
+            // (10 + 11 − 8)% of what level 8 → 9 costs; the reverse is (10 + 8 − 11)% of level 11 → 12.
+            Assert.That(BattleRewards.Experience(actor, target), Is.EqualTo((int)System.Math.Round(ExperienceCurve.ToNextLevel(8) * 0.13)));
             Assert.That(BattleRewards.Proficiency(actor), Is.EqualTo(8 + 2 * 3 + 8 / 4));
             Assert.That(BattleRewards.SpilloverProficiency(16), Is.EqualTo(4));
-            Assert.That(BattleRewards.Experience(target, actor), Is.EqualTo(7));
+            Assert.That(BattleRewards.Experience(target, actor), Is.EqualTo((int)System.Math.Round(ExperienceCurve.ToNextLevel(11) * 0.07)));
+        }
+
+        private Unit UnitAtLevel(int level)
+        {
+            var unit = UnitWith();
+            unit.GainExperience(ExperienceCurve.TotalFor(level));
+            return unit;
+        }
+
+        [TestCase(1)]
+        [TestCase(20)]
+        [TestCase(50)]
+        [TestCase(98)]
+        public void SameLevelTargets_AreWorthATenthOfALevel_AtAnyLevel(int level)
+        {
+            var actor = UnitAtLevel(level);
+            var target = UnitAtLevel(level);
+
+            double share = BattleRewards.Experience(actor, target) / (double)ExperienceCurve.ToNextLevel(level);
+            Assert.That(share, Is.EqualTo(0.10).Within(0.01));
+        }
+
+        [Test]
+        public void StrongerTargetsGiveMore_WeakerGiveLess()
+        {
+            var actor = UnitAtLevel(30);
+            int weaker = BattleRewards.Experience(actor, UnitAtLevel(25));
+            int equal = BattleRewards.Experience(actor, UnitAtLevel(30));
+            int stronger = BattleRewards.Experience(actor, UnitAtLevel(35));
+
+            Assert.That(weaker, Is.LessThan(equal));
+            Assert.That(stronger, Is.GreaterThan(equal));
+        }
+
+        [Test]
+        public void ExperienceIsAtLeastOne_AtMostOneLevel_AndZeroAtTheCap()
+        {
+            Assert.That(BattleRewards.Experience(UnitAtLevel(60), UnitAtLevel(1)), Is.EqualTo(1));
+            var fresh = UnitAtLevel(1);
+            Assert.That(BattleRewards.Experience(fresh, UnitAtLevel(99)), Is.EqualTo(ExperienceCurve.ToNextLevel(1)));
+            Assert.That(BattleRewards.Experience(UnitAtLevel(99), UnitAtLevel(99)), Is.Zero);
         }
 
         [Test]
