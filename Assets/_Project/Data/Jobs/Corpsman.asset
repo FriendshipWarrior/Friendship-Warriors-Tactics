@@ -39,6 +39,11 @@ MonoBehaviour:
   - {fileID: 11400000, guid: 702e2743129c54b128aac49b01c021e8, type: 2}
   - {fileID: 11400000, guid: 191e8e13f883d4b07ab3d90c09b6850e, type: 2}
   - {fileID: 11400000, guid: ac97e72b9f36a4f7f87e89d6135c2860, type: 2}
+  - {fileID: 11400000, guid: 2708abddbbc8e4d8b85837b37e6b2684, type: 2}
+  - {fileID: 11400000, guid: 1eadae612613b43bba23f55703b74bd4, type: 2}
+  - {fileID: 11400000, guid: ac527cff894634be4adcfdd882b97427, type: 2}
+  - {fileID: 11400000, guid: 2c8e1232e568249698177a6d66ecbf5b, type: 2}
+  - {fileID: 11400000, guid: 3887a3af7791d4f12bf5359b01cb35fc, type: 2}
   _innateAbilities:
   - {fileID: 11400000, guid: ac97e72b9f36a4f7f87e89d6135c2860, type: 2}
   _weaponTypes: 02000000i

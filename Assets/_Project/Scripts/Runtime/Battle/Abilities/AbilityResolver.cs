@@ -25,7 +25,8 @@ namespace FriendshipWarriors.Battle.Abilities
                         return new AbilityOutcome(false, hitChance);
                     var range = ability.RandomMultiplier;
                     int multiplier = rng.Next(Math.Min(range.x, range.y), Math.Max(range.x, range.y) + 1);
-                    return new AbilityOutcome(true, hitChance, damage: user.Stats.PhysicalAttack * multiplier);
+                    int damage = CombatFormulas.PhysicalDamage(user, target, user.Stats.PhysicalAttack * multiplier, ability.IsMelee);
+                    return new AbilityOutcome(true, hitChance, damage: damage);
                 }
                 case AbilityEffect.BoostPhysicalAttack:
                     return new AbilityOutcome(true, 100, physicalAttackGained: ability.Amount);
@@ -40,6 +41,8 @@ namespace FriendshipWarriors.Battle.Abilities
                 }
                 case AbilityEffect.Revive:
                     return new AbilityOutcome(true, 100, hpRestored: rng.Next(ReviveHpMin, ReviveHpMax + 1), revived: true);
+                case AbilityEffect.CureStatus:
+                    return new AbilityOutcome(true, 100, cures: ability.Cures);
                 default:
                     return new AbilityOutcome(false, 0);
             }
@@ -61,7 +64,16 @@ namespace FriendshipWarriors.Battle.Abilities
             int mp = target.RestoreMp(outcome.MpRestored);
             if (outcome.PhysicalAttackGained > 0)
                 target.AddPhysicalAttackBonus(outcome.PhysicalAttackGained);
-            return new AbilityOutcome(true, outcome.HitChance, damage, hp, mp, outcome.PhysicalAttackGained);
+            int cured = 0;
+            if (outcome.Cures != null)
+            {
+                foreach (var status in outcome.Cures)
+                {
+                    if (target.RemoveStatus(status))
+                        cured++;
+                }
+            }
+            return new AbilityOutcome(true, outcome.HitChance, damage, hp, mp, outcome.PhysicalAttackGained, cures: outcome.Cures, curedCount: cured);
         }
     }
 }

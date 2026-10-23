@@ -33,7 +33,7 @@ FFT is the reference for mechanics and presentation. Characters, story and job n
 - An isometric camera that rotates in 90° steps, switches between FFT's low and high tilt, zooms and pans.
 
 **Units and jobs**
-- FFT's stat model (hidden raw stats × job multipliers, level-up growth), without Brave and Faith.
+- FFT's stat model (hidden raw stats × job multipliers, level-up growth), with our own **Morale** and **Resonance** in place of FFT's Brave and Faith. Morale drives reactions, melee punch and toughness, and below 10 a unit panics and flees. Resonance scales magic both ways.
 - Six jobs in two trees. Advanced jobs unlock at job level 2 in their base job.
 - Five equipment slots: two hands, head, body and accessory. Each job is limited to the weapons and armor its FFT counterpart could use.
 - Ability slots as in FFT: primary and secondary commands, reaction, support and movement.
@@ -46,6 +46,8 @@ FFT is the reference for mechanics and presentation. Characters, story and job n
 - FFT's damage and hit formulas. Attacking from the side or back strips away evasion.
 - **Timed press** (our addition): press as a marker crosses the bar for a chance at a critical hit when attacking, or a block when defending. The closer to perfect, the better the chance, but it never reaches 100%.
 - Knock-outs with FFT's 3-turn countdown, victory and defeat.
+- **Status effects** on FFT's battle clock: Poison, Regen, Protect, Shell, Haste, Slow, Stop, Sleep, Blind, Silence, Disable, Immobilize and Panic.
+- **Reactions** that trigger at Morale %: Counter Charge, Self-Dose, Guard Stance, Adrenaline and Mending Ward. Plus cures: First Aid and the Corpsman's Antitoxin, Eyewash, Throat Lozenge and Field Remedy.
 - Enemy AI that weighs damage, knock-outs and attack angle, retreats after attacking, and faces your nearest unit.
 
 **Tools**
@@ -178,13 +180,15 @@ CLAUDE.md              Design decisions, conventions and project notes
 - [x] Combat: FFT formulas, five-slot gear, timed press, knock-outs
 - [x] Enemy AI
 - [x] First job abilities: Cadet *Drill* and Corpsman *Field Kit* items
-- [ ] Status effects, reactions, and the abilities that need them
+- [x] Status effects, reactions, cures
+- [x] Morale and Resonance (our Brave and Faith)
 - [ ] Magic (Evoker and Warder spells, charge times)
-- [ ] Our replacement for Brave and Faith
 - [ ] Character sprites and terrain art
 - [ ] Battle prep, party management, campaign and story
 - [ ] Save system
 - [ ] Steam builds (Windows, SteamOS, macOS)
+
+**Game modes, in order:** quick play, then the story campaign, then online co-op and versus. Battle rules are kept deterministic so online matches can be re-simulated from each player's commands.
 
 ---
 

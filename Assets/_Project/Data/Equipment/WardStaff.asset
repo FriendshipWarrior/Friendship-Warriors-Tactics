@@ -14,10 +14,15 @@ MonoBehaviour:
   m_EditorClassIdentifier: FriendshipWarriors.Runtime::FriendshipWarriors.Units.Equipment.EquipmentDefinition
   _displayName: Ward Staff
   _description: Ironwood staff etched with warding glyphs.
-  _slot: 0
+  _category: 0
   _weaponType: 5
   _power: 3
   _minRange: 1
   _maxRange: 1
   _verticalReach: 3
+  _twoHanded: 0
+  _weaponEvasion: 15
   _evasion: 0
+  _armorType: 0
+  _hpBonus: 0
+  _mpBonus: 0

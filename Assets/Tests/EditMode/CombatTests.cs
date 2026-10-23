@@ -69,11 +69,11 @@ namespace FriendshipWarriors.Tests
         }
 
         [Test]
-        public void BareHands_UseTheBraveStandIn()
+        public void BareHands_UseMoraleAsFftUsedBrave()
         {
             var unit = UnitWith(pa: 10);
 
-            // (PA × Brave / 100) × PA with Brave standing in at 70.
+            // ⌊PA × Morale / 100⌋ × PA, at the default Morale of 70.
             Assert.That(CombatFormulas.AttackFactors(unit).Damage, Is.EqualTo(10 * 70 / 100 * 10));
         }
 

@@ -6,6 +6,7 @@ using FriendshipWarriors.Grid;
 using FriendshipWarriors.Grid.Generation;
 using FriendshipWarriors.Grid.Props;
 using FriendshipWarriors.Grid.View;
+using FriendshipWarriors.Units;
 using UnityEditor;
 using UnityEditor.SceneManagement;
 using UnityEngine;
@@ -114,6 +115,26 @@ namespace FriendshipWarriors.Editor.Maps
                 element.FindPropertyRelative("_item").objectReferenceValue = stock[i].Item;
                 element.FindPropertyRelative("_count").intValue = stock[i].Count;
             }
+            // A few starting statuses to try statuses, cures and reactions (rosters: Cadet, Vanguard, Warder vs
+            // Marksman, Corpsman, Evoker), and an enemy Corpsman at Morale 8 so Panic shows up.
+            var seeds = new (Team team, int index, FriendshipWarriors.Units.Status.StatusEffect status)[]
+            {
+                (Team.Player, 0, FriendshipWarriors.Units.Status.StatusEffect.Haste),
+                (Team.Player, 1, FriendshipWarriors.Units.Status.StatusEffect.Protect),
+                (Team.Player, 2, FriendshipWarriors.Units.Status.StatusEffect.Poison),
+                (Team.Enemy, 0, FriendshipWarriors.Units.Status.StatusEffect.Blind),
+                (Team.Enemy, 2, FriendshipWarriors.Units.Status.StatusEffect.Slow),
+            };
+            var seedProperty = stockSo.FindProperty("_startingStatuses");
+            seedProperty.arraySize = seeds.Length;
+            for (int i = 0; i < seeds.Length; i++)
+            {
+                var element = seedProperty.GetArrayElementAtIndex(i);
+                element.FindPropertyRelative("_team").enumValueIndex = (int)seeds[i].team;
+                element.FindPropertyRelative("_rosterIndex").intValue = seeds[i].index;
+                element.FindPropertyRelative("_status").enumValueIndex = (int)seeds[i].status;
+            }
+            stockSo.FindProperty("_lowMoraleEnemy").intValue = 1;
             stockSo.ApplyModifiedPropertiesWithoutUndo();
         }
 

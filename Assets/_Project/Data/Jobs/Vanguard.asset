@@ -32,6 +32,8 @@ MonoBehaviour:
   _commandName: Assault
   _abilities:
   - {fileID: 11400000, guid: 948892cb2cf6c4d689954a48cef866e2, type: 2}
+  - {fileID: 11400000, guid: c908d9eec2c004668aec1ca83148e92c, type: 2}
+  _innateAbilities: []
   _weaponTypes: 01000000i
   _canUseShields: 1
   _armorTypes: 010000000300000005000000i

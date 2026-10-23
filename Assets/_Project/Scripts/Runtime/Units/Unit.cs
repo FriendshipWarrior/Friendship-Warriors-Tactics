@@ -3,12 +3,13 @@ using System.Collections.Generic;
 using FriendshipWarriors.Grid;
 using FriendshipWarriors.Units.Abilities;
 using FriendshipWarriors.Units.Equipment;
+using FriendshipWarriors.Units.Status;
 
 namespace FriendshipWarriors.Units
 {
     /// <summary>
-    /// One combatant: identity, level and EXP, raw stats, Proficiency per job, Commendations, current HP/MP, and
-    /// where it stands.
+    /// One combatant: identity, level and EXP, raw stats, Morale and Resonance, Proficiency per job, Commendations,
+    /// statuses, current HP/MP, and where it stands.
     /// Plain C# so battle rules can test it without a scene; <c>UnitView</c> presents it.
     /// </summary>
     public sealed class Unit
@@ -18,21 +19,43 @@ namespace FriendshipWarriors.Units
         /// <summary>Turns a knocked-out unit lasts before it is lost for good (FFT's count of 3; recalled).</summary>
         public const int DeathCounterStart = 3;
 
+        /// <summary>Morale and Resonance run 0–100, like FFT's Brave and Faith.</summary>
+        public const int MaxSpirit = 100;
+
+        /// <summary>Defaults for units made directly (tests, story units until set): the old Brave/Faith stand-in.</summary>
+        public const int DefaultMorale = 70, DefaultResonance = 70;
+
+        /// <summary>Morale below this means Panic (FFT: Brave below 10 means Chicken).</summary>
+        public const int PanicThreshold = 10;
+
+        /// <summary>Permanent Morale gained per Commendation. Placeholder amount: tune once Commendations have weight.</summary>
+        public const int CommendationMoraleBonus = 3;
+
+        /// <summary>Permanent Morale lost after a heavy defeat. Placeholder amount: tune with the campaign.</summary>
+        public const int DefeatMoralePenalty = 5;
+
+        private readonly StatusSet _statuses = new();
+        private int _moraleModifier;
+        private int _resonanceModifier;
+
         private readonly Dictionary<JobDefinition, int> _proficiency = new();
         private readonly Dictionary<JobDefinition, int> _spentProficiency = new();
         private readonly HashSet<AbilityDefinition> _learned = new();
         private readonly List<Commendation> _commendations = new();
 
-        public Unit(string name, Team team, JobDefinition job, RawStats raw)
+        public Unit(string name, Team team, JobDefinition job, RawStats raw, int morale = DefaultMorale, int resonance = DefaultResonance)
         {
             Name = name;
             Team = team;
             Job = job ?? throw new ArgumentNullException(nameof(job));
             Raw = raw;
+            BaseMorale = Math.Clamp(morale, 0, MaxSpirit);
+            BaseResonance = Math.Clamp(resonance, 0, MaxSpirit);
             Level = 1;
             var stats = Stats;
             CurrentHp = stats.MaxHp;
             CurrentMp = stats.MaxMp;
+            UpdatePanic(); // after HP is set, or the new unit would count as knocked out
         }
 
         public string Name { get; }
@@ -84,8 +107,91 @@ namespace FriendshipWarriors.Units
 
         public void AddPhysicalAttackBonus(int amount) => PhysicalAttackBonus += amount;
 
-        /// <summary>Drops everything that only lasts for one battle.</summary>
-        public void ClearBattleModifiers() => PhysicalAttackBonus = 0;
+        /// <summary>Speed added by in-battle effects (e.g. the Archer-style Speed Save). Cleared when a battle ends.</summary>
+        public int SpeedBonus { get; private set; }
+
+        public void AddSpeedBonus(int amount) => SpeedBonus += amount;
+
+        /// <summary>Drops everything that only lasts for one battle: boosts, Morale/Resonance swings and statuses.</summary>
+        public void ClearBattleModifiers()
+        {
+            PhysicalAttackBonus = 0;
+            SpeedBonus = 0;
+            _moraleModifier = 0;
+            _resonanceModifier = 0;
+            _statuses.Clear();
+            UpdatePanic();
+        }
+
+        // ------------------------------------------------------------------ Morale and Resonance
+
+        /// <summary>Permanent Morale (our Brave): grit and discipline. Changed by Commendations and defeats.</summary>
+        public int BaseMorale { get; private set; }
+
+        /// <summary>Permanent Resonance (our Faith): how well the unit harmonizes with aether.</summary>
+        public int BaseResonance { get; private set; }
+
+        /// <summary>Morale right now: the permanent value plus this battle's swings, 0–100.</summary>
+        public int Morale => Math.Clamp(BaseMorale + _moraleModifier, 0, MaxSpirit);
+
+        /// <summary>Resonance right now: the permanent value plus this battle's swings, 0–100.</summary>
+        public int Resonance => Math.Clamp(BaseResonance + _resonanceModifier, 0, MaxSpirit);
+
+        /// <summary>Changes Morale for this battle only; dropping below 10 causes Panic, rising to 10 ends it.</summary>
+        public void AdjustMorale(int amount)
+        {
+            _moraleModifier = Math.Clamp(BaseMorale + _moraleModifier + amount, 0, MaxSpirit) - BaseMorale;
+            UpdatePanic();
+        }
+
+        public void AdjustResonance(int amount) =>
+            _resonanceModifier = Math.Clamp(BaseResonance + _resonanceModifier + amount, 0, MaxSpirit) - BaseResonance;
+
+        /// <summary>Permanently changes Morale (Commendations raise it, heavy defeats lower it).</summary>
+        public void AdjustBaseMorale(int amount)
+        {
+            BaseMorale = Math.Clamp(BaseMorale + amount, 0, MaxSpirit);
+            UpdatePanic();
+        }
+
+        public void AdjustBaseResonance(int amount) => BaseResonance = Math.Clamp(BaseResonance + amount, 0, MaxSpirit);
+
+        /// <summary>Hook for a heavy battlefield defeat: permanent Morale loss.</summary>
+        public void SufferDefeat() => AdjustBaseMorale(-DefeatMoralePenalty);
+
+        private void UpdatePanic()
+        {
+            if (IsKnockedOut)
+                return;
+            if (Morale < PanicThreshold)
+                _statuses.Add(StatusEffect.Panic, StatusRules.UntilCured);
+            else
+                _statuses.Remove(StatusEffect.Panic);
+        }
+
+        // ------------------------------------------------------------------ Statuses
+
+        public StatusSet Statuses => _statuses;
+
+        public bool HasStatus(StatusEffect status) => _statuses.Has(status);
+
+        /// <summary>Adds a status (refreshing it if already present). Knocked-out units take no statuses.</summary>
+        public bool AddStatus(StatusEffect status, int? duration = null)
+        {
+            if (IsKnockedOut || status == StatusEffect.Panic)
+                return false; // Panic follows Morale; change Morale instead.
+            _statuses.Add(status, duration);
+            return true;
+        }
+
+        public bool RemoveStatus(StatusEffect status) => status != StatusEffect.Panic && _statuses.Remove(status);
+
+        public bool CanMove => !IsKnockedOut && !_statuses.Any(StatusRules.PreventsMove);
+        public bool CanAct => !IsKnockedOut && !_statuses.Any(StatusRules.PreventsAct);
+        public bool CanReact => !IsKnockedOut && !_statuses.Any(StatusRules.BlocksReactions);
+
+        /// <summary>False while asleep or stopped: every evasion is ignored.</summary>
+        public bool CanEvade => !_statuses.Any(StatusRules.RemovesEvasion);
 
         /// <summary>Whether the unit can throw items at range: an innate or equipped ability that throws items.</summary>
         public bool ThrowsItems
@@ -138,6 +244,7 @@ namespace FriendshipWarriors.Units
                 return false;
             CurrentHp = Math.Clamp(hp, 1, Stats.MaxHp);
             DeathCounter = 0;
+            UpdatePanic();
             return true;
         }
 
@@ -218,7 +325,10 @@ namespace FriendshipWarriors.Units
             int dealt = Math.Min(amount, CurrentHp);
             CurrentHp -= dealt;
             if (CurrentHp == 0)
+            {
                 DeathCounter = DeathCounterStart;
+                _statuses.Clear(); // FFT clears statuses on KO (our simplification: all of them).
+            }
             return dealt;
         }
 
@@ -240,7 +350,7 @@ namespace FriendshipWarriors.Units
                 return new UnitStats(
                     Math.Min(StatFormulas.MaxHpOrMp, StatFormulas.Shown(Raw.Hp, m.Hp, StatFormulas.MaxHpOrMp) + GearBonus(i => i.HpBonus)),
                     Math.Min(StatFormulas.MaxHpOrMp, StatFormulas.Shown(Raw.Mp, m.Mp, StatFormulas.MaxHpOrMp) + GearBonus(i => i.MpBonus)),
-                    StatFormulas.Shown(Raw.Speed, m.Speed, StatFormulas.MaxOtherStat),
+                    Math.Min(StatFormulas.MaxOtherStat, StatFormulas.Shown(Raw.Speed, m.Speed, StatFormulas.MaxOtherStat) + SpeedBonus),
                     Math.Min(StatFormulas.MaxOtherStat, StatFormulas.Shown(Raw.PhysicalAttack, m.PhysicalAttack, StatFormulas.MaxOtherStat) + PhysicalAttackBonus),
                     StatFormulas.Shown(Raw.MagicAttack, m.MagicAttack, StatFormulas.MaxOtherStat),
                     Job.Move + (Movement != null ? Movement.MoveBonus : 0),
@@ -357,12 +467,19 @@ namespace FriendshipWarriors.Units
             bool wasMastered = HasMastered(job);
             _proficiency[job] = Proficiency(job) + amount;
             if (!wasMastered && HasMastered(job))
-                _commendations.Add(new Commendation(CommendationSource.JobMastery, $"{job.DisplayName} Mastery", job));
+                Commend(new Commendation(CommendationSource.JobMastery, $"{job.DisplayName} Mastery", job));
         }
 
         /// <summary>Awards a Commendation for a field challenge.</summary>
         public void AwardCommendation(string title) =>
-            _commendations.Add(new Commendation(CommendationSource.FieldChallenge, title));
+            Commend(new Commendation(CommendationSource.FieldChallenge, title));
+
+        /// <summary>Every Commendation also raises Morale permanently (the user's Morale design).</summary>
+        private void Commend(Commendation commendation)
+        {
+            _commendations.Add(commendation);
+            AdjustBaseMorale(CommendationMoraleBonus);
+        }
 
         public bool MeetsRequirements(JobDefinition job)
         {

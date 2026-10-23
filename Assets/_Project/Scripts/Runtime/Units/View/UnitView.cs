@@ -16,6 +16,8 @@ namespace FriendshipWarriors.Units.View
 
         private SpriteRenderer _sprite;
         private SpriteRenderer _marker;
+        private TMPro.TextMeshPro _statusLabel;
+        private int _shownStatusVersion = -1;
         private GridView _gridView;
         private IsoCameraRig _cameraRig;
 
@@ -47,12 +49,32 @@ namespace FriendshipWarriors.Units.View
             _marker.sprite = PlaceholderSprites.GroundMarker();
             _marker.color = unit.Team == Team.Player ? PlayerColor : EnemyColor;
 
+            // Placeholder status indicator: short codes floating above the unit (PSN, HST...).
+            _statusLabel = new GameObject("Statuses").AddComponent<TMPro.TextMeshPro>();
+            _statusLabel.transform.SetParent(transform, false);
+            _statusLabel.transform.localPosition = new Vector3(0f, 1.45f, 0f);
+            _statusLabel.fontSize = 2.2f;
+            _statusLabel.alignment = TMPro.TextAlignmentOptions.Center;
+            _statusLabel.color = new Color(1f, 0.85f, 0.35f);
+            _statusLabel.outlineWidth = 0.25f;
+            _statusLabel.outlineColor = Color.black;
+            _statusLabel.rectTransform.sizeDelta = new Vector2(4f, 1f);
+
             SyncPosition();
             UpdateSprite();
         }
 
         /// <summary>Snaps to the unit's tile; call after the unit moves.</summary>
         public void SyncPosition() => transform.position = _gridView.SurfaceCenter(Unit.Coord);
+
+        /// <summary>A cheap fingerprint of the status set, so the label is only rebuilt when it changes.</summary>
+        private int StatusVersion()
+        {
+            int hash = 17;
+            foreach (var status in Unit.Statuses.Active)
+                hash = hash * 31 + (int)status + 1;
+            return hash;
+        }
 
         private void LateUpdate() => UpdateSprite();
 
@@ -69,6 +91,17 @@ namespace FriendshipWarriors.Units.View
             var art = pose.ShowsFront ? job.FrontSprite : job.BackSprite;
             _sprite.sprite = art != null ? art : PlaceholderSprites.Unit(job.PlaceholderColor, pose.ShowsFront);
             _sprite.flipX = pose.FlipX;
+
+            _statusLabel.transform.rotation = Quaternion.Euler(_cameraRig.transform.eulerAngles.x, yaw, 0f);
+            int version = StatusVersion();
+            if (version != _shownStatusVersion)
+            {
+                _shownStatusVersion = version;
+                var codes = new System.Text.StringBuilder();
+                foreach (var status in Unit.Statuses.Active)
+                    codes.Append(codes.Length > 0 ? " " : "").Append(Status.StatusRules.Abbreviation(status));
+                _statusLabel.text = codes.ToString();
+            }
         }
     }
 }

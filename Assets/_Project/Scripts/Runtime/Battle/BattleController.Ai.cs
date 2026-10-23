@@ -6,6 +6,7 @@ using FriendshipWarriors.Grid;
 using FriendshipWarriors.Grid.Pathfinding;
 using FriendshipWarriors.Grid.View;
 using FriendshipWarriors.Units;
+using FriendshipWarriors.Units.Status;
 using UnityEngine;
 
 namespace FriendshipWarriors.Battle
@@ -40,6 +41,9 @@ namespace FriendshipWarriors.Battle
         }
 
         private bool IsAiControlled(Unit unit) => unit != null && ControlOf(unit.Team) == TeamControl.AI;
+
+        /// <summary>Who drives this turn: the AI for AI teams, and for panicking units of any team (FFT Chicken).</summary>
+        private bool IsAiDriven(Unit unit) => IsAiControlled(unit) || (unit != null && unit.HasStatus(StatusEffect.Panic));
 
         /// <summary>Only human-controlled sides get timed presses: a strike for their attacks, a block against the AI's.</summary>
         private PressRole PressRoleFor(Unit attacker, Unit target) =>

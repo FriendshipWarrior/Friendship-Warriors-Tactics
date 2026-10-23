@@ -19,5 +19,8 @@ namespace FriendshipWarriors.Units.Abilities
 
         /// <summary>Brings a knocked-out unit back while its death counter is still running.</summary>
         Revive = 6,
+
+        /// <summary>Removes the statuses listed in the ability's cures (FFT Antidote, Eye Drop, Squire Heal…).</summary>
+        CureStatus = 7,
     }
 }

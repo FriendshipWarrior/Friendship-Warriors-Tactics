@@ -177,9 +177,18 @@ namespace FriendshipWarriors.Tests
         }
 
         [Test]
-        public void KnockbackChance_IsEvenWithTheBraveStandIn()
+        public void KnockbackChance_IsAttackerMoraleOverBothMorales()
         {
-            Assert.That(Knockback.Chance, Is.EqualTo(0.5));
+            var job = ScriptableObject.CreateInstance<JobDefinition>();
+            var raw = new RawStats(491520, 229376, 98304, 81920, 65536);
+            var even = new Unit("A", Team.Player, job, raw);
+            var bold = new Unit("B", Team.Player, job, raw, morale: 90);
+            var timid = new Unit("C", Team.Enemy, job, raw, morale: 30);
+
+            Assert.That(Knockback.Chance(even, even), Is.EqualTo(0.5));
+            Assert.That(Knockback.Chance(bold, timid), Is.EqualTo(0.75));
+            Assert.That(Knockback.Chance(timid, bold), Is.EqualTo(0.25));
+            Object.DestroyImmediate(job);
         }
 
         // ------------------------------------------------------------------ Items

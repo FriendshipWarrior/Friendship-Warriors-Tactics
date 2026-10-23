@@ -10,6 +10,9 @@ namespace FriendshipWarriors.Battle.Abilities
 
         public int Count(AbilityDefinition item) => item != null && _counts.TryGetValue(item, out int n) ? n : 0;
 
+        /// <summary>Every item the team has ever held, including ones now at zero.</summary>
+        public IEnumerable<AbilityDefinition> Items => _counts.Keys;
+
         public void Add(AbilityDefinition item, int amount)
         {
             if (item == null || amount <= 0)

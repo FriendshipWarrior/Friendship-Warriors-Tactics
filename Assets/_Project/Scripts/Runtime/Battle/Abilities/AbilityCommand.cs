@@ -84,7 +84,7 @@ namespace FriendshipWarriors.Battle.Abilities
             var outcome = AbilityResolver.Apply(AbilityResolver.Resolve(ability, user, target, rng), target);
 
             GridCoord? knockedTo = null;
-            if (outcome.Hit && ability.Knockback && !target.IsKnockedOut && Knockback.Roll(rng))
+            if (outcome.Hit && ability.Knockback && !target.IsKnockedOut && Knockback.Roll(rng, user, target))
             {
                 knockedTo = Knockback.Destination(grid, user.Coord, target.Coord, c => unitList.Any(u => u != target && u.Coord == c));
                 if (knockedTo is { } landing)
