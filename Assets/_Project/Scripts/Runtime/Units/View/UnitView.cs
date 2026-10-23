@@ -34,6 +34,8 @@ namespace FriendshipWarriors.Units.View
 
         private SpriteRenderer _sprite;
         private SpriteRenderer _marker;
+        private SpriteRenderer _shadow;
+        private Color _shadowColor = Color.white;
         private TMPro.TextMeshPro _statusLabel;
         private TMPro.TextMeshPro _roleLabel;
         private int _shownStatusVersion = -1;
@@ -82,6 +84,14 @@ namespace FriendshipWarriors.Units.View
             _marker.transform.localScale = new Vector3(0.8f, 0.8f, 1f);
             _marker.sprite = PlaceholderSprites.GroundMarker();
             _marker.color = unit.Team == Team.Player ? PlayerColor : EnemyColor;
+            _marker.sortingOrder = 1;
+
+            // A soft blob on the ground. It and the team marker stay on the surface below the unit while it hops or
+            // leaps (see LateUpdate), so the arc reads against the ground, as in FFT.
+            _shadow = new GameObject("Shadow").AddComponent<SpriteRenderer>();
+            _shadow.transform.SetParent(transform, false);
+            _shadow.transform.localRotation = Quaternion.Euler(90f, 0f, 0f);
+            _shadow.sprite = PlaceholderSprites.Shadow();
 
             // Placeholder status indicator: short codes floating above the unit (PSN, HST...).
             _statusLabel = new GameObject("Statuses").AddComponent<TMPro.TextMeshPro>();
@@ -108,6 +118,7 @@ namespace FriendshipWarriors.Units.View
 
             SyncPosition();
             UpdateSprite();
+            UpdateGroundMarks();
         }
 
         /// <summary>Shows a role tag over the unit (e.g. TARGET, PROTECT); null or empty hides it.</summary>
@@ -185,7 +196,44 @@ namespace FriendshipWarriors.Units.View
             return hash;
         }
 
-        private void LateUpdate() => UpdateSprite();
+        private void LateUpdate()
+        {
+            UpdateSprite();
+            UpdateGroundMarks();
+        }
+
+        /// <summary>
+        /// Puts the shadow and team marker on the surface straight below the unit, shrinking and fading the shadow with
+        /// height. Over a void chasm both hide until the unit is over ground again.
+        /// </summary>
+        private void UpdateGroundMarks()
+        {
+            if (Unit == null || _gridView == null || _gridView.Grid == null)
+                return;
+            var feet = transform.position;
+            float ground = feet.y;
+            bool visible = true;
+            if (_walk != null)
+            {
+                var local = _gridView.transform.InverseTransformPoint(feet);
+                visible = GroundShadow.TrySurfaceHeight(_gridView.Grid, local, out float surface);
+                if (visible)
+                    ground = _gridView.transform.TransformPoint(new Vector3(local.x, surface, local.z)).y;
+            }
+            // Standing still, the unit's own height is the ground (an odd slope's standing height is rounded down).
+            float above = Mathf.Max(0f, feet.y - ground);
+
+            _shadow.enabled = visible;
+            _marker.enabled = visible;
+            if (!visible)
+                return;
+            _shadow.transform.position = new Vector3(feet.x, ground + 0.012f, feet.z);
+            _marker.transform.position = new Vector3(feet.x, ground + 0.02f, feet.z);
+            float size = 0.8f * GroundShadow.Scale(above);
+            _shadow.transform.localScale = new Vector3(size, size, 1f);
+            _shadowColor.a = GroundShadow.Opacity(above);
+            _shadow.color = _shadowColor;
+        }
 
         private void UpdateSprite()
         {

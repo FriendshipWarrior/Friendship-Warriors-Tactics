@@ -35,7 +35,7 @@ FFT is the reference for mechanics and presentation. Characters, story and job n
 **Battlefield**
 - FFT-style tiles: heights in half steps (1h, 1.5h, …), slopes, water depth, terrain types, deployment zones for each side, and props like trees and rocks.
 - FFT movement: Move and Jump, leaping gaps of Jump ÷ 2 tiles, and leaping over enemies standing at least 2h lower. Enemies block, allies can be passed.
-- Units walk their route tile by tile, as in FFT: they follow slopes, hop up and down ledges, arc over gaps, and turn with each step. Knockback pushes them. Hold A / Enter to hurry a walk.
+- Units walk their route tile by tile, as in FFT: they follow slopes, hop up and down ledges, arc over gaps, and turn with each step. A ground shadow stays on the surface below them as they arc. Knockback pushes them. Hold A / Enter to hurry a walk.
 - The whole map is drawn as one mesh with real slopes, which keeps it cheap enough for the Steam Deck.
 - An isometric camera that rotates in 90° steps, switches between FFT's low and high tilt, zooms and pans.
 
