@@ -22,5 +22,8 @@ namespace FriendshipWarriors.Units.Abilities
 
         /// <summary>Removes the statuses listed in the ability's cures (FFT Antidote, Eye Drop, Squire Heal…).</summary>
         CureStatus = 7,
+
+        /// <summary>Adds the ability's statuses (spells: FFT Poison, Protect, Shell, Regen), at a hit rate for spells.</summary>
+        AddStatus = 8,
     }
 }

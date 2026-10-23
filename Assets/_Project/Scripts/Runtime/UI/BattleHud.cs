@@ -128,6 +128,29 @@ namespace FriendshipWarriors.UI
             }
         }
 
+        /// <summary>The turn list with charged spells resolving in their place (FFT shows them in the AT list too).</summary>
+        public void SetTurnOrder(IReadOnlyList<Battle.TurnOrderEntry> upcoming, Unit active)
+        {
+            for (int i = 0; i < _turnRows.Count; i++)
+            {
+                var (team, label) = _turnRows[i];
+                bool visible = i < upcoming.Count;
+                team.transform.parent.gameObject.SetActive(visible);
+                if (!visible)
+                    continue;
+                var entry = upcoming[i];
+                var unit = entry.Unit;
+                team.color = unit.Team == Team.Player ? PlayerColor : EnemyColor;
+                if (entry.Spell != null)
+                {
+                    label.text = $"   <color=#C9A7FF>* {entry.Spell.DisplayName}</color>  <color=#9A9AA0>({unit.Name})</color>";
+                    continue;
+                }
+                string marker = i == 0 && unit == active ? "> " : "   ";
+                label.text = $"{marker}{unit.Name}  <color=#9A9AA0>{unit.Job.DisplayName}</color>";
+            }
+        }
+
         public void SetUnitInfo(Unit unit)
         {
             _unitPanel.gameObject.SetActive(unit != null);

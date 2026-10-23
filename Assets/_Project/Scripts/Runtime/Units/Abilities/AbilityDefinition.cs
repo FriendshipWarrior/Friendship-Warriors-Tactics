@@ -40,6 +40,23 @@ namespace FriendshipWarriors.Units.Abilities
         [Tooltip("Cure Status only: the statuses removed.")]
         [SerializeField] private StatusEffect[] _cures = Array.Empty<StatusEffect>();
 
+        [Header("Spell")]
+        [Tooltip("A spell (FFT magick): uses M.Atk and Resonance, needs a voice (Silence blocks it), lands on a tile.")]
+        [SerializeField] private bool _isSpell;
+        [Tooltip("Damage/heal: M.Atk × this (FFT's Q). Status, revive and cure spells: hit rate is M.Atk + this, in percent.")]
+        [SerializeField, Min(0)] private int _power;
+        [Tooltip("Charge speed: the spell's CT rises by this each clock tick and it resolves at 100. 0 = instant.")]
+        [SerializeField, Min(0)] private int _chargeSpeed;
+        [Tooltip("Area around the targeted tile, as a Manhattan radius: 0 = one tile, 1 = a cross of five (FFT effect 2).")]
+        [SerializeField, Min(0)] private int _areaRadius;
+        [Tooltip("Largest height difference, in h, from the targeted tile that the area still reaches.")]
+        [SerializeField, Min(0)] private int _areaVertical = 1;
+        [SerializeField] private SpellElement _element;
+        [Tooltip("Add Status only: the statuses applied.")]
+        [SerializeField] private StatusEffect[] _inflicts = Array.Empty<StatusEffect>();
+        [Tooltip("Revive spells: share of max HP restored, in percent.")]
+        [SerializeField, Range(0, 100)] private int _revivePercent;
+
         [Header("Reaction")]
         [SerializeField] private ReactionEffect _reaction;
 
@@ -69,14 +86,27 @@ namespace FriendshipWarriors.Units.Abilities
         public IReadOnlyList<StatusEffect> Cures => _cures;
         public ReactionEffect Reaction => _reaction;
 
+        public bool IsSpell => _isSpell;
+        public int Power => _power;
+        public int ChargeSpeed => _chargeSpeed;
+        public int AreaRadius => _areaRadius;
+        public int AreaVertical => _areaVertical;
+        public SpellElement Element => _element;
+        public IReadOnlyList<StatusEffect> Inflicts => _inflicts;
+        public int RevivePercent => _revivePercent;
+
+        /// <summary>Spells that harm their targets: damage, or harmful statuses.</summary>
+        public bool IsOffensive => _effect == AbilityEffect.Damage ||
+                                   (_effect == AbilityEffect.AddStatus && Array.Exists(_inflicts, StatusRules.IsHarmful));
+
         /// <summary>Damage abilities that only reach adjacent tiles count as melee (for Morale's melee bonus).</summary>
         public bool IsMelee => _effect == AbilityEffect.Damage && _maxRange <= 1;
         public int MoveBonus => _moveBonus;
         public int ProficiencyBonusPercent => _proficiencyBonusPercent;
         public bool ThrowsItems => _throwsItems;
 
-        /// <summary>Heals, buffs, items and revives (anything that isn't damage) earn support EXP.</summary>
-        public bool IsSupportAction => _effect != AbilityEffect.Damage;
+        /// <summary>Heals, buffs, items, revives and cures earn support EXP; damage and harmful statuses don't.</summary>
+        public bool IsSupportAction => !IsOffensive;
 
         public void Define(string displayName, string description, AbilityKind kind, int learnCost, TurnTrade turnTrade = TurnTrade.None)
         {
@@ -104,6 +134,23 @@ namespace FriendshipWarriors.Units.Abilities
         }
 
         public void SetCures(params StatusEffect[] cures) => _cures = cures;
+
+        /// <summary>
+        /// Makes an action a spell (call <see cref="SetAction"/> first for effect, targeting, range and MP). Used by
+        /// tooling and tests.
+        /// </summary>
+        public void SetSpell(int power, int chargeSpeed, int areaRadius, int areaVertical, SpellElement element = SpellElement.None,
+            StatusEffect[] inflicts = null, int revivePercent = 0)
+        {
+            _isSpell = true;
+            _power = power;
+            _chargeSpeed = chargeSpeed;
+            _areaRadius = areaRadius;
+            _areaVertical = areaVertical;
+            _element = element;
+            _inflicts = inflicts ?? Array.Empty<StatusEffect>();
+            _revivePercent = revivePercent;
+        }
 
         /// <summary>
         /// Makes this a reaction ability. Counter strikes use the action fields for their damage (random multiplier and

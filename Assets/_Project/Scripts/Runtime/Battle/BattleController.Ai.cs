@@ -76,7 +76,13 @@ namespace FriendshipWarriors.Battle
                 _aiSteps.Enqueue(() => AiShowMove(before));
                 _aiSteps.Enqueue(() => AiMove(before));
             }
-            if (_aiPlan.Target != null)
+            if (_aiPlan.Spell != null)
+            {
+                var spell = _aiPlan.Spell;
+                var tile = _aiPlan.SpellTile;
+                _aiSteps.Enqueue(() => AiCast(spell, tile));
+            }
+            else if (_aiPlan.Target != null)
             {
                 var target = _aiPlan.Target;
                 _aiSteps.Enqueue(() => AiAttack(target));
@@ -149,6 +155,17 @@ namespace FriendshipWarriors.Battle
             _cursor.SetCoord(target.Coord, followCamera: true);
             // Hands over to the shared attack flow; it calls AfterAction → ResumeAiTurn when done.
             TryTarget(target.Coord);
+        }
+
+        private void AiCast(FriendshipWarriors.Units.Abilities.AbilityDefinition spell, GridCoord tile)
+        {
+            var unit = _active.Unit;
+            if (!_turn.CanAct || unit.CurrentMp < spell.MpCost || unit.HasStatus(StatusEffect.Silence))
+                return;
+            _ability = spell;
+            _cursor.SetCoord(tile, followCamera: true);
+            // Hands over to the shared casting path; it calls AfterAction → ResumeAiTurn when done.
+            CastSpell(spell, tile);
         }
 
         private void AiFace()

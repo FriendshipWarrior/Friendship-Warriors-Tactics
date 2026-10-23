@@ -4,7 +4,7 @@ An isometric, turn-based tactics RPG in the spirit of **Final Fantasy Tactics**,
 
 FFT is the reference for mechanics and presentation. Characters, story and job names are original, and every intended departure from FFT is recorded in [`CLAUDE.md`](CLAUDE.md).
 
-> **Status:** early development. The battlefield, units, turn order, combat, the first job abilities and enemy AI are playable in a test scene with placeholder art. No story or campaign yet.
+> **Status:** early development. The battlefield, units, turn order, combat, the first job abilities, magic and enemy AI are playable in a test scene with placeholder art. No story or campaign yet.
 
 ![Battle with the command menu, turn order and unit details](docs/images/battle-hud.png)
 
@@ -47,8 +47,9 @@ FFT is the reference for mechanics and presentation. Characters, story and job n
 - **Timed press** (our addition): press as a marker crosses the bar for a chance at a critical hit when attacking, or a block when defending. The closer to perfect, the better the chance, but it never reaches 100%.
 - Knock-outs with FFT's 3-turn countdown, victory and defeat.
 - **Status effects** on FFT's battle clock: Poison, Regen, Protect, Shell, Haste, Slow, Stop, Sleep, Blind, Silence, Disable, Immobilize and Panic.
-- **Reactions** that trigger at Morale %: Counter Charge, Self-Dose, Guard Stance, Adrenaline and Mending Ward. Plus cures: First Aid and the Corpsman's Antitoxin, Eyewash, Throat Lozenge and Field Remedy.
-- Enemy AI that weighs damage, knock-outs and attack angle, retreats after attacking, and faces your nearest unit.
+- **Magic** on FFT's charge-time clock: the Evoker's *Evocation* (fire, ice and lightning in three tiers, Toxin Cloud) and the Warder's *Warding* (three tiers of Mend, Vital Ward, Plate Ward, Aether Ward and Purge). Spells target a tile, hit everyone in their area, cost MP, and resolve on the turn order after a charge, during which the caster can't dodge. Knock-outs, Stop, Sleep and Silence cut a spell off. Damage and hit rates scale with caster and target Resonance.
+- **Reactions** that trigger at Morale %: Counter Charge, Self-Dose, Guard Stance, Adrenaline and Mending Ward, and the Evoker's Feedback Loop (Counter Magic). Plus cures: First Aid and the Corpsman's Antitoxin, Eyewash, Throat Lozenge and Field Remedy.
+- Enemy AI that weighs damage, knock-outs and attack angle, retreats after attacking, faces your nearest unit, and casts spells: area damage away from its own side, heals for hurt allies.
 
 **Tools**
 - An in-Unity map editor with a live 3D preview and map checks.
@@ -131,6 +132,7 @@ Every clock tick, each unit's CT (charge time) rises by its Speed. At 100 the un
 - **Hit chance:** class evasion only works from the front, shield evasion from the front or side, and accessory evasion from any direction.
 - **Criticals:** a 5% base chance, raised by a well-timed press.
 - **Blocks:** only from a timed press while defending.
+- **Magic:** M.Atk × spell power × caster Resonance/100 × target Resonance/100 (Shell cuts damage to ⅔). Status spells hit (M.Atk + spell power) × the same Resonances %. A spell's CT rises by its speed each tick and it resolves at 100, before units' turns.
 - **Knock-outs:** at 0 HP a unit has 3 turns to be revived before it is lost.
 </details>
 
@@ -182,7 +184,7 @@ CLAUDE.md              Design decisions, conventions and project notes
 - [x] First job abilities: Cadet *Drill* and Corpsman *Field Kit* items
 - [x] Status effects, reactions, cures
 - [x] Morale and Resonance (our Brave and Faith)
-- [ ] Magic (Evoker and Warder spells, charge times)
+- [x] Magic (Evoker and Warder spells, charge times)
 - [ ] Character sprites and terrain art
 - [ ] Battle prep, party management, campaign and story
 - [ ] Save system

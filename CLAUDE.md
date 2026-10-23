@@ -78,6 +78,7 @@ Assets/
           AI/             # AiPlanner, AiPlan (pure, deterministic per seed)
           Abilities/      # AbilityCommand (job command menus + execution), AbilityRules, AbilityResolver, Knockback, Inventory
           Combat/         # CombatFormulas, AttackResolver, AttackRange, TimedPressRules, BattleRewards
+          Magic/          # MagicFormulas, SpellArea, ChargingAction, SpellResolver (spells, Counter Magic)
           Reactions/      # ReactionResolver (Morale-chance reactions after damage)
         UI/               # BattleHud (uGUI + TextMeshPro, built in code), MenuModel
         Controls/         # BattleInput, TileCursor, CursorMath (gamepad + mouse/keyboard)
@@ -189,6 +190,23 @@ Record decisions here as they are made (date — decision — rationale).
   Rules: items come from a per-team shared stock and always land; damage abilities are physical (evaded exactly like Attack); knockback pushes one tile straight away with FFT's chance attacker Brave / (attacker + target Brave), using Morale (50% when equal), blocked by higher ground, gaps, blocked or occupied tiles and the map edge, and may drop to lower ground (no fall damage: none found in FFT). Offensive abilities give level-based EXP, everything else support EXP; Prof as for Attack, with Diligence's bonus. **The timed press stays Attack-only** (FFT abilities have no equivalent; revisit if wanted). Unusable entries are greyed out with the reason (none left, not enough MP, no target).
   Unverified: Dash ×1–4 and Throw Stone ×1–2 multipliers (sources disagree; one gives Throw Stone ×1–4), Phoenix Down's 1–20 HP, Hi-Ether/Elixir JP costs, Dash's 3h vertical reach.
   Deferred: Maiden's Kiss, Soft, Holy Water (need Frog, Stone, Undead). Knockback fall damage isn't in FFT as far as we can find; left out unless the user wants it. (Heal, the other cures and Counter Tackle arrived with statuses and reactions, below.)
+- 2026-10-23 — **Magic (FFT):** the Evoker's *Evocation* (Black Magic) and the Warder's *Warding* (White Magic). Spell list set by the user; names are proposals (the user's fallback is FFT-style numbering, Fire 1/2/3):
+
+  | Ours | FFT original | MP | Range | Area (radius / vertical) | Speed | Power | Prof (FFT JP) |
+  |---|---|---|---|---|---|---|---|
+  | Incendiary Charge / Blast / Barrage | Fire / Fira / Firaga | 6 / 12 / 24 | 4 | 1 / 1, 2, 3 | 25 / 20 / 15 | Q 14 / 18 / 24 | 50 / 200 / 500 |
+  | Cryo Charge / Blast / Barrage | Blizzard / Blizzara / Blizzaga | as Fire | | | | | |
+  | Voltaic Charge / Blast / Barrage | Thunder / Thundara / Thundaga | as Fire | | | | | |
+  | Toxin Cloud | Poison | 6 | 4 | 1 / 1 | 33 | hit +160, Poison | 150 |
+  | Mend / Greater Mend / Grand Mend | Cure / Cura / Curaga | 6 / 10 / 16 | 4 | 1 / 1, 2, 3 | 25 / 20 / 15 | Q 14 / 20 / 30 | 50 / 180 / 450 |
+  | Vital Ward | Regen ("Regain" — read as Regen, to confirm) | 8 | 3 | single | 34 | hit +170, Regen | 350 |
+  | Plate Ward / Aether Ward | Protect / Shell | 6 | 3 | single | 34 | hit +200 | 70 / 70 |
+  | Purge | Esuna | 18 | 3 | 1 / 2 | 34 | hit +190 | 300 |
+  | Feedback Loop (reaction) | Counter Magic | | | | | | 800 |
+
+  Rules: spells target a tile (empty ground is fine; height doesn't block aiming) and hit everyone in the area, friend and foe. Area = tiles within the radius (FFT effect 2 = radius 1, a cross of five), within vertical × 2 half-steps of the centre tile. Charged spells go on the CT clock: each tick the spell's CT rises by its speed and at 100 it resolves, before unit turns in the same tick (`TurnOrder.NextEvent`); the turn-order panel lists pending spells. The caster gets **Charging** (can't move, act or evade) until then. **MP is paid when casting starts** and casting ends the turn's options (Wait/facing, 80 CT). Knock-out, Stop, Sleep or Silence on the caster cancels the spell (MP lost). Damage/heal = M.Atk × Q × caster Resonance/100 × target Resonance/100 (Shell ×⅔ on damage, not heals); always lands. Status/cure/revive hit % = (M.Atk + power) × the two Resonances, capped at 100. Silence blocks spells (menu greys them out "silenced"; AI won't cast). **Purge cures every harmful status we have** (Poison, Blind, Silence, Sleep, Slow, Stop, Disable, Immobilize and Panic — FFT Esuna's list is shorter; user decision) and never buffs; Panic follows Morale, so Purge lifts it by raising Morale to 10. Elements (Fire/Ice/Lightning) are tagged only; no weaknesses yet. Feedback Loop: when an enemy's offensive spell hits the reactor, at Morale % it casts the same spell back at the caster's tile instantly, paying its MP, no rewards, no chains. Rewards per spell: offensive → level EXP vs the first enemy hit, support → support EXP; Prof as for actions. **The timed press stays Attack-only** (no press for spells). AI (`AiPlanner.SpellScore`): expected damage/heal/status value over everyone in the area, friendly fire ×1.5, charged spells discounted (harm ×0.8, help ×0.9), heals only count for allies missing 25%+, minus MP × 0.1; must beat the best attack; deterministic. A Raise-style revive (`AbilityEffect.Revive`, KnockedOut targeting, within the death counter) is implemented and tested but not taught until the user confirms.
+  Verified (Final Fantasy Wiki, Game8): Fire tiers' MP, range, effect, speed, Q and JP; the damage and status formulas; White Magic JP (Cure 50, Cura 180, Curaga 450, Regen 350, Protect 70, Shell 70, Esuna 300); Counter Magic 800 JP. Recalled/unverified: Poison's speed and hit bonus, the buff and Esuna speeds (34) and hit bonuses, Cura/Curaga speeds and Q, Blizzard/Thunder mirroring Fire exactly, which statuses interrupt charging, MP paid at cast start, Counter Magic paying MP.
+  Deferred: tier-4 spells, Flare, Death, Holy, Frog/Toad (and Maiden's Kiss), Raise in the list, Reraise, Protectja/Shellja, elemental weaknesses, Magic Attack/Defense Up, Short Charge, AI use of items and job skills.
 - 2026-10-22 — **Battle UI:** uGUI + TextMeshPro, built in code by `BattleHud` on a Screen Space Overlay canvas scaled from 1920x1080 (readable on Steam Deck's 1280x800). Menus are driven by `MenuModel` and the battle's own input (D-pad/stick/keys, A/B); the mouse can hover and click. Placeholder styling.
 - 2026-10-22 — **Unit visuals:** a placeholder object with a camera-facing sprite (rotates on the vertical axis only). Two drawn poses per job (front ¾ and back ¾, facing screen-right) mirrored to cover all four views. Set `FrontSprite`/`BackSprite` on a job to replace the generated placeholder.
 - 2026-10-23 — **Morale and Resonance (the user's replacements for Brave and Faith), 0–100**, each a permanent base plus in-battle swings that reset after battle. Generic units roll both in 45–74. Defaults (tunable constants):
@@ -207,7 +225,7 @@ Record decisions here as they are made (date — decision — rationale).
   | Adrenaline | Speed Save | Marksman | when hurt, Speed +1 for the battle | 800 |
   | Mending Ward | Regenerator | Warder | when hurt, gain Regen | 400 |
 
-  Evoker's Counter Magic waits for magic. Starter weapon W-Ev (recalled FFT values): saber 5, knife 5, rifle 0, rod 20, staff 15.
+  Evoker's Counter Magic (Feedback Loop) arrived with magic, below. Starter weapon W-Ev (recalled FFT values): saber 5, knife 5, rifle 0, rod 20, staff 15.
 - 2026-10-23 — **Cures (FFT):** First Aid (Squire *Heal*, 150, cures Blind and Silence on self or adjacent), Antitoxin (*Antidote*, 70, Poison), Eyewash (*Eye Drops*, 80, Blind), Throat Lozenge (*Echo Herbs*, 120, Silence), Field Remedy (*Remedy*, 700, Poison/Blind/Silence/Sleep — cut down to the statuses we have). Remedy's JP cost is recalled.
 - 2026-10-23 — **Enemy AI and statuses:** immobilized units don't move, disabled units approach without attacking, panicking units flee to the reachable tile farthest from the enemy, and attacks into a likely counter-strike are scored down by their expected counter damage.
 - Open questions: save system scope; AI difficulty levels; whether to add FFT's multi-layer tiles (bridges, walking under things).

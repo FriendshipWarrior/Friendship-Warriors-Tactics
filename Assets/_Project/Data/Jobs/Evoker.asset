@@ -30,7 +30,18 @@ MonoBehaviour:
   _jump: 3
   _classEvasion: 5
   _commandName: Evocation
-  _abilities: []
+  _abilities:
+  - {fileID: 11400000, guid: 107461a7e00094771a764755d67aa7c9, type: 2}
+  - {fileID: 11400000, guid: 7c14ec2da6e024a1da2badc896033103, type: 2}
+  - {fileID: 11400000, guid: cfe85fa81956e4a5487b5e1512a08775, type: 2}
+  - {fileID: 11400000, guid: 3950a090e9ce7411bb7ceecfe5e7bf38, type: 2}
+  - {fileID: 11400000, guid: 9b41692adac994c6199cd8f3b86fe192, type: 2}
+  - {fileID: 11400000, guid: e7ca0a8690b144ccbb725b63f0099a00, type: 2}
+  - {fileID: 11400000, guid: 0a2932027e3c24bef9fe4d6bf66ae4a6, type: 2}
+  - {fileID: 11400000, guid: a190a08ba99234045a1aff26d6208874, type: 2}
+  - {fileID: 11400000, guid: ee719e5448a5b4aab99edf28cc5819ed, type: 2}
+  - {fileID: 11400000, guid: c1390f79a6a294c83a12e53b53b4a607, type: 2}
+  - {fileID: 11400000, guid: 23500f92c423f4aa7b27d17cde40f083, type: 2}
   _innateAbilities: []
   _weaponTypes: 04000000i
   _canUseShields: 0
