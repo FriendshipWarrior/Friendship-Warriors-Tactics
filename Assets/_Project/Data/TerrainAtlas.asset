@@ -1,0 +1,49 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 38b0ef3662a3b476881653a48411815a, type: 3}
+  m_Name: TerrainAtlas
+  m_EditorClassIdentifier: FriendshipWarriors.Runtime::FriendshipWarriors.Grid.View.TerrainAtlas
+  _texture: {fileID: 2800000, guid: d15ffe686236440debc21713aad0c4cc, type: 3}
+  _cellPixels: 32
+  _gutter: 2
+  _columns: 8
+  _tiles:
+  - _terrain: 0
+    _tops: 00000000010000000200000003000000i
+    _mirrorTops: 1
+    _sides: 0700000008000000i
+    _lip: 9
+    _lipPixels: 10
+  - _terrain: 1
+    _tops: 0400000005000000i
+    _mirrorTops: 1
+    _sides: 0700000008000000i
+    _lip: 10
+    _lipPixels: 10
+  - _terrain: 2
+    _tops: 0b0000000c0000000d000000i
+    _mirrorTops: 1
+    _sides: 0e0000000f000000i
+    _lip: -1
+    _lipPixels: 0
+  - _terrain: 3
+    _tops: 100000001100000012000000i
+    _mirrorTops: 1
+    _sides: 0700000008000000i
+    _lip: -1
+    _lipPixels: 0
+  - _terrain: 4
+    _tops: 06000000i
+    _mirrorTops: 1
+    _sides: 0700000008000000i
+    _lip: -1
+    _lipPixels: 0

@@ -38,3 +38,4 @@ MonoBehaviour:
     _sideColor: {r: 0.27058825, g: 0.36862746, b: 0.69411767, a: 1}
     _topTexture: {fileID: 0}
     _sideTexture: {fileID: 0}
+  _atlas: {fileID: 11400000, guid: 124713b4e2cdc47238b219e1623d55c4, type: 2}
