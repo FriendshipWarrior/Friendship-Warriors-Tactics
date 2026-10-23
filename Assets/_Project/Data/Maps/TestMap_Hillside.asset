@@ -42,12 +42,24 @@ MonoBehaviour:
   - {x: 11, y: 11}
   _props:
   - _coord: {x: 0, y: 11}
-    _prop: {fileID: 11400000, guid: 78be583f6964042878835e233b80ccf7, type: 2}
+    _prop: {fileID: 11400000, guid: 137c309e1ce144636bdda97542e65321, type: 2}
   - _coord: {x: 5, y: 1}
-    _prop: {fileID: 11400000, guid: 78be583f6964042878835e233b80ccf7, type: 2}
+    _prop: {fileID: 11400000, guid: 137c309e1ce144636bdda97542e65321, type: 2}
   - _coord: {x: 10, y: 1}
-    _prop: {fileID: 11400000, guid: 78be583f6964042878835e233b80ccf7, type: 2}
+    _prop: {fileID: 11400000, guid: 137c309e1ce144636bdda97542e65321, type: 2}
   - _coord: {x: 7, y: 10}
-    _prop: {fileID: 11400000, guid: 1898d440d552440f69d6220129a3f632, type: 2}
+    _prop: {fileID: 11400000, guid: 768f003591c8a41bdaf159d7f8f65d2d, type: 2}
   - _coord: {x: 11, y: 4}
-    _prop: {fileID: 11400000, guid: 1898d440d552440f69d6220129a3f632, type: 2}
+    _prop: {fileID: 11400000, guid: 768f003591c8a41bdaf159d7f8f65d2d, type: 2}
+  - _coord: {x: 3, y: 11}
+    _prop: {fileID: 11400000, guid: dbaebbc5d88ce49d69d0d9c8a79a0a42, type: 2}
+  - _coord: {x: 5, y: 9}
+    _prop: {fileID: 11400000, guid: 765360be081a740709003f2df95d765a, type: 2}
+  - _coord: {x: 11, y: 6}
+    _prop: {fileID: 11400000, guid: dbaebbc5d88ce49d69d0d9c8a79a0a42, type: 2}
+  - _coord: {x: 1, y: 5}
+    _prop: {fileID: 11400000, guid: dbaebbc5d88ce49d69d0d9c8a79a0a42, type: 2}
+  - _coord: {x: 9, y: 2}
+    _prop: {fileID: 11400000, guid: 765360be081a740709003f2df95d765a, type: 2}
+  - _coord: {x: 4, y: 0}
+    _prop: {fileID: 11400000, guid: dbaebbc5d88ce49d69d0d9c8a79a0a42, type: 2}

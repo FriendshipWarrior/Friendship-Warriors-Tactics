@@ -4,8 +4,8 @@ using UnityEngine;
 namespace FriendshipWarriors.Grid.View
 {
     /// <summary>
-    /// How each terrain type looks. Placeholder colors today; drop textures in later and they take over without
-    /// code changes. Textures repeat once per tile on tops and once per world unit on sides.
+    /// How each terrain type looks. Terrain types the <see cref="Atlas"/> covers use its pixel-art tiles; the rest use
+    /// a colour, optionally with a texture that repeats once per tile on tops and once per world unit on sides.
     /// </summary>
     [CreateAssetMenu(menuName = "Friendship Warriors/Terrain Palette", fileName = "TerrainPalette")]
     public sealed class TerrainPalette : ScriptableObject
@@ -35,6 +35,11 @@ namespace FriendshipWarriors.Grid.View
 
         [SerializeField] private Look[] _looks = Array.Empty<Look>();
 
+        [Tooltip("Pixel-art tiles; covered terrain types use them instead of their colour. Leave empty for flat colours.")]
+        [SerializeField] private TerrainAtlas _atlas;
+
+        public TerrainAtlas Atlas => _atlas;
+
         public Look Get(TerrainType terrain)
         {
             foreach (var look in _looks)
@@ -46,5 +51,7 @@ namespace FriendshipWarriors.Grid.View
         }
 
         public void SetLooks(Look[] looks) => _looks = looks;
+
+        public void SetAtlas(TerrainAtlas atlas) => _atlas = atlas;
     }
 }
