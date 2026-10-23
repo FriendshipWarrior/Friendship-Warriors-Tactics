@@ -24,9 +24,9 @@ namespace FriendshipWarriors.Battle
     /// unit). Knocked-out units count down 3 turns before they are lost. Every team is player-controlled until enemy
     /// AI exists, but only the Player team gets timed presses.
     /// </summary>
-    public sealed class BattleController : MonoBehaviour
+    public sealed partial class BattleController : MonoBehaviour
     {
-        private enum Phase { Idle, Command, ActMenu, ChooseDestination, ChooseTarget, TimedPress, ChooseFacing, BattleOver }
+        private enum Phase { Idle, Command, ActMenu, ChooseDestination, ChooseTarget, TimedPress, ChooseFacing, BattleOver, AiTurn }
         private enum PressRole { None, Offense, Defense }
 
         private const string MoveId = "move", ActId = "act", WaitId = "wait", AttackId = "attack";
@@ -105,6 +105,7 @@ namespace FriendshipWarriors.Battle
             _rng = new System.Random(seed);
             Debug.Log($"[Battle] Seed {seed}.", this);
             _hud.HideTimingPrompt();
+            ResetAiTurn();
             StartNextTurn();
         }
 
@@ -121,6 +122,9 @@ namespace FriendshipWarriors.Battle
                     break;
                 case Phase.TimedPress:
                     UpdateTimedPress();
+                    break;
+                case Phase.AiTurn:
+                    UpdateAiTurn();
                     break;
             }
         }
@@ -155,7 +159,10 @@ namespace FriendshipWarriors.Battle
             _turn = new TurnState(unit.HasTurnTrade(TurnTrade.MoveForAct), unit.HasTurnTrade(TurnTrade.ActForMove));
             _cursor.SetCoord(unit.Coord, followCamera: true);
             _commandMenu.SetItems(System.Array.Empty<MenuItem>());
-            OpenCommandMenu();
+            if (IsAiControlled(unit))
+                BeginAiTurn();
+            else
+                OpenCommandMenu();
         }
 
         private void OpenCommandMenu()
@@ -258,10 +265,8 @@ namespace FriendshipWarriors.Battle
             unit.Facing = DirectionExtensions.Toward(unit.Coord, coord);
             _target = target;
 
-            // The player times a strike when attacking, or a block when an enemy attacks one of theirs.
-            _pressRole = unit.Team == Team.Player ? PressRole.Offense
-                : target.Unit.Team == Team.Player ? PressRole.Defense
-                : PressRole.None;
+            // A human times a strike when attacking, or a block when the other side attacks one of theirs.
+            _pressRole = PressRoleFor(unit, target.Unit);
             if (_pressRole == PressRole.None)
             {
                 ResolveAttack(0f, pressed: false);
@@ -372,6 +377,11 @@ namespace FriendshipWarriors.Battle
 
         private void AfterAction()
         {
+            if (IsAiControlled(_active.Unit))
+            {
+                ResumeAiTurn();
+                return;
+            }
             if (_turn.IsFinished)
                 BeginFacing();
             else
@@ -536,6 +546,9 @@ namespace FriendshipWarriors.Battle
                     break;
                 case Phase.ChooseFacing:
                     _gridView.SetHighlight(_active.Unit.Coord + _active.Unit.Facing.ToStep(), TileHighlight.Path);
+                    break;
+                case Phase.AiTurn:
+                    RefreshAiHighlights();
                     break;
             }
 
