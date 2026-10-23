@@ -61,7 +61,7 @@ FFT is the reference for mechanics and presentation. Characters, story and job n
 - Enemy AI that weighs damage, knock-outs and attack angle, retreats after attacking, faces your nearest unit, and casts spells: area damage away from its own side, heals for hurt allies.
 
 **Unit sprites**
-- **Paper-doll sprites:** each unit is put together from part sheets (body, head, face, hair, headgear, body gear, weapon, shield) and recoloured with its job colour, its team colour and a skin tone, hair colour and hairstyle picked from its name. Gear changes show on the sprite.
+- **Paper-doll sprites:** each unit is put together from part sheets (body, head, face, hair, headgear, body gear, weapon, shield) and recoloured with its job colour, its team colour and a skin tone, hair colour and hairstyle picked from its name. Gear changes show on the sprite. The code-drawn parts follow FFT's chibi look: big heads, shading lit from the upper left and coloured outlines.
 - Idle, walk, attack, cast (while charging a spell), hurt and knocked-out animations, in front and back poses.
 - The parts are plain PNGs on a fixed grid, made to be edited by hand in Aseprite. See the [art guide](Assets/_Project/Art/Sprites/README.md).
 
@@ -84,7 +84,7 @@ FFT is the reference for mechanics and presentation. Characters, story and job n
 | ![The main menu](docs/images/main-menu.png) | ![A quick play match](docs/images/quick-play.png) |
 | **Main menu:** Quick Play now; Campaign and Options to come. | **Quick play:** random map, random teams, and the seed in the corner. |
 | ![Timed press: the Strike! bar](docs/images/timed-press.png) | ![Paper-doll units in battle: one casting, one knocked out](docs/images/paper-doll-battle.png) |
-| **Timed press:** press as the marker crosses the gold zone. | **Units:** paper-doll sprites that face the camera. Here an Evoker charges a spell next to a knocked-out Corpsman. |
+| **Timed press:** press as the marker crosses the gold zone. | **Units:** FFT-style chibi paper-doll sprites that face the camera. Here a Cadet charges up next to a knocked-out Corpsman (its death counter shows 3). |
 | ![A randomly generated map](docs/images/random-map.png) | ![The map editor](docs/images/map-editor.png) |
 | **Random maps:** hills, plateaus, ponds, chasms and ramps from a seed. | **Map editor:** paint on a grid, preview in 3D, fix the reported problems. |
 | ![A Cadet leaping a chasm mid-walk](docs/images/walk-leap.png) | |
@@ -244,7 +244,7 @@ CLAUDE.md              Design decisions, conventions and project notes
 - [x] Magic (Evoker and Warder spells, charge times)
 - [x] Battle setups and objectives (5 v 5 standard, defeat a target, protect a character)
 - [x] Main menu, Quick Play (random 5 v 5 from a seed), pause menu
-- [x] Paper-doll unit sprites (first drafts drawn by code, ready for hand editing)
+- [x] Paper-doll unit sprites (first drafts drawn by code in an FFT-like chibi style, ready for hand editing)
 - [x] Animated movement: units walk their path tile by tile, as in FFT, with walk frames, hops and leaps
 - [x] Formation phase before battle (FFT): place units, swap, choose facings
 - [x] Battle feedback: floating numbers, hit flashes, knock-out countdown, sound hooks (placeholder blips)
