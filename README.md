@@ -21,6 +21,7 @@ FFT is the reference for mechanics and presentation. Characters, story and job n
 - [Project structure](#project-structure)
 - [Development](#development)
 - [Roadmap](#roadmap)
+- [Credits](#credits)
 
 ---
 
@@ -61,8 +62,10 @@ FFT is the reference for mechanics and presentation. Characters, story and job n
 - Enemy AI that weighs damage, knock-outs and attack angle, retreats after attacking, faces your nearest unit, and casts spells: area damage away from its own side, heals for hurt allies.
 
 **Unit sprites**
-- **Paper-doll sprites:** each unit is put together from part sheets (body, head, face, hair, headgear, body gear, weapon, shield) and recoloured with its job colour, its team colour and a skin tone, hair colour and hairstyle picked from its name. Gear changes show on the sprite. The code-drawn parts follow FFT's chibi look: big heads, shading lit from the upper left and coloured outlines.
-- Idle, walk, attack, cast (while charging a spell), hurt and knocked-out animations, in front and back poses.
+- **Placeholder art from [Tiny Tactics – Battle Kit I](#credits)** (CC0): every job is drawn with one of the pack's three characters (fighter: Cadet, Vanguard, Marksman; cleric: Corpsman, Warder; mage: Evoker). Each job gets its own outfit colour and each team its colour (Player blue, Enemy red); fighters also get a hair colour picked from their name. Idle, walk, attack (with a sword, knife, rod or staff swing over it), charging, casting, hurt, a kneeling pose at critical HP (a fifth of max HP or less, as in FFT) and knocked-out animations. Trees, bushes, rocks, stumps and logs come from the same pack, and the terrain uses its colours.
+- Jobs pick their art in data: an animated **unit sheet** on the job replaces the paper doll, and clearing it brings the paper doll back.
+- **Paper-doll sprites** (the fallback, and the base for hand-drawn art): each unit is put together from part sheets (body, head, face, hair, headgear, body gear, weapon, shield) and recoloured with its job colour, its team colour and a skin tone, hair colour and hairstyle picked from its name. Gear changes show on the sprite. The code-drawn parts follow FFT's chibi look: big heads, shading lit from the upper left and coloured outlines.
+- Paper dolls have idle, walk, attack, cast (while charging a spell), hurt and knocked-out animations, in front and back poses.
 - The parts are plain PNGs on a fixed grid, made to be edited by hand in Aseprite. See the [art guide](Assets/_Project/Art/Sprites/README.md).
 
 **Drops (FFT crystals and chests)**
@@ -89,22 +92,26 @@ FFT is the reference for mechanics and presentation. Characters, story and job n
 |---|---|
 | ![The main menu](docs/images/main-menu.png) | ![A quick play match](docs/images/quick-play.png) |
 | **Main menu:** Quick Play now; Campaign and Options to come. | **Quick play:** random map, random teams, and the seed in the corner. |
-| ![Timed press: the Strike! bar](docs/images/timed-press.png) | ![Paper-doll units in battle: one casting, one knocked out](docs/images/paper-doll-battle.png) |
-| **Timed press:** press as the marker crosses the gold zone. | **Units:** FFT-style chibi paper-doll sprites that face the camera. Here a Cadet charges up next to a knocked-out Corpsman (its death counter shows 3). |
+| ![Timed press: the Strike! bar](docs/images/timed-press.png) | ![Units in battle: one charging a spell, one kneeling at critical HP, one knocked out](docs/images/unit-sheets-battle.png) |
+| **Timed press:** press as the marker crosses the gold zone. | **Units:** Tiny Tactics sprites that face the camera. An Evoker charges a spell (CHG), a Warder kneels at critical HP, a Vanguard swings, and a knocked-out Corpsman shows its death counter (3). |
 | ![A randomly generated map](docs/images/random-map.png) | ![The map editor](docs/images/map-editor.png) |
 | **Random maps:** hills, plateaus, ponds, chasms and ramps from a seed. | **Map editor:** paint on a grid, preview in 3D, fix the reported problems. |
 | ![A Cadet leaping a chasm mid-walk](docs/images/walk-leap.png) | |
-| **Walking:** units walk their route tile by tile. Here a Cadet leaps a chasm after walking up a ramp and hopping onto a ledge. | |
+| **Walking:** units walk their route tile by tile. Here a Cadet leaps a chasm, seen from the high tilt. | |
 | ![The formation menu before a battle, enemies already in place](docs/images/formation-menu.png) | ![Arranging units on the blue deployment tiles](docs/images/formation.png) |
 | **Formation:** the objective, the enemy's starting spots, and the Formation menu. | **Arranging units:** blue tiles are where your side may start. |
-| ![An area spell: four damage numbers and white hit flashes](docs/images/battle-feedback-area.png) | ![A hit followed by a Self-Dose heal](docs/images/battle-feedback-reaction.png) |
-| **Battle feedback:** an area spell hits four enemies at once. | **Reactions follow the hit:** 14 damage, then the green Self-Dose heal a beat later. |
-| ![A Cadet on a fallen Corpsman's steel rod, choosing to learn or restore](docs/images/drops-steel-rod.png) | ![A Vanguard opening a treasure chest](docs/images/drops-chest.png) |
+| ![An area hit: five damage numbers at once](docs/images/battle-feedback-area.png) | ![A hit followed by a heal](docs/images/battle-feedback-reaction.png) |
+| **Battle feedback:** an area hit lands on five enemies at once. | **One after another:** 14 damage, then a green 9 HP heal a beat later, with the heal glow. |
+| ![A Cadet on a fallen Marksman's steel rod, choosing to learn or restore](docs/images/drops-steel-rod.png) | ![A Vanguard opening a treasure chest](docs/images/drops-chest.png) |
 | **Steel rod:** learn the fallen unit's abilities, or restore HP and MP. | **Treasure chest:** a piece of the fallen unit's gear, kept as spoils. |
+
+![Every job on both teams in Tiny Tactics art: idle, walk, attack, charging, cast, hurt, weak and KO, front and back](docs/images/unit-sheets.png)
+
+**Unit sheets:** every job, Player then Enemy, two rows per job (Cadet, Vanguard, Marksman, Corpsman, Warder, Evoker). Each pair of columns is the front and back pose of idle, walk, attack, charging, cast, hurt, weak and knocked out.
 
 ![Every job in its starting gear on both teams: idle, walk, attack, cast, hurt and KO frames, front and back](docs/images/paper-doll.png)
 
-**Paper dolls:** every job in typical gear, Player team on top and Enemy team below. From left to right: idle, walk, attack, cast, hurt and KO frames in the front pose, then idle, attack, cast and KO frames in the back pose.
+**Paper dolls (fallback):** every job in typical gear, Player team on top and Enemy team below. From left to right: idle, walk, attack, cast, hurt and KO frames in the front pose, then idle, attack, cast and KO frames in the back pose.
 
 ## Controls
 
@@ -151,6 +158,7 @@ All of these are under the **Friendship Warriors** menu in the Unity Editor.
 | **Data → Create Starting Jobs / Create Starter Equipment** | Creates the job, ability and equipment assets. Existing assets are left alone. |
 | **Art → Generate Paper-Doll Parts** | Draws any missing paper-doll part PNGs and the key palette, and updates the part catalog. Existing PNGs are left alone. **Regenerate (Overwrite)…** replaces them after asking. |
 | **Art → Save Paper-Doll Preview…** | Saves a contact sheet of every job on both teams, to check the parts read clearly. |
+| **Art → Build Tiny Tactics Placeholders** | Builds the unit sheets and weapon swings from the Tiny Tactics pack, points every job at one, gives the props their sprites and sets the terrain colours. Safe to re-run. |
 
 ## How the game works
 
@@ -222,7 +230,7 @@ Assets/
       UI/              Battle HUD and menus (uGUI + TextMeshPro, built in code)
     Scripts/Editor/    Map editor, scene and data builders, paper-doll part generator
     Data/              Maps, jobs, abilities, equipment, battle setups, props, palettes, generator settings
-    Art/               Paper-doll part PNGs, key palette, art guide (Sprites/README.md), shaders
+    Art/               Paper-doll part PNGs, key palette, art guide (Sprites/README.md), shaders, ThirdParty/TinyTactics (CC0 placeholder art)
     Resources/         Sprite part catalog, sound cue set, hit-flash material (loaded at runtime)
     Input/             Input actions (gamepad + keyboard/mouse)
     Scenes/            MainMenu, QuickPlay, Battle_Test (dev sandbox)
@@ -235,7 +243,7 @@ CLAUDE.md              Design decisions, conventions and project notes
 
 - **Rules are plain C#, separate from presentation**, so they're deterministic and tested in EditMode tests. Run them from the Unity Test Runner (Window → General → Test Runner).
 - **Content is data:** jobs, abilities, equipment, maps and terrain looks are ScriptableObject assets. To use real art, set it on the asset; no code changes needed.
-- **Placeholder art throughout:** colored tiles, and paper-doll unit sprites drawn by code as a starting point for hand editing.
+- **Placeholder art throughout:** the CC0 Tiny Tactics pack for units, props and terrain colours, with code-drawn paper dolls as the fallback and the starting point for hand editing.
 - **Workflow:** feature branches and pull requests into `main`, with commit messages in Conventional Commits style.
 - **Design record:** [`CLAUDE.md`](CLAUDE.md) records every design decision. It notes which FFT rules are confirmed, which are approximations, and where we deliberately differ.
 
@@ -257,6 +265,7 @@ CLAUDE.md              Design decisions, conventions and project notes
 - [x] Formation phase before battle (FFT): place units, swap, choose facings
 - [x] Battle feedback: floating numbers, hit flashes, knock-out countdown, sound hooks (placeholder blips)
 - [x] Drops (FFT): lost units leave a steel rod (learn abilities or restore) or a treasure chest (gear, kept as spoils)
+- [x] Placeholder art from the CC0 Tiny Tactics pack: animated unit sheets with job and team colours, weapon swings, sprite props, terrain colours
 - [ ] Hand-drawn character art and terrain art, real sound effects and music
 - [ ] Battle prep, party management, campaign and story. Losing a campaign battle won't be game over: the campaign carries on, unlike FFT.
 - [ ] Quick Play options: online matches, army building
@@ -264,6 +273,10 @@ CLAUDE.md              Design decisions, conventions and project notes
 - [ ] Steam builds (Windows, SteamOS, macOS)
 
 **Game modes, in order:** quick play, then the story campaign, then online co-op and versus. Battle rules are kept deterministic so online matches can be re-simulated from each player's commands.
+
+## Credits
+
+- **[Tiny Tactics – Battle Kit I](https://tiopalada.itch.io/tiny-tactics---battle-kit-i)** by Gabriel "tiopalada" Lima, released under [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/): placeholder unit sprites, weapon swings, props and terrain colours. CC0 asks for no credit; we give it anyway. Files and notes in [`Assets/_Project/Art/ThirdParty/TinyTactics`](Assets/_Project/Art/ThirdParty/TinyTactics/README.md).
 
 ---
 
