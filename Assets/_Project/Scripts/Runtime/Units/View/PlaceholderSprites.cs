@@ -20,6 +20,7 @@ namespace FriendshipWarriors.Units.View
 
         private static readonly Dictionary<(Color, bool), Sprite> Units = new();
         private static Sprite _groundMarker;
+        private static Sprite _shadow;
 
         public static Sprite Unit(Color jobColor, bool front)
         {
@@ -70,6 +71,27 @@ namespace FriendshipWarriors.Units.View
             }
             _groundMarker = Create("Placeholder Ground Marker", pixels, size, size, new Vector2(0.5f, 0.5f));
             return _groundMarker;
+        }
+
+        /// <summary>A soft dark disc for the ground shadow under units; lying on the ground, the iso camera shows it as an FFT-style ellipse.</summary>
+        public static Sprite Shadow()
+        {
+            if (_shadow != null)
+                return _shadow;
+            const int width = 24, height = 24;
+            var pixels = new Color[width * height];
+            for (int y = 0; y < height; y++)
+            for (int x = 0; x < width; x++)
+            {
+                float dx = (x + 0.5f - width / 2f) / (width / 2f);
+                float dy = (y + 0.5f - height / 2f) / (height / 2f);
+                float d = Mathf.Sqrt(dx * dx + dy * dy);
+                // Solid in the middle, soft towards the rim.
+                float alpha = d >= 1f ? 0f : 0.55f * Mathf.Clamp01((1f - d) / 0.45f);
+                pixels[y * width + x] = new Color(0f, 0f, 0f, alpha);
+            }
+            _shadow = Create("Placeholder Shadow", pixels, width, height, new Vector2(0.5f, 0.5f));
+            return _shadow;
         }
 
         private static void AddOutline(Color[] pixels)

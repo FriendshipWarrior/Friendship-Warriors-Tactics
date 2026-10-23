@@ -1,6 +1,7 @@
 using FriendshipWarriors.Cameras;
 using FriendshipWarriors.Grid.View;
 using FriendshipWarriors.Units.View.PaperDoll;
+using FriendshipWarriors.Units.View.Walking;
 using UnityEngine;
 
 namespace FriendshipWarriors.Units.View
@@ -10,7 +11,9 @@ namespace FriendshipWarriors.Units.View
     /// vertical axis so it stays upright), switches between front/back poses and mirrors them based on the unit's
     /// facing and the camera angle, plus a team-colored marker on the ground. Knocked-out units lie down, greyed.
     /// Art comes from, in order: the job's hand-drawn front/back sprites, the paper-doll composite of the unit's job
-    /// and gear (animated: idle, attack, cast while charging, hurt, knocked out), or the generated placeholder.
+    /// and gear (animated: idle, walk, attack, cast while charging, hurt, knocked out), or the generated placeholder.
+    /// Moves play out along a <see cref="WalkPath"/> advanced by the battle (battle time, so pausing freezes them);
+    /// the unit's tile has already changed by then, only the picture is catching up.
     /// </summary>
     public sealed class UnitView : MonoBehaviour
     {
@@ -31,6 +34,8 @@ namespace FriendshipWarriors.Units.View
 
         private SpriteRenderer _sprite;
         private SpriteRenderer _marker;
+        private SpriteRenderer _shadow;
+        private Color _shadowColor = Color.white;
         private TMPro.TextMeshPro _statusLabel;
         private TMPro.TextMeshPro _roleLabel;
         private int _shownStatusVersion = -1;
@@ -44,7 +49,14 @@ namespace FriendshipWarriors.Units.View
         private static readonly Equipment.EquipmentSlot[] Slots =
             (Equipment.EquipmentSlot[])System.Enum.GetValues(typeof(Equipment.EquipmentSlot));
 
+        private WalkPlayback _walk;
+
         public Unit Unit { get; private set; }
+
+        /// <summary>The tile the unit is drawn on (or walking from); catches up with <see cref="Units.Unit.Coord"/> when a walk ends.</summary>
+        public Grid.GridCoord ShownCoord { get; private set; }
+
+        public bool IsWalking => _walk != null;
 
         public static UnitView Create(Unit unit, GridView gridView, IsoCameraRig cameraRig, Transform parent)
         {
@@ -72,6 +84,14 @@ namespace FriendshipWarriors.Units.View
             _marker.transform.localScale = new Vector3(0.8f, 0.8f, 1f);
             _marker.sprite = PlaceholderSprites.GroundMarker();
             _marker.color = unit.Team == Team.Player ? PlayerColor : EnemyColor;
+            _marker.sortingOrder = 1;
+
+            // A soft blob on the ground. It and the team marker stay on the surface below the unit while it hops or
+            // leaps (see LateUpdate), so the arc reads against the ground, as in FFT.
+            _shadow = new GameObject("Shadow").AddComponent<SpriteRenderer>();
+            _shadow.transform.SetParent(transform, false);
+            _shadow.transform.localRotation = Quaternion.Euler(90f, 0f, 0f);
+            _shadow.sprite = PlaceholderSprites.Shadow();
 
             // Placeholder status indicator: short codes floating above the unit (PSN, HST...).
             _statusLabel = new GameObject("Statuses").AddComponent<TMPro.TextMeshPro>();
@@ -98,6 +118,7 @@ namespace FriendshipWarriors.Units.View
 
             SyncPosition();
             UpdateSprite();
+            UpdateGroundMarks();
         }
 
         /// <summary>Shows a role tag over the unit (e.g. TARGET, PROTECT); null or empty hides it.</summary>
@@ -113,8 +134,39 @@ namespace FriendshipWarriors.Units.View
         /// <summary>Plays the cast gesture once (charged spells then keep the cast loop while Charging).</summary>
         public void PlayCast() => _animator.Play(DollAnimation.Cast, Time.time);
 
-        /// <summary>Snaps to the unit's tile; call after the unit moves.</summary>
-        public void SyncPosition() => transform.position = _gridView.SurfaceCenter(Unit.Coord);
+        /// <summary>Snaps to the unit's tile, ending any walk.</summary>
+        public void SyncPosition()
+        {
+            _walk = null;
+            ShownCoord = Unit.Coord;
+            transform.position = _gridView.SurfaceCenter(Unit.Coord);
+        }
+
+        /// <summary>Starts showing the unit walking along <paramref name="path"/> (built in the grid's local space).</summary>
+        public void Walk(WalkPath path)
+        {
+            if (path == null || path.Segments.Count == 0)
+            {
+                SyncPosition();
+                return;
+            }
+            _walk = new WalkPlayback(path);
+            PlaceOnWalk();
+        }
+
+        /// <summary>Plays <paramref name="seconds"/> of battle time of the current walk; at the end the unit stands on its tile.</summary>
+        public void AdvanceWalk(float seconds, float rate = 1f)
+        {
+            if (_walk == null)
+                return;
+            _walk.Advance(seconds, rate);
+            if (_walk.IsFinished)
+                SyncPosition();
+            else
+                PlaceOnWalk();
+        }
+
+        private void PlaceOnWalk() => transform.position = _gridView.transform.TransformPoint(_walk.Position);
 
         /// <summary>The unit's paper-doll sheet, rebuilt only when its job or gear changes.</summary>
         private DollSheet CurrentDoll()
@@ -144,7 +196,44 @@ namespace FriendshipWarriors.Units.View
             return hash;
         }
 
-        private void LateUpdate() => UpdateSprite();
+        private void LateUpdate()
+        {
+            UpdateSprite();
+            UpdateGroundMarks();
+        }
+
+        /// <summary>
+        /// Puts the shadow and team marker on the surface straight below the unit, shrinking and fading the shadow with
+        /// height. Over a void chasm both hide until the unit is over ground again.
+        /// </summary>
+        private void UpdateGroundMarks()
+        {
+            if (Unit == null || _gridView == null || _gridView.Grid == null)
+                return;
+            var feet = transform.position;
+            float ground = feet.y;
+            bool visible = true;
+            if (_walk != null)
+            {
+                var local = _gridView.transform.InverseTransformPoint(feet);
+                visible = GroundShadow.TrySurfaceHeight(_gridView.Grid, local, out float surface);
+                if (visible)
+                    ground = _gridView.transform.TransformPoint(new Vector3(local.x, surface, local.z)).y;
+            }
+            // Standing still, the unit's own height is the ground (an odd slope's standing height is rounded down).
+            float above = Mathf.Max(0f, feet.y - ground);
+
+            _shadow.enabled = visible;
+            _marker.enabled = visible;
+            if (!visible)
+                return;
+            _shadow.transform.position = new Vector3(feet.x, ground + 0.012f, feet.z);
+            _marker.transform.position = new Vector3(feet.x, ground + 0.02f, feet.z);
+            float size = 0.8f * GroundShadow.Scale(above);
+            _shadow.transform.localScale = new Vector3(size, size, 1f);
+            _shadowColor.a = GroundShadow.Opacity(above);
+            _shadow.color = _shadowColor;
+        }
 
         private void UpdateSprite()
         {
@@ -153,7 +242,9 @@ namespace FriendshipWarriors.Units.View
                 return;
             float yaw = _cameraRig.transform.eulerAngles.y;
             bool down = Unit.IsKnockedOut;
-            var pose = SpriteViewMath.Resolve(Unit.Facing, yaw);
+            // Walking turns the unit with each step; pushes keep the way it faced.
+            var facing = _walk != null && _walk.Current.TurnsUnit ? _walk.Current.Facing : Unit.Facing;
+            var pose = SpriteViewMath.Resolve(facing, yaw);
             var job = Unit.Job;
             var art = pose.ShowsFront ? job.FrontSprite : job.BackSprite;
             var doll = art == null ? CurrentDoll() : null;
@@ -173,7 +264,8 @@ namespace FriendshipWarriors.Units.View
             }
             else if (doll != null)
             {
-                var (animation, frame) = _animator.Current(Time.time, down, Unit.HasStatus(Status.StatusEffect.Charging));
+                var (animation, frame) = _animator.Current(Time.time, down, Unit.HasStatus(Status.StatusEffect.Charging),
+                    _walk != null && !down ? _walk.WalkFrame : -1);
                 _sprite.sprite = doll.Get(animation, frame, back: !pose.ShowsFront);
             }
             else
