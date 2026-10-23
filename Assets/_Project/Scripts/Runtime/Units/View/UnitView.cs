@@ -38,8 +38,6 @@ namespace FriendshipWarriors.Units.View
         private SpriteRenderer _marker;
         private SpriteRenderer _shadow;
         private Color _shadowColor = Color.white;
-        private TMPro.TextMeshPro _statusLabel;
-        private TMPro.TextMeshPro _roleLabel;
         private int _shownStatusVersion = -1;
         private GridView _gridView;
         private IsoCameraRig _cameraRig;
@@ -107,29 +105,6 @@ namespace FriendshipWarriors.Units.View
             _shadow.transform.localRotation = Quaternion.Euler(90f, 0f, 0f);
             _shadow.sprite = PlaceholderSprites.Shadow();
 
-            // Placeholder status indicator: short codes floating above the unit (PSN, HST...).
-            _statusLabel = new GameObject("Statuses").AddComponent<TMPro.TextMeshPro>();
-            _statusLabel.transform.SetParent(transform, false);
-            _statusLabel.transform.localPosition = new Vector3(0f, StatusLabelHeight, 0f);
-            _statusLabel.fontSize = 2.2f;
-            _statusLabel.alignment = TMPro.TextAlignmentOptions.Center;
-            _statusLabel.color = new Color(1f, 0.85f, 0.35f);
-            _statusLabel.outlineWidth = 0.25f;
-            _statusLabel.outlineColor = Color.black;
-            _statusLabel.rectTransform.sizeDelta = new Vector2(4f, 1f);
-
-            // Objective role (TARGET / PROTECT), above the status codes.
-            _roleLabel = new GameObject("Role").AddComponent<TMPro.TextMeshPro>();
-            _roleLabel.transform.SetParent(transform, false);
-            _roleLabel.transform.localPosition = new Vector3(0f, RoleLabelHeight, 0f);
-            _roleLabel.fontSize = 2.4f;
-            _roleLabel.fontStyle = TMPro.FontStyles.Bold;
-            _roleLabel.alignment = TMPro.TextAlignmentOptions.Center;
-            _roleLabel.outlineWidth = 0.25f;
-            _roleLabel.outlineColor = Color.black;
-            _roleLabel.rectTransform.sizeDelta = new Vector2(4f, 1f);
-            _roleLabel.text = "";
-
             SyncPosition();
             UpdateSprite();
             UpdateGroundMarks();
@@ -138,9 +113,17 @@ namespace FriendshipWarriors.Units.View
         /// <summary>Shows a role tag over the unit (e.g. TARGET, PROTECT); null or empty hides it.</summary>
         public void SetRole(string text, Color color)
         {
-            _roleLabel.text = text ?? "";
-            _roleLabel.color = color;
+            RoleTag = text ?? "";
+            RoleColor = color;
         }
+
+        /// <summary>The objective role shown over the unit (TARGET, PROTECT), or empty.</summary>
+        public string RoleTag { get; private set; } = "";
+        public Color RoleColor { get; private set; } = Color.white;
+
+        /// <summary>Short codes of the unit's statuses (PSN HST ...), or empty. Drawn by the HUD's tag overlay in
+        /// screen space (<see cref="FriendshipWarriors.UI.UnitTagOverlay"/>), so it stays crisp in pixel mode.</summary>
+        public string StatusTag { get; private set; } = "";
 
         /// <summary>Plays the attack animation once (weapon swing or shot).</summary>
         public void PlayAttack()
@@ -335,8 +318,6 @@ namespace FriendshipWarriors.Units.View
                 _weapon.transform.localPosition = new Vector3(0f, 0f, pose.ShowsFront ? -0.02f : 0.02f);
             }
 
-            _statusLabel.transform.rotation = Quaternion.Euler(_cameraRig.transform.eulerAngles.x, yaw, 0f);
-            _roleLabel.transform.rotation = _statusLabel.transform.rotation;
             int version = StatusVersion();
             if (version != _shownStatusVersion)
             {
@@ -344,7 +325,7 @@ namespace FriendshipWarriors.Units.View
                 var codes = new System.Text.StringBuilder();
                 foreach (var status in Unit.Statuses.Active)
                     codes.Append(codes.Length > 0 ? " " : "").Append(Status.StatusRules.Abbreviation(status));
-                _statusLabel.text = codes.ToString();
+                StatusTag = codes.ToString();
             }
         }
     }

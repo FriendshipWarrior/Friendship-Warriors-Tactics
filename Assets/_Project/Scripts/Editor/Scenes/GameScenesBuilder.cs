@@ -37,6 +37,8 @@ namespace FriendshipWarriors.Editor.Scenes
 
             Units.StartingJobsBuilder.CreateStartingJobs();
             CreateEquipmentCatalog();
+            // The pixel UI skin (Tiny RPG GUI and font packs) the menus and HUD are drawn with.
+            UI.PixelUiBuilder.Build();
             AssetDatabase.SaveAssets();
 
             // NewScene unloads unreferenced assets, so each scene loads what it needs after it is created.
@@ -96,7 +98,7 @@ namespace FriendshipWarriors.Editor.Scenes
 
             var menuInput = CreateMenuInput();
             var screen = CreateMenuScreen("Main Menu Canvas", menuInput, sortingOrder: 0);
-            SetFloat(screen, "_width", 760f);
+            SetFloat(screen, "_width", 240f);
             var controller = new GameObject("Main Menu").AddComponent<MainMenuController>();
             Set(controller, "_screen", screen);
             CreateEventSystem();
@@ -209,17 +211,18 @@ namespace FriendshipWarriors.Editor.Scenes
             return screen;
         }
 
-        /// <summary>A Screen Space Overlay canvas scaled from 1920x1080 (readable on Steam Deck's 1280x800).</summary>
-        private static GameObject CreateCanvas(string name, int sortingOrder)
+        /// <summary>A Screen Space Overlay canvas at a whole-number pixel scale (<see cref="FriendshipWarriors.UI.PixelCanvasScaler"/>:
+        /// 640x360 logical pixels or more, x2 on Steam Deck's 1280x800, x3 at 1080p).</summary>
+        public static GameObject CreateCanvas(string name, int sortingOrder)
         {
             var go = new GameObject(name, typeof(Canvas), typeof(UnityEngine.UI.CanvasScaler), typeof(UnityEngine.UI.GraphicRaycaster));
             var canvas = go.GetComponent<Canvas>();
             canvas.renderMode = RenderMode.ScreenSpaceOverlay;
             canvas.sortingOrder = sortingOrder;
+            canvas.pixelPerfect = true;
             var scaler = go.GetComponent<UnityEngine.UI.CanvasScaler>();
-            scaler.uiScaleMode = UnityEngine.UI.CanvasScaler.ScaleMode.ScaleWithScreenSize;
-            scaler.referenceResolution = new Vector2(1920f, 1080f);
-            scaler.matchWidthOrHeight = 0.5f;
+            scaler.uiScaleMode = UnityEngine.UI.CanvasScaler.ScaleMode.ConstantPixelSize;
+            go.AddComponent<FriendshipWarriors.UI.PixelCanvasScaler>();
             return go;
         }
 

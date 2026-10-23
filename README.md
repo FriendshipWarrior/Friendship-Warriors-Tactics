@@ -31,7 +31,7 @@ FFT is the reference for mechanics and presentation. Characters, story and job n
 - A title screen with Quick Play, plus Campaign and Options (greyed out until they exist). Works with a gamepad, a keyboard or a mouse.
 - **Quick Play:** a random map and 5 random units on each side, you against the AI. Every unit has a random job, the same level, random gear its job can use, its job line's abilities learned, and random reaction, support, movement and secondary abilities. Both sides get the same item stock.
 - **Formation** (FFT): before the first turn, arrange your units on your side's blue deployment tiles while the enemy stands in view. Pick a unit, pick a tile (picking another unit's tile swaps them), choose its facing, then *Begin Battle* from the Formation menu. Beginning straight away keeps the starting spots.
-- One seed builds the whole match. It's shown in the corner, so a match can be reported and played again.
+- One seed builds the whole match. It's shown in the corner, so a match can be reported and played again. Names are unique across both teams.
 - Pause any time, formation included (Start / P), to resume or quit to the main menu. Winning or losing returns you to the main menu.
 
 **Battlefield**
@@ -40,7 +40,7 @@ FFT is the reference for mechanics and presentation. Characters, story and job n
 - Units walk their route tile by tile, as in FFT: they follow slopes, hop up and down ledges, arc over gaps, and turn with each step. A ground shadow stays on the surface below them as they arc. Knockback pushes them. Hold A / Enter to hurry a walk.
 - The whole map is drawn as one mesh with real slopes, which keeps it cheap enough for the Steam Deck.
 - **Pixel-art terrain** from [Tiny RPG – Green Wilderness](#credits) by the Tiny Tactics artist: grass, dirt and water tiles on the tops, cliff faces down the sides (lined up across columns of any height), a grass or dirt edge hanging over each cliff top, and a few variants per terrain so fields don't repeat. Stone and sand, which the pack lacks, are drawn in its palette. Pines, oaks, shrubs, mossy rocks, mushrooms and wildflowers from the same pack decorate the maps.
-- A **pixel look**, on by default: the battlefield and units render at low resolution and scale up crisply by a whole number (640×400 × 2 on Steam Deck), so everything shares one pixel grid while the menus stay sharp. It costs no more than full resolution. Untick *Pixelated* on a camera's *Pixel Rendering* for the full-resolution look.
+- A **pixel look**, on by default: the battlefield and units render at low resolution and scale up crisply by a whole number (640×400 × 2 on Steam Deck), so everything shares one pixel grid. Menus, text, the tags over units and the floating numbers are drawn on top at full resolution, so they stay sharp. It costs no more than full resolution. Untick *Pixelated* on a camera's *Pixel Rendering* for the full-resolution look.
 - An isometric camera that rotates in 90° steps, switches between FFT's low and high tilt, zooms and pans.
 
 **Units and jobs**
@@ -83,6 +83,11 @@ FFT is the reference for mechanics and presentation. Characters, story and job n
 - Sound hooks for hits, criticals, misses, blocks, heals, spells, knock-outs, timed presses and menus. Until real audio exists they play generated placeholder blips; drop clips into `Resources/Audio/SoundCues` to replace them.
 - Everything runs on the battle clock, so pausing freezes it mid-bounce.
 
+**Pixel UI**
+- Menus and the battle HUD in the [Tiny RPG – Mana Soul GUI](#credits) style: framed purple-and-gold windows, button-framed menu items, an animated feather pointer beside the selected item (like FFT's hand), and framed HP / MP / CT bars in the unit panel.
+- Pixel fonts from [Tiny RPG – Font Kit I](#credits): *Fine Fantasy Strategies* for menus and text, *Brilliant Strength* for titles and banners, and the italic-numbers face for the floating damage numbers.
+- Always crisp: the UI is laid out on a 640×360 canvas and scaled by a whole number (×2 on Steam Deck's 1280×800, ×3 at 1080p, ×4 at 1440p), and every font is drawn at a whole multiple of its native pixel size, so no pixel is ever wider than another. Status and role tags over units and the floating numbers follow the units in screen space, so they stay sharp in the pixel look too.
+
 **Tools**
 - An in-Unity map editor with a live 3D preview and map checks.
 - A seeded random map generator for quick play.
@@ -93,21 +98,23 @@ FFT is the reference for mechanics and presentation. Characters, story and job n
 | | |
 |---|---|
 | ![The main menu](docs/images/main-menu.png) | ![A quick play match](docs/images/quick-play.png) |
-| **Main menu:** Quick Play now; Campaign and Options to come. | **Quick play:** random map, random teams, and the seed in the corner. |
-| ![Timed press: the Strike! bar](docs/images/timed-press.png) | ![Units in battle: one charging a spell, one kneeling at critical HP, one knocked out](docs/images/unit-sheets-battle.png) |
-| **Timed press:** press as the marker crosses the gold zone. | **Units:** Tiny Tactics sprites that face the camera. An Evoker charges a spell (CHG), a Warder kneels at critical HP, a Vanguard swings, and a knocked-out Corpsman shows its death counter (3). |
+| **Main menu:** Quick Play now; Campaign and Options to come. | **Quick play:** random map, random teams, the command menu with its pointer, and the seed in the corner. |
+| ![Timed press: the Brace! bar](docs/images/timed-press.png) | ![Units in battle: one charging a spell, one kneeling at critical HP, one knocked out](docs/images/unit-sheets-battle.png) |
+| **Timed press:** press as the marker crosses the gold zone. | **Units:** Tiny Tactics sprites that face the camera. An Evoker charges a spell (CHG), a Warder kneels at critical HP, a knocked-out Corpsman shows its death counter (3), and a protected Vanguard carries the green PROTECT tag. |
 | ![A randomly generated map](docs/images/random-map.png) | ![The map editor](docs/images/map-editor.png) |
 | **Random maps:** hills, plateaus, ponds, chasms and ramps from a seed. | **Map editor:** paint on a grid, preview in 3D, fix the reported problems. |
 | ![The Hillside test map with Green Wilderness terrain and props](docs/images/pixel-terrain.png) | ![The map editor's 3D preview of the same map](docs/images/pixel-terrain-preview.png) |
 | **Pixel-art terrain:** grass, dirt, water and cliffs from Green Wilderness; stone and sand drawn in its palette. | **Overview:** the whole test map, with pines, mossy rocks, mushrooms and wildflowers. |
-| ![A Cadet leaping a chasm mid-walk](docs/images/walk-leap.png) | |
-| **Walking:** units walk their route tile by tile. Here a Cadet leaps a chasm, seen from the high tilt. | |
+| ![A Cadet mid-walk, its HST tag following it](docs/images/walk-leap.png) | ![The pause menu over a quick play match](docs/images/pause-menu.png) |
+| **Walking:** units walk their route tile by tile, hopping ledges and leaping gaps; their tags follow them. | **Pause:** Resume or Quit to Main Menu, with the match's seed. |
 | ![The formation menu before a battle, enemies already in place](docs/images/formation-menu.png) | ![Arranging units on the blue deployment tiles](docs/images/formation.png) |
 | **Formation:** the objective, the enemy's starting spots, and the Formation menu. | **Arranging units:** blue tiles are where your side may start. |
 | ![An area hit: five damage numbers at once](docs/images/battle-feedback-area.png) | ![A hit followed by a heal](docs/images/battle-feedback-reaction.png) |
-| **Battle feedback:** an area hit lands on five enemies at once. | **One after another:** 14 damage, then a green 9 HP heal a beat later, with the heal glow. |
+| **Battle feedback:** an area hit lands on four units at once. | **One after another:** 14 damage, then a green 20 HP heal a beat later. |
 | ![A Cadet on a fallen Marksman's steel rod, choosing to learn or restore](docs/images/drops-steel-rod.png) | ![A Vanguard opening a treasure chest](docs/images/drops-chest.png) |
 | **Steel rod:** learn the fallen unit's abilities, or restore HP and MP. | **Treasure chest:** a piece of the fallen unit's gear, kept as spoils. |
+| ![The battle HUD at 1920x1080: the Act menu, turn order and unit panel](docs/images/pixel-ui-1080p.png) | |
+| **At 1080p** the same UI is drawn at ×3 (×2 on Steam Deck): every pixel of the frames and fonts lands on whole screen pixels. | |
 
 ![Every job on both teams in Tiny Tactics art: idle, walk, attack, charging, cast, hurt, weak and KO, front and back](docs/images/unit-sheets.png)
 
@@ -232,11 +239,11 @@ Assets/
       QuickPlay/       Random teams and quick-play matches
       Controls/        Input, tile cursor
       Camera/          Isometric camera, optional pixel look
-      UI/              Battle HUD and menus (uGUI + TextMeshPro, built in code)
+      UI/              Battle HUD, menus, unit tags and the pixel UI skin (uGUI + TextMeshPro, built in code, whole-number scaling)
     Scripts/Editor/    Map editor, scene and data builders, paper-doll part generator
-    Data/              Maps, jobs, abilities, equipment, battle setups, props, palettes, generator settings
-    Art/               Paper-doll part PNGs, key palette, art guide (Sprites/README.md), shaders, ThirdParty/TinyTactics (CC0 placeholder art), ThirdParty/TinyRPG_GreenWilderness (CC BY 4.0 terrain), Terrain/TerrainAtlas.png (built from it)
-    Resources/         Sprite part catalog, sound cue set, hit-flash material (loaded at runtime)
+    Data/              Maps, jobs, abilities, equipment, battle setups, props, palettes, generator settings, UI font assets
+    Art/               Paper-doll part PNGs, key palette, art guide (Sprites/README.md), shaders, ThirdParty/TinyTactics (CC0 placeholder art), ThirdParty/TinyRPG_GreenWilderness (CC BY 4.0 terrain), ThirdParty/TinyRPG_ManaSoulGUI and TinyRPG_FontKit01 (CC0 UI and fonts), Terrain/TerrainAtlas.png (built from it)
+    Resources/         Sprite part catalog, sound cue set, hit-flash material, UI skin (loaded at runtime)
     Input/             Input actions (gamepad + keyboard/mouse)
     Scenes/            MainMenu, QuickPlay, Battle_Test (dev sandbox)
   Tests/EditMode/      Unit tests (NUnit)
@@ -248,7 +255,7 @@ CLAUDE.md              Design decisions, conventions and project notes
 
 - **Rules are plain C#, separate from presentation**, so they're deterministic and tested in EditMode tests. Run them from the Unity Test Runner (Window → General → Test Runner).
 - **Content is data:** jobs, abilities, equipment, maps and terrain looks are ScriptableObject assets. To use real art, set it on the asset; no code changes needed.
-- **Placeholder art throughout:** tiopalada's Tiny Tactics pack for units (CC0) and Tiny RPG – Green Wilderness for terrain and props (CC BY 4.0), with code-drawn paper dolls as the fallback and the starting point for hand editing.
+- **Placeholder art throughout, one artist's style:** tiopalada's Tiny Tactics pack for units (CC0), Tiny RPG – Green Wilderness for terrain and props (CC BY 4.0), and Tiny RPG – Mana Soul GUI and Font Kit I for menus and text (CC0), with code-drawn paper dolls as the fallback and the starting point for hand editing.
 - **Workflow:** feature branches and pull requests into `main`, with commit messages in Conventional Commits style.
 - **Design record:** [`CLAUDE.md`](CLAUDE.md) records every design decision. It notes which FFT rules are confirmed, which are approximations, and where we deliberately differ.
 
@@ -272,6 +279,7 @@ CLAUDE.md              Design decisions, conventions and project notes
 - [x] Drops (FFT): lost units leave a steel rod (learn abilities or restore) or a treasure chest (gear, kept as spoils)
 - [x] Placeholder art from the CC0 Tiny Tactics pack: animated unit sheets with job and team colours, weapon swings, sprite props, terrain colours
 - [x] Pixel-art terrain and props from Tiny RPG – Green Wilderness, and a low-resolution pixel look (on by default)
+- [x] Pixel UI: Mana Soul GUI windows, buttons, pointer and bars, Font Kit I fonts, whole-number scaling that stays crisp at every resolution
 - [ ] More of the Green Wilderness pack: smooth borders between ground types (its edge tiles), tall grass, bridges, fallen logs, the sign, caves
 - [ ] Hand-drawn character art and terrain art, real sound effects and music
 - [ ] Battle prep, party management, campaign and story. Losing a campaign battle won't be game over: the campaign carries on, unlike FFT.
@@ -285,6 +293,8 @@ CLAUDE.md              Design decisions, conventions and project notes
 
 - **[Tiny Tactics – Battle Kit I](https://tiopalada.itch.io/tiny-tactics---battle-kit-i)** by Gabriel "tiopalada" Lima, released under [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/): placeholder unit sprites, weapon swings and props. CC0 asks for no credit; we give it anyway. Files and notes in [`Assets/_Project/Art/ThirdParty/TinyTactics`](Assets/_Project/Art/ThirdParty/TinyTactics/README.md).
 - **[Tiny RPG – Green Wilderness](https://tiopalada.itch.io/tiny-rpg-green-wilderness)** by Gabriel "tiopalada" Lima, licensed under [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/): terrain tiles (grass, dirt, water, cliffs) and props (trees, shrubs, rocks, mushrooms, flowers). Tiles are cut out and laid on our 3D battlefield by code; the stone and sand tiles are our own, drawn in the pack's palette. Files and notes in [`Assets/_Project/Art/ThirdParty/TinyRPG_GreenWilderness`](Assets/_Project/Art/ThirdParty/TinyRPG_GreenWilderness/README.md).
+- **[Tiny RPG – Mana Soul GUI](https://tiopalada.itch.io/tiny-rpg-mana-soul-gui)** by Gabriel "tiopalada" Lima, released under [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/): window frames, menu buttons, the pointer and the gauge frames. Files and notes in [`Assets/_Project/Art/ThirdParty/TinyRPG_ManaSoulGUI`](Assets/_Project/Art/ThirdParty/TinyRPG_ManaSoulGUI/README.md).
+- **[Tiny RPG – Font Kit I](https://tiopalada.itch.io/tiny-rpg-font-kit-i)** by Gabriel "tiopalada" Lima, released under [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/): the pixel fonts for menus, titles and floating numbers. Files and notes in [`Assets/_Project/Art/ThirdParty/TinyRPG_FontKit01`](Assets/_Project/Art/ThirdParty/TinyRPG_FontKit01/README.md).
 
 ---
 

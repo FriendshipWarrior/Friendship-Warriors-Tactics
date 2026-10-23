@@ -1,0 +1,51 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 7c77519583be94f3d90bbcfbbfff0acb, type: 3}
+  m_Name: UiSkin
+  m_EditorClassIdentifier: FriendshipWarriors.Runtime::FriendshipWarriors.UI.UiSkin
+  Body: {fileID: 11400000, guid: f3837a0f772b2442aa55ebf61f5acb3b, type: 2}
+  Title: {fileID: 11400000, guid: 47a2ea3c6369e4ea88d0b22925fcbbf4, type: 2}
+  Numbers: {fileID: 11400000, guid: 00f1602c72473410da208ba76e67d022, type: 2}
+  NumbersOutline: {fileID: 2100000, guid: a3c1967cd15c04e528a20d60a3361aa0, type: 2}
+  BodySize: 12
+  TitleSize: 14
+  Window:
+    _texture: {fileID: 2800000, guid: b1d7764a07e124bc296838a44e68de89, type: 3}
+    _frameWidth: 96
+    _frameHeight: 96
+    _border: {x: 32, y: 32, z: 32, w: 32}
+  ItemFrames:
+    _texture: {fileID: 2800000, guid: b38f2588f3b77486586f380fc0cf6ee6, type: 3}
+    _frameWidth: 96
+    _frameHeight: 22
+    _border: {x: 16, y: 6, z: 16, w: 6}
+  Cursor:
+    _texture: {fileID: 2800000, guid: 0d1b2229cf0c4454a9266969618b4121, type: 3}
+    _frameWidth: 37
+    _frameHeight: 14
+    _border: {x: 0, y: 0, z: 0, w: 0}
+  CursorFrameSeconds: 0.12
+  Bar:
+    _texture: {fileID: 2800000, guid: 464f6e0d9b26044eebab75eae9a25a3a, type: 3}
+    _frameWidth: 95
+    _frameHeight: 15
+    _border: {x: 8, y: 4, z: 8, w: 4}
+  BarInterior: {x: 6, y: 4, z: 6, w: 3}
+  TextColor: {r: 0.99, g: 0.95, b: 0.85, a: 1}
+  SelectedTextColor: {r: 1, g: 1, b: 1, a: 1}
+  DisabledTextColor: {r: 0.55, g: 0.5, b: 0.66, a: 1}
+  MutedTextColor: {r: 0.72, g: 0.66, b: 0.8, a: 1}
+  AccentColor: {r: 0.98, g: 0.78, b: 0.29, a: 1}
+  HpColor: {r: 0.55, g: 0.86, b: 0.26, a: 1}
+  MpColor: {r: 0.27, g: 0.62, b: 0.93, a: 1}
+  CtColor: {r: 0.98, g: 0.78, b: 0.29, a: 1}
+  BarBackColor: {r: 0.07, g: 0.05, b: 0.16, a: 1}

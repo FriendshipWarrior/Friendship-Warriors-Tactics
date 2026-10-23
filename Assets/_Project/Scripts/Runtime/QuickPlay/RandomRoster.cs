@@ -23,18 +23,22 @@ namespace FriendshipWarriors.QuickPlay
             "Sterling", "Thorne", "Underhill", "Vance", "Whitlock", "Yardley", "Brass", "Cogburn", "Ferris", "Gage",
         };
 
+        /// <param name="taken">Names already in the battle (the other team's): skipped, and this team's are added, so
+        /// names are unique across both sides ("Calloway attacks Calloway" was confusing).</param>
         public static List<Unit> Build(Team team, int size, int level, IReadOnlyList<JobDefinition> jobs,
-            IReadOnlyList<EquipmentDefinition> equipment, Random rng, IReadOnlyList<string> names = null)
+            IReadOnlyList<EquipmentDefinition> equipment, Random rng, IReadOnlyList<string> names = null,
+            ISet<string> taken = null)
         {
             if (jobs == null || jobs.Count == 0) throw new ArgumentException("Need at least one job.", nameof(jobs));
             names ??= DefaultNames;
 
-            var namePool = names.ToList();
+            var namePool = names.Where(name => taken == null || !taken.Contains(name)).ToList();
             var units = new List<Unit>(size);
             for (int i = 0; i < size; i++)
             {
                 var job = jobs[rng.Next(jobs.Count)];
-                string name = TakeName(namePool, rng, i);
+                string name = TakeName(namePool, rng, i, team);
+                taken?.Add(name);
                 var unit = UnitFactory.CreateGeneric(name, team, job, level, rng);
                 LearnAbilities(unit);
                 EquipPassives(unit, rng);
@@ -47,10 +51,10 @@ namespace FriendshipWarriors.QuickPlay
         }
 
         /// <summary>Removes a random name from the pool; falls back to numbered names if the pool runs out.</summary>
-        private static string TakeName(List<string> pool, Random rng, int index)
+        private static string TakeName(List<string> pool, Random rng, int index, Team team)
         {
             if (pool.Count == 0)
-                return $"Recruit {index + 1}";
+                return $"{(team == Team.Player ? "Recruit" : "Raider")} {index + 1}";
             int pick = rng.Next(pool.Count);
             string name = pool[pick];
             pool.RemoveAt(pick);

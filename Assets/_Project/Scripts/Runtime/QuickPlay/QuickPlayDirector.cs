@@ -72,12 +72,13 @@ namespace FriendshipWarriors.QuickPlay
 
         private void Awake()
         {
-            _seedLabel = UiFactory.Text(_pauseMenu.transform, "Seed", 20, FontStyles.Normal, TextAlignmentOptions.TopLeft);
+            // Bottom left, above the hint strip at its tallest (two lines); the objective owns the top-left corner.
+            _seedLabel = UiFactory.Text(_pauseMenu.transform, "Seed", alignment: TextAlignmentOptions.BottomLeft);
             var rect = (RectTransform)_seedLabel.transform;
-            rect.anchorMin = rect.anchorMax = rect.pivot = new Vector2(0f, 1f);
-            rect.anchoredPosition = new Vector2(16f, -10f);
-            rect.sizeDelta = new Vector2(400f, 30f);
-            _seedLabel.color = new Color(1f, 1f, 1f, 0.55f);
+            rect.anchorMin = rect.anchorMax = rect.pivot = new Vector2(0f, 0f);
+            rect.anchoredPosition = new Vector2(UiFactory.Margin + 2, UiFactory.Margin + 38);
+            rect.sizeDelta = new Vector2(200f, 12f);
+            _seedLabel.color = UiFactory.MutedTextColor;
 
             _pauseModel.SetItems(new[] { new MenuItem(ResumeId, "Resume"), new MenuItem(QuitId, "Quit to Main Menu") });
         }
@@ -118,8 +119,10 @@ namespace FriendshipWarriors.QuickPlay
             _gridView.SetMap(_map);
             _gridView.Build();
 
-            var players = RandomRoster.Build(Team.Player, _teamSize, _unitLevel, _jobs.Jobs, _equipment.Items, rng);
-            var enemies = RandomRoster.Build(Team.Enemy, _teamSize, _unitLevel, _jobs.Jobs, _equipment.Items, rng);
+            // One name pool for both sides, so no two units share a name.
+            var names = new HashSet<string>();
+            var players = RandomRoster.Build(Team.Player, _teamSize, _unitLevel, _jobs.Jobs, _equipment.Items, rng, taken: names);
+            var enemies = RandomRoster.Build(Team.Enemy, _teamSize, _unitLevel, _jobs.Jobs, _equipment.Items, rng, taken: names);
             var unitRoot = new GameObject("Units").transform;
             Place(players, _map.PlayerDeployment, _map.EnemyDeployment, unitRoot);
             Place(enemies, _map.EnemyDeployment, _map.PlayerDeployment, unitRoot);

@@ -152,6 +152,9 @@ namespace FriendshipWarriors.Battle
             // Hit numbers, flashes and sounds listen to this controller, so scenes don't need to wire them.
             if (!TryGetComponent<Feedback.BattleFeedback>(out _))
                 gameObject.AddComponent<Feedback.BattleFeedback>();
+            // Status and role tags over units, drawn in screen space so they stay crisp.
+            if (!TryGetComponent<UI.UnitTagOverlay>(out _))
+                gameObject.AddComponent<UI.UnitTagOverlay>();
         }
 
         private void OnEnable()

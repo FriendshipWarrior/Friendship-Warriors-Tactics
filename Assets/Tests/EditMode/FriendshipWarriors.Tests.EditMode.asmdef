@@ -5,7 +5,8 @@
         "FriendshipWarriors.Runtime",
         "FriendshipWarriors.Editor",
         "UnityEngine.TestRunner",
-        "UnityEditor.TestRunner"
+        "UnityEditor.TestRunner",
+        "Unity.TextMeshPro"
     ],
     "includePlatforms": [
         "Editor"
