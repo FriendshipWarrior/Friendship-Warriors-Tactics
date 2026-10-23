@@ -192,14 +192,15 @@ namespace FriendshipWarriors.UI
 
         private static string Name(Units.Abilities.AbilityDefinition ability) => ability != null ? ability.DisplayName : "-";
 
-        /// <summary>Statuses with the clock ticks they have left, e.g. "Poison (12), Blind".</summary>
+        /// <summary>Statuses with the time they have left, e.g. "Poison (12), Silence (2 turns), Blind".</summary>
         private static string StatusText(Unit unit)
         {
             var parts = new List<string>();
             foreach (var status in unit.Statuses.Active)
             {
                 int left = unit.Statuses.Remaining(status);
-                parts.Add(left > 0 ? $"{status} ({left})" : status.ToString());
+                string unitLabel = unit.Statuses.IsTurnBased(status) ? (left == 1 ? " turn" : " turns") : "";
+                parts.Add(left > 0 ? $"{status} ({left}{unitLabel})" : status.ToString());
             }
             return string.Join(", ", parts);
         }

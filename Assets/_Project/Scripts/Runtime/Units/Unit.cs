@@ -327,7 +327,11 @@ namespace FriendshipWarriors.Units
             if (CurrentHp == 0)
             {
                 DeathCounter = DeathCounterStart;
-                _statuses.Clear(); // FFT clears statuses on KO (our simplification: all of them).
+                _statuses.Clear(); // A knock-out clears every status (user decision).
+            }
+            else if (dealt > 0)
+            {
+                _statuses.Remove(Status.StatusEffect.Sleep); // Any damage wakes a sleeping unit (user decision).
             }
             return dealt;
         }

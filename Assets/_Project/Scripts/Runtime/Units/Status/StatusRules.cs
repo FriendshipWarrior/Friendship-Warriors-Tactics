@@ -10,8 +10,22 @@ namespace FriendshipWarriors.Units.Status
         /// <summary>Duration value meaning "until cured (or the battle ends)".</summary>
         public const int UntilCured = -1;
 
-        /// <summary>HP lost to Poison and healed by Regen at the end of the unit's turn: max HP / 8.</summary>
-        public const int PoisonRegenDivisor = 8;
+        /// <summary>HP lost to Poison at the end of the unit's turn: max HP / 16. FFT is usually cited as / 8; we start
+        /// gentler (user decision) and can raise it later.</summary>
+        public const int PoisonDivisor = 16;
+
+        /// <summary>HP healed by Regen at the end of the unit's turn: max HP / 8 (FFT).</summary>
+        public const int RegenDivisor = 8;
+
+        /// <summary>
+        /// Statuses measured in the unit's own turns instead of clock ticks, and how many. Silence lasts 2 turns (user
+        /// decision; FFT's lasts until cured).
+        /// </summary>
+        public static int? TurnDuration(StatusEffect status) => status switch
+        {
+            StatusEffect.Silence => 2,
+            _ => null,
+        };
 
         public static int DefaultDuration(StatusEffect status) => status switch
         {
@@ -25,7 +39,8 @@ namespace FriendshipWarriors.Units.Status
             StatusEffect.Sleep => 60,
             StatusEffect.Disable => 24,
             StatusEffect.Immobilize => 24,
-            // Blind and Silence last until cured (PSX); Panic lasts while Morale stays below 10.
+            // Blind lasts until cured (PSX); Silence counts the unit's turns instead (see TurnDuration); Panic lasts
+            // while Morale stays below 10.
             _ => UntilCured,
         };
 
