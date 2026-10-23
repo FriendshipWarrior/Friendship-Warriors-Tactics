@@ -58,6 +58,11 @@ FFT is the reference for mechanics and presentation. Characters, story and job n
 - **Reactions** that trigger at Morale %: Counter Charge, Self-Dose, Guard Stance, Adrenaline and Mending Ward, and the Evoker's Feedback Loop (Counter Magic). Plus cures: First Aid and the Corpsman's Antitoxin, Eyewash, Throat Lozenge and Field Remedy.
 - Enemy AI that weighs damage, knock-outs and attack angle, retreats after attacking, faces your nearest unit, and casts spells: area damage away from its own side, heals for hurt allies.
 
+**Unit sprites**
+- **Paper-doll sprites:** each unit is put together from part sheets (body, head, face, hair, headgear, body gear, weapon, shield) and recoloured with its job colour, its team colour and a skin tone, hair colour and hairstyle picked from its name. Gear changes show on the sprite.
+- Idle, attack, cast (while charging a spell), hurt and knocked-out animations, in front and back poses.
+- The parts are plain PNGs on a fixed grid, made to be edited by hand in Aseprite. See the [art guide](Assets/_Project/Art/Sprites/README.md).
+
 **Tools**
 - An in-Unity map editor with a live 3D preview and map checks.
 - A seeded random map generator for quick play.
@@ -69,10 +74,14 @@ FFT is the reference for mechanics and presentation. Characters, story and job n
 |---|---|
 | ![The main menu](docs/images/main-menu.png) | ![A quick play match](docs/images/quick-play.png) |
 | **Main menu:** Quick Play now; Campaign and Options to come. | **Quick play:** random map, random teams, and the seed in the corner. |
-| ![Timed press: the Strike! bar](docs/images/timed-press.png) | ![Units shown as sprites that face the camera](docs/images/units.png) |
-| **Timed press:** press as the marker crosses the gold zone. | **Units:** flat sprites with front and back poses, mirrored by camera angle. |
+| ![Timed press: the Strike! bar](docs/images/timed-press.png) | ![Paper-doll units in battle: one casting, one knocked out](docs/images/paper-doll-battle.png) |
+| **Timed press:** press as the marker crosses the gold zone. | **Units:** paper-doll sprites that face the camera. Here an Evoker charges a spell next to a knocked-out Corpsman. |
 | ![A randomly generated map](docs/images/random-map.png) | ![The map editor](docs/images/map-editor.png) |
 | **Random maps:** hills, plateaus, ponds, chasms and ramps from a seed. | **Map editor:** paint on a grid, preview in 3D, fix the reported problems. |
+
+![Every job in its starting gear on both teams: idle, walk, attack, cast, hurt and KO frames, front and back](docs/images/paper-doll.png)
+
+**Paper dolls:** every job in typical gear, Player team on top and Enemy team below. From left to right: idle, walk, attack, cast, hurt and KO frames in the front pose, then idle, attack, cast and KO frames in the back pose.
 
 ## Controls
 
@@ -115,6 +124,8 @@ All of these are under the **Friendship Warriors** menu in the Unity Editor.
 | **Dev → Rebuild Battle Test Scene** | Rebuilds the test scene and its placeholder assets from code. |
 | **Data → Create Battle Setups** | Creates the prebuilt battle setups: Standard (5 v 5), Defeat the Commander and Escort. |
 | **Data → Create Starting Jobs / Create Starter Equipment** | Creates the job, ability and equipment assets. Existing assets are left alone. |
+| **Art → Generate Paper-Doll Parts** | Draws any missing paper-doll part PNGs and the key palette, and updates the part catalog. Existing PNGs are left alone. **Regenerate (Overwrite)…** replaces them after asking. |
+| **Art → Save Paper-Doll Preview…** | Saves a contact sheet of every job on both teams, to check the parts read clearly. |
 
 ## How the game works
 
@@ -182,8 +193,10 @@ Assets/
       Controls/        Input, tile cursor
       Camera/          Isometric camera
       UI/              Battle HUD and menus (uGUI + TextMeshPro, built in code)
-    Scripts/Editor/    Map editor, scene and data builders
+    Scripts/Editor/    Map editor, scene and data builders, paper-doll part generator
     Data/              Maps, jobs, abilities, equipment, battle setups, props, palettes, generator settings
+    Art/               Paper-doll part PNGs, key palette, art guide (Sprites/README.md)
+    Resources/         Sprite part catalog (loaded at runtime)
     Input/             Input actions (gamepad + keyboard/mouse)
     Scenes/            MainMenu, QuickPlay, Battle_Test (dev sandbox)
   Tests/EditMode/      Unit tests (NUnit)
@@ -195,7 +208,7 @@ CLAUDE.md              Design decisions, conventions and project notes
 
 - **Rules are plain C#, separate from presentation**, so they're deterministic and tested in EditMode tests. Run them from the Unity Test Runner (Window → General → Test Runner).
 - **Content is data:** jobs, abilities, equipment, maps and terrain looks are ScriptableObject assets. To use real art, set it on the asset; no code changes needed.
-- **Placeholder art throughout:** colored tiles and generated sprites, until the real sprites are drawn.
+- **Placeholder art throughout:** colored tiles, and paper-doll unit sprites drawn by code as a starting point for hand editing.
 - **Workflow:** feature branches and pull requests into `main`, with commit messages in Conventional Commits style.
 - **Design record:** [`CLAUDE.md`](CLAUDE.md) records every design decision. It notes which FFT rules are confirmed, which are approximations, and where we deliberately differ.
 
@@ -212,7 +225,9 @@ CLAUDE.md              Design decisions, conventions and project notes
 - [x] Magic (Evoker and Warder spells, charge times)
 - [x] Battle setups and objectives (5 v 5 standard, defeat a target, protect a character)
 - [x] Main menu, Quick Play (random 5 v 5 from a seed), pause menu
-- [ ] Character sprites and terrain art
+- [x] Paper-doll unit sprites (first drafts drawn by code, ready for hand editing)
+- [ ] **Next:** animated movement: units walk along their path tile by tile, as in FFT, with walk frames and leaps
+- [ ] Hand-drawn character art and terrain art
 - [ ] Battle prep, party management, campaign and story. Losing a campaign battle won't be game over: the campaign carries on, unlike FFT.
 - [ ] Quick Play options: online matches, army building
 - [ ] Save system

@@ -3,6 +3,7 @@
     "rootNamespace": "FriendshipWarriors.Tests",
     "references": [
         "FriendshipWarriors.Runtime",
+        "FriendshipWarriors.Editor",
         "UnityEngine.TestRunner",
         "UnityEditor.TestRunner"
     ],

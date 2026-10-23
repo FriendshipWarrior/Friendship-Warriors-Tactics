@@ -402,6 +402,7 @@ namespace FriendshipWarriors.Battle
                 user.Facing = DirectionExtensions.Toward(user.Coord, coord);
 
             bool wasDown = target.Unit.IsKnockedOut;
+            _active.PlayAttack();
             var result = AbilityCommand.Execute(_ability, user, target.Unit, _gridView.Grid, Units, InventoryOf(user.Team), _rng);
             if (result.KnockedTo != null)
                 target.SyncPosition();
@@ -428,6 +429,7 @@ namespace FriendshipWarriors.Battle
             if (tile != caster.Coord)
                 caster.Facing = DirectionExtensions.Toward(caster.Coord, tile);
             _turn.RecordAct();
+            _active.PlayCast();
 
             var result = SpellCasting.Begin(caster, spell, tile, _order, _gridView.Grid, Units.ToList(), _rng, out var charge);
             if (charge == null)
@@ -634,6 +636,7 @@ namespace FriendshipWarriors.Battle
             _hud.HideTimingPrompt();
             var attacker = _active.Unit;
             var target = _target.Unit;
+            _active.PlayAttack();
 
             string outcome;
             if (!result.Hit)
