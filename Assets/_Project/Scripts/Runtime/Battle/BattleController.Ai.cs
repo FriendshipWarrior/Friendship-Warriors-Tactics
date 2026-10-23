@@ -7,13 +7,15 @@ using FriendshipWarriors.Grid.Pathfinding;
 using FriendshipWarriors.Grid.View;
 using FriendshipWarriors.Units;
 using FriendshipWarriors.Units.Status;
+using FriendshipWarriors.Units.View.Walking;
 using UnityEngine;
 
 namespace FriendshipWarriors.Battle
 {
     /// <summary>
     /// AI-controlled turns. <see cref="AiPlanner"/> decides the whole turn up front; this plays it back as a queue of
-    /// paced steps (show the move range, move, attack, face, end) so the player can follow along. Attacks go through
+    /// paced steps (show the move range, move, attack, face, end) so the player can follow along; moves wait for the
+    /// unit's walk to finish before the next step. Attacks go through
     /// the same resolution as the player's, so an AI unit attacking a Player-team unit still raises the "Brace!" prompt.
     /// </summary>
     public sealed partial class BattleController
@@ -143,15 +145,22 @@ namespace FriendshipWarriors.Battle
             {
                 _aiRange.TryGetPath(destination, _path);
                 var lastFrom = _path.Count > 1 ? _path[^2] : unit.Coord;
+                var walk = WalkPath.ForRoute(_gridView.Grid, unit.Coord, _path, _walkSettings);
                 unit.Coord = destination;
                 unit.Facing = DirectionExtensions.Toward(lastFrom, destination);
-                _active.SyncPosition();
                 _turn.RecordMove();
+                _active.Walk(walk);
             }
             _aiRange = null;
             _aiDestination = null;
-            _cursor.SetCoord(unit.Coord, followCamera: true);
-            Refresh();
+            // The next step waits for the walk; a shorter pause after it, since the walk itself was the show.
+            WaitForWalks(() =>
+            {
+                _cursor.SetCoord(unit.Coord, followCamera: true);
+                _phase = Phase.AiTurn;
+                _aiNextStepAt = BattleNow + _aiStepDelay * 0.5f;
+                Refresh();
+            }, follow: _active);
         }
 
         private void AiAttack(Unit target)

@@ -35,6 +35,7 @@ FFT is the reference for mechanics and presentation. Characters, story and job n
 **Battlefield**
 - FFT-style tiles: heights in half steps (1h, 1.5h, …), slopes, water depth, terrain types, deployment zones for each side, and props like trees and rocks.
 - FFT movement: Move and Jump, leaping gaps of Jump ÷ 2 tiles, and leaping over enemies standing at least 2h lower. Enemies block, allies can be passed.
+- Units walk their route tile by tile, as in FFT: they follow slopes, hop up and down ledges, arc over gaps, and turn with each step. Knockback pushes them. Hold A / Enter to hurry a walk.
 - The whole map is drawn as one mesh with real slopes, which keeps it cheap enough for the Steam Deck.
 - An isometric camera that rotates in 90° steps, switches between FFT's low and high tilt, zooms and pans.
 
@@ -60,7 +61,7 @@ FFT is the reference for mechanics and presentation. Characters, story and job n
 
 **Unit sprites**
 - **Paper-doll sprites:** each unit is put together from part sheets (body, head, face, hair, headgear, body gear, weapon, shield) and recoloured with its job colour, its team colour and a skin tone, hair colour and hairstyle picked from its name. Gear changes show on the sprite.
-- Idle, attack, cast (while charging a spell), hurt and knocked-out animations, in front and back poses.
+- Idle, walk, attack, cast (while charging a spell), hurt and knocked-out animations, in front and back poses.
 - The parts are plain PNGs on a fixed grid, made to be edited by hand in Aseprite. See the [art guide](Assets/_Project/Art/Sprites/README.md).
 
 **Tools**
@@ -78,6 +79,8 @@ FFT is the reference for mechanics and presentation. Characters, story and job n
 | **Timed press:** press as the marker crosses the gold zone. | **Units:** paper-doll sprites that face the camera. Here an Evoker charges a spell next to a knocked-out Corpsman. |
 | ![A randomly generated map](docs/images/random-map.png) | ![The map editor](docs/images/map-editor.png) |
 | **Random maps:** hills, plateaus, ponds, chasms and ramps from a seed. | **Map editor:** paint on a grid, preview in 3D, fix the reported problems. |
+| ![A Cadet leaping a chasm mid-walk](docs/images/walk-leap.png) | |
+| **Walking:** units walk their route tile by tile. Here a Cadet leaps a chasm after walking up a ramp and hopping onto a ledge. | |
 
 ![Every job in its starting gear on both teams: idle, walk, attack, cast, hurt and KO frames, front and back](docs/images/paper-doll.png)
 
@@ -95,6 +98,7 @@ FFT is the reference for mechanics and presentation. Characters, story and job n
 | Zoom | LT / RT | Scroll wheel, − / = |
 | Pan | Right stick | Middle-drag |
 | Timed press | A | Enter / Space |
+| Hurry a walk (hold) | A | Enter / Space |
 | Pause | Start | P |
 | New random map (test scene) | Select | R |
 
@@ -226,7 +230,7 @@ CLAUDE.md              Design decisions, conventions and project notes
 - [x] Battle setups and objectives (5 v 5 standard, defeat a target, protect a character)
 - [x] Main menu, Quick Play (random 5 v 5 from a seed), pause menu
 - [x] Paper-doll unit sprites (first drafts drawn by code, ready for hand editing)
-- [ ] **Next:** animated movement: units walk along their path tile by tile, as in FFT, with walk frames and leaps
+- [x] Animated movement: units walk their path tile by tile, as in FFT, with walk frames, hops and leaps
 - [ ] Hand-drawn character art and terrain art
 - [ ] Battle prep, party management, campaign and story. Losing a campaign battle won't be game over: the campaign carries on, unlike FFT.
 - [ ] Quick Play options: online matches, army building

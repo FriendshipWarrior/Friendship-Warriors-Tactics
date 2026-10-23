@@ -15,6 +15,7 @@ using FriendshipWarriors.Units;
 using FriendshipWarriors.Units.Abilities;
 using FriendshipWarriors.Units.Status;
 using FriendshipWarriors.Units.View;
+using FriendshipWarriors.Units.View.Walking;
 using UnityEngine;
 using UnityEngine.InputSystem;
 
@@ -34,7 +35,7 @@ namespace FriendshipWarriors.Battle
     /// </summary>
     public sealed partial class BattleController : MonoBehaviour
     {
-        private enum Phase { Idle, Command, ActMenu, ChooseDestination, ChooseTarget, TimedPress, ChooseFacing, BattleOver, AiTurn, AbilityMenu, ChooseAbilityTarget, SpellResolving }
+        private enum Phase { Idle, Command, ActMenu, ChooseDestination, ChooseTarget, TimedPress, ChooseFacing, BattleOver, AiTurn, AbilityMenu, ChooseAbilityTarget, SpellResolving, Moving }
         private enum PressRole { None, Offense, Defense }
 
         private const string MoveId = "move", ActId = "act", WaitId = "wait", AttackId = "attack", PrimaryId = "primary", SecondaryId = "secondary";
@@ -57,6 +58,10 @@ namespace FriendshipWarriors.Battle
         [Header("Magic")]
         [Tooltip("Pause after a charged spell resolves, in seconds, so its result can be read.")]
         [SerializeField, Min(0f)] private float _spellResolvePause = 1.1f;
+
+        [Header("Movement")]
+        [Tooltip("How moves play out on screen: walk speed, hop and leap arcs, knockback, and the hold-Confirm speed-up.")]
+        [SerializeField] private WalkSettings _walkSettings = WalkSettings.Default;
 
         [Header("Menu Repeat")]
         [SerializeField, Min(0.05f)] private float _menuRepeatDelay = 0.35f;
@@ -95,6 +100,11 @@ namespace FriendshipWarriors.Battle
         // Battle time for presses, result holds and AI steps; disabling this component (pausing) stops it.
         private readonly BattleClock _clock = new();
         private float BattleNow => _clock.Now(Time.unscaledTime);
+
+        // Walks: the rules have already moved the unit; the battle waits here until the picture catches up.
+        private System.Action _afterWalk;
+        private UnitView _walkFollow;
+        private float _walkClockAt;
 
         /// <summary>The battle is over; true when the Player team won. Raised once, after the result banner is shown.</summary>
         public event System.Action<bool> BattleEnded;
@@ -156,6 +166,8 @@ namespace FriendshipWarriors.Battle
             _lost.Clear();
             _objective = objective ?? BattleObjective.Standard;
             _phase = Phase.Idle; // a previous battle may have ended in BattleOver
+            _afterWalk = null;
+            _walkFollow = null;
             foreach (var unit in Units)
             {
                 unit.ChargeTime = 0;
@@ -191,6 +203,7 @@ namespace FriendshipWarriors.Battle
 
         private void Update()
         {
+            UpdateWalks();
             switch (_phase)
             {
                 case Phase.Command:
@@ -404,17 +417,16 @@ namespace FriendshipWarriors.Battle
             bool wasDown = target.Unit.IsKnockedOut;
             _active.PlayAttack();
             var result = AbilityCommand.Execute(_ability, user, target.Unit, _gridView.Grid, Units, InventoryOf(user.Team), _rng);
-            if (result.KnockedTo != null)
-                target.SyncPosition();
             string message = result.Message;
             if (result.Outcome.Damage > 0)
                 message += AfterDamage(target.Unit, user, wasDown, result.Outcome.Damage);
             Debug.Log($"[Battle] {message} ({result.Outcome.HitChance}% to hit).", this);
             _hud.ShowBanner(message);
             _turn.RecordAct();
+            PushDisplacedUnits();
             if (CheckBattleOver())
                 return;
-            AfterAction();
+            WaitForWalks(AfterAction);
         }
 
         // ------------------------------------------------------------------ Magic
@@ -554,11 +566,12 @@ namespace FriendshipWarriors.Battle
             var unit = _active.Unit;
             _range.TryGetPath(coord, _path);
             var lastFrom = _path.Count > 1 ? _path[^2] : unit.Coord;
+            var walk = WalkPath.ForRoute(_gridView.Grid, unit.Coord, _path, _walkSettings);
             unit.Coord = coord;
             unit.Facing = DirectionExtensions.Toward(lastFrom, coord);
-            _active.SyncPosition();
             _turn.RecordMove();
-            AfterAction();
+            _active.Walk(walk);
+            WaitForWalks(AfterAction, follow: _active);
         }
 
         /// <summary>Targets within the equipped weapon's range and vertical reach.</summary>
@@ -665,9 +678,10 @@ namespace FriendshipWarriors.Battle
                       $"({result.HitChance}% to hit): {result}.", this);
             _hud.ShowBanner($"{attacker.Name} > {target.Name}: {outcome}");
             _turn.RecordAct();
+            PushDisplacedUnits();
             if (CheckBattleOver())
                 return;
-            AfterAction();
+            WaitForWalks(AfterAction);
         }
 
         /// <summary>Ends the battle if the objective is won or lost (see <see cref="ObjectiveEvaluator"/>).</summary>
@@ -782,9 +796,6 @@ namespace FriendshipWarriors.Battle
             {
                 extra = $"   |   {reaction.Message}";
                 Debug.Log($"[Battle] Reaction: {reaction.Message}.", this);
-                var attackerView = _views.FirstOrDefault(v => v.Unit == attacker);
-                if (attackerView != null)
-                    attackerView.SyncPosition();
                 if (!attackerWasDown && attacker.IsKnockedOut)
                     OnKnockedOut(attacker);
             }
@@ -796,6 +807,72 @@ namespace FriendshipWarriors.Battle
         {
             foreach (var ally in Units.Where(u => u != unit && u.Team == unit.Team && !u.IsKnockedOut))
                 ally.AdjustMorale(-MoraleRules.AllyKnockedOutLoss);
+        }
+
+        // ------------------------------------------------------------------ Walking
+
+        /// <summary>
+        /// Waits for every walk and push on screen to finish, then runs <paramref name="then"/>. Input is ignored
+        /// meanwhile (the camera still works) and the camera follows <paramref name="follow"/>. Runs at once when
+        /// nothing is moving.
+        /// </summary>
+        private void WaitForWalks(System.Action then, UnitView follow = null)
+        {
+            if (!_views.Any(v => v.IsWalking))
+            {
+                then();
+                return;
+            }
+            _phase = Phase.Moving;
+            _walkClockAt = BattleNow;
+            _afterWalk = then;
+            _walkFollow = follow;
+            _hud.HideMenu();
+            _cursor.DirectionalInputLocked = true;
+            _hud.SetHint(follow != null ? "Hold A / Enter to hurry" : "");
+            Refresh();
+        }
+
+        /// <summary>Plays walks on battle time (frozen while paused); Confirm held hurries them.</summary>
+        private void UpdateWalks()
+        {
+            float now = BattleNow;
+            // Capped so a hitch (or the first frame after a long idle) doesn't skip a walk.
+            float seconds = Mathf.Min(now - _walkClockAt, 0.1f);
+            _walkClockAt = now;
+            float rate = _input.Confirm.IsPressed() ? _walkSettings.HurryMultiplier : 1f;
+            bool walking = false;
+            foreach (var view in _views)
+            {
+                if (!view.IsWalking)
+                    continue;
+                view.AdvanceWalk(seconds, rate);
+                walking |= view.IsWalking;
+            }
+            if (_walkFollow != null)
+                _cameraRig.Focus(_walkFollow.transform.position);
+            if (walking || _phase != Phase.Moving)
+                return;
+
+            var then = _afterWalk;
+            _afterWalk = null;
+            if (_walkFollow != null)
+                _cursor.SetCoord(_walkFollow.Unit.Coord, followCamera: true);
+            _walkFollow = null;
+            _phase = Phase.Idle;
+            then?.Invoke();
+        }
+
+        /// <summary>Units the rules moved without a walk (knockback, Counter Tackle) are pushed to their new tile.</summary>
+        private void PushDisplacedUnits()
+        {
+            foreach (var view in _views)
+            {
+                var unit = view.Unit;
+                if (view.IsWalking || view.ShownCoord == unit.Coord)
+                    continue;
+                view.Walk(WalkPath.ForPush(_gridView.Grid, view.ShownCoord, unit.Coord, unit.Facing, _walkSettings));
+            }
         }
 
         // ------------------------------------------------------------------ Input
@@ -986,7 +1063,7 @@ namespace FriendshipWarriors.Battle
                     break;
             }
 
-            if (_active != null)
+            if (_active != null && _phase != Phase.Moving)
                 _gridView.SetHighlight(_active.Unit.Coord, TileHighlight.Selected);
             if (_phase is Phase.ChooseDestination or Phase.ChooseTarget or Phase.ChooseAbilityTarget)
                 _gridView.SetHighlight(_cursor.Coord, TileHighlight.Hover);
