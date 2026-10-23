@@ -32,6 +32,8 @@ MonoBehaviour:
   _commandName: Marksmanship
   _abilities:
   - {fileID: 11400000, guid: 69e38cfa668f6485c8f8a76af030c0e8, type: 2}
+  - {fileID: 11400000, guid: 52f496018e7b64728bfd5f248f1a61ec, type: 2}
+  _innateAbilities: []
   _weaponTypes: 03000000i
   _canUseShields: 0
   _armorTypes: 0200000004000000i

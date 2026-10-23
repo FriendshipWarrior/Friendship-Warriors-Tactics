@@ -26,6 +26,8 @@ namespace FriendshipWarriors.Units.Equipment
         [SerializeField, Min(0)] private int _verticalReach = 3;
         [Tooltip("Needs both hands, leaving the off hand empty (FFT bows and similar).")]
         [SerializeField] private bool _twoHanded;
+        [Tooltip("W-Ev, in percent: only counts for a unit with a Parry-type reaction, against front and side physical attacks (FFT).")]
+        [SerializeField, Range(0, 100)] private int _weaponEvasion;
 
         [Header("Shield / Accessory")]
         [Tooltip("S-Ev for shields, A-Ev for accessories, in percent.")]
@@ -45,6 +47,9 @@ namespace FriendshipWarriors.Units.Equipment
         public int MaxRange => _maxRange;
         public int VerticalReach => _verticalReach;
         public bool TwoHanded => _twoHanded;
+        public int WeaponEvasion => _weaponEvasion;
+
+        public void SetWeaponEvasion(int weaponEvasion) => _weaponEvasion = weaponEvasion;
         public int Evasion => _evasion;
         public ArmorType ArmorType => _armorType;
         public int HpBonus => _hpBonus;

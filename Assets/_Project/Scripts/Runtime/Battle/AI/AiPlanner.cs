@@ -4,7 +4,10 @@ using System.Linq;
 using FriendshipWarriors.Battle.Combat;
 using FriendshipWarriors.Grid;
 using FriendshipWarriors.Grid.Pathfinding;
+using FriendshipWarriors.Battle.Reactions;
 using FriendshipWarriors.Units;
+using FriendshipWarriors.Units.Abilities;
+using FriendshipWarriors.Units.Status;
 
 namespace FriendshipWarriors.Battle.AI
 {
@@ -13,8 +16,10 @@ namespace FriendshipWarriors.Battle.AI
     /// weights). Every tile the unit can stand on this turn — including staying put — is paired with every enemy its
     /// Attack can reach from there, and scored by expected damage, a large bonus for a likely knock-out, a preference
     /// for side and back attacks, and a small cost for ending within reach of many enemies. With nothing to attack, it
-    /// closes in on the nearest enemy by walking distance. It always ends facing the nearest enemy. Turn-trade
-    /// abilities are not used by the AI yet.
+    /// closes in on the nearest enemy by walking distance. It always ends facing the nearest enemy. Statuses are
+    /// respected: no moving when immobilized, no attacking when disabled, and a panicking unit only runs as far from
+    /// the enemy as it can (FFT Chicken). Attacks into a likely counter-strike cost their expected counter damage.
+    /// Turn-trade abilities are not used by the AI yet.
     /// </summary>
     public static class AiPlanner
     {
@@ -30,13 +35,26 @@ namespace FriendshipWarriors.Battle.AI
         {
             var origin = actor.Coord;
             var stats = actor.Stats;
-            var range = Pathfinder.FindMovementRange(grid, origin, new MovementProfile(stats.Move, stats.Jump),
-                UnitOccupancy.For(actor, units), rules);
             var positions = new List<GridCoord> { origin };
-            positions.AddRange(range.Destinations);
+            if (actor.CanMove)
+            {
+                var range = Pathfinder.FindMovementRange(grid, origin, new MovementProfile(stats.Move, stats.Jump),
+                    UnitOccupancy.For(actor, units), rules);
+                positions.AddRange(range.Destinations);
+            }
             var enemies = units.Where(u => u.Team != actor.Team && !u.IsKnockedOut).ToList();
 
             var plan = new AiPlan();
+            if (actor.HasStatus(StatusEffect.Panic))
+            {
+                var flee = FarthestFromEnemies(positions, origin, enemies, rng);
+                if (flee != origin)
+                    plan.MoveBefore = flee;
+                plan.Facing = FacingTowardNearest(flee, enemies, actor.Facing);
+                return plan;
+            }
+            // A disabled unit can't attack, but still walks toward the enemy.
+            var attackable = actor.CanAct ? enemies : new List<Unit>();
             double bestScore = double.NegativeInfinity;
             GridCoord bestPosition = origin;
             try
@@ -45,7 +63,7 @@ namespace FriendshipWarriors.Battle.AI
                 {
                     actor.Coord = position;
                     var targets = new HashSet<GridCoord>(AttackRange.Targets(grid, actor));
-                    foreach (var enemy in enemies)
+                    foreach (var enemy in attackable)
                     {
                         if (!targets.Contains(enemy.Coord))
                             continue;
@@ -99,8 +117,9 @@ namespace FriendshipWarriors.Battle.AI
         public static double AttackScore(Unit actor, Unit target)
         {
             double hit = CombatFormulas.HitChance(actor, target) / 100.0;
-            int damage = CombatFormulas.AttackFactors(actor).Damage;
+            int damage = CombatFormulas.AttackDamage(actor, target);
             double score = hit * Math.Min(damage, target.CurrentHp);
+            score -= CounterRisk(actor, target, hit, damage);
             if (damage >= target.CurrentHp)
                 score += hit * target.Stats.MaxHp * KnockOutBonus;
             score += FacingRules.AngleOfAttack(target.Coord, target.Facing, actor.Coord) switch
@@ -110,6 +129,43 @@ namespace FriendshipWarriors.Battle.AI
                 _ => 0.0,
             };
             return score;
+        }
+
+        /// <summary>
+        /// Expected damage from the target's counter-strike reaction: trigger chance (its Morale) × average counter
+        /// damage, if the attack would land, the target would survive it, and the attacker stands within its reach.
+        /// </summary>
+        public static double CounterRisk(Unit actor, Unit target, double hit, int damage)
+        {
+            var reaction = target.Reaction;
+            if (reaction == null || reaction.Reaction != ReactionEffect.CounterStrike || !target.CanReact || damage >= target.CurrentHp)
+                return 0.0;
+            if (actor.Coord.ManhattanDistance(target.Coord) > Math.Max(1, reaction.MaxRange))
+                return 0.0;
+            double averageMultiplier = (reaction.RandomMultiplier.x + reaction.RandomMultiplier.y) / 2.0;
+            double counter = CombatFormulas.PhysicalDamage(target, actor, (int)Math.Round(target.Stats.PhysicalAttack * averageMultiplier), melee: true);
+            return hit * ReactionResolver.TriggerChance(target) * Math.Min(counter, actor.CurrentHp);
+        }
+
+        /// <summary>FFT's Chicken runs: the reachable tile farthest from the nearest enemy.</summary>
+        private static GridCoord FarthestFromEnemies(List<GridCoord> positions, GridCoord origin, List<Unit> enemies, Random rng)
+        {
+            if (enemies.Count == 0)
+                return origin;
+            var best = origin;
+            double bestDistance = Nearest(origin);
+            foreach (var position in positions)
+            {
+                double distance = Nearest(position) + rng.NextDouble() * 0.01;
+                if (distance > bestDistance)
+                {
+                    bestDistance = distance;
+                    best = position;
+                }
+            }
+            return best;
+
+            double Nearest(GridCoord tile) => enemies.Min(e => e.Coord.ManhattanDistance(tile));
         }
 
         /// <summary>How many enemies could plausibly reach and hit this tile next turn: within their Move plus weapon range.</summary>

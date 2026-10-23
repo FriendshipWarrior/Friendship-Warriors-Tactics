@@ -39,6 +39,13 @@ namespace FriendshipWarriors.Dev
         [SerializeField] private JobDefinition _itemJob;
         [SerializeField] private ItemStock[] _startingItems = System.Array.Empty<ItemStock>();
 
+        [Header("Statuses (testing)")]
+        [Tooltip("Statuses some units start with, to try statuses, cures and reactions. Panic comes from Morale instead.")]
+        [SerializeField] private StatusSeed[] _startingStatuses = System.Array.Empty<StatusSeed>();
+        [Tooltip("An enemy (by roster index) that starts at this Morale; below 10 it panics. -1 for none.")]
+        [SerializeField] private int _lowMoraleEnemy = -1;
+        [SerializeField, Range(0, 100)] private int _lowMorale = 8;
+
         [Header("Random Maps")]
         [SerializeField] private MapGeneratorSettings _generatorSettings;
 
@@ -85,7 +92,29 @@ namespace FriendshipWarriors.Dev
                     inventory.Add(stock.Item, stock.Count);
                 _battle.SetInventory(team, inventory);
             }
-            _battle.Begin(_views);
+            _battle.Begin(_views, PrepareStatuses);
+        }
+
+        /// <summary>Applies the test statuses and the low-Morale enemy once the battle has cleared old modifiers.</summary>
+        private void PrepareStatuses(IReadOnlyList<Unit> units)
+        {
+            Unit At(Team team, int index)
+            {
+                int seen = 0;
+                foreach (var unit in units)
+                {
+                    if (unit.Team != team)
+                        continue;
+                    if (seen++ == index)
+                        return unit;
+                }
+                return null;
+            }
+
+            foreach (var seed in _startingStatuses)
+                At(seed.Team, seed.RosterIndex)?.AddStatus(seed.Status);
+            if (_lowMoraleEnemy >= 0 && At(Team.Enemy, _lowMoraleEnemy) is { } nervous)
+                nervous.AdjustMorale(_lowMorale - nervous.Morale);
         }
 
         private void Spawn(JobDefinition[] jobs, Team team, IReadOnlyList<GridCoord> zone, IReadOnlyList<GridCoord> facingZone, System.Random rng)

@@ -11,11 +11,17 @@ namespace FriendshipWarriors.Battle
     {
         private readonly bool _canTradeMoveForAct;
         private readonly bool _canTradeActForMove;
+        private readonly bool _moveBlocked;
+        private readonly bool _actBlocked;
 
-        public TurnState(bool canTradeMoveForAct = false, bool canTradeActForMove = false)
+        /// <param name="moveBlocked">A status forbids moving this turn (Immobilize, Sleep, Stop).</param>
+        /// <param name="actBlocked">A status forbids acting this turn (Disable, Sleep, Stop, Panic).</param>
+        public TurnState(bool canTradeMoveForAct = false, bool canTradeActForMove = false, bool moveBlocked = false, bool actBlocked = false)
         {
             _canTradeMoveForAct = canTradeMoveForAct;
             _canTradeActForMove = canTradeActForMove;
+            _moveBlocked = moveBlocked;
+            _actBlocked = actBlocked;
         }
 
         /// <summary>The turn's Move has been used, by moving or by a second action.</summary>
@@ -27,8 +33,8 @@ namespace FriendshipWarriors.Battle
         public int MovesTaken { get; private set; }
         public int ActsTaken { get; private set; }
 
-        public bool CanMove => !MoveSpent || (_canTradeActForMove && !ActSpent);
-        public bool CanAct => !ActSpent || (_canTradeMoveForAct && !MoveSpent);
+        public bool CanMove => !_moveBlocked && (!MoveSpent || (_canTradeActForMove && !ActSpent));
+        public bool CanAct => !_actBlocked && (!ActSpent || (_canTradeMoveForAct && !MoveSpent));
 
         /// <summary>The next Move would use up the Act.</summary>
         public bool NextMoveUsesAct => MoveSpent && CanMove;

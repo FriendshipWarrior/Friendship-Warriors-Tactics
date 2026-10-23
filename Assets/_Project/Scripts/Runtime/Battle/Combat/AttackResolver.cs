@@ -5,7 +5,9 @@ namespace FriendshipWarriors.Battle.Combat
 {
     /// <summary>
     /// Resolves one physical Attack: evasion first (FFT), then the defender's timed block, then the critical roll
-    /// (FFT's 5% plus the attacker's timed bonus). Pure: it reads the units and returns a result without applying it.
+    /// (FFT's 5% plus the attacker's timed bonus), then Morale and status modifiers on the damage. Reactions come
+    /// after the damage lands (see <c>ReactionResolver</c>). Pure: it reads the units and returns a result without
+    /// applying it.
     /// </summary>
     public static class AttackResolver
     {
@@ -25,7 +27,8 @@ namespace FriendshipWarriors.Battle.Combat
 
             var factors = CombatFormulas.AttackFactors(attacker);
             bool critical = rng.NextDouble() < rules.CriticalChance(offenseAccuracy);
-            int damage = critical ? CombatFormulas.CriticalDamage(factors, rng) : factors.Damage;
+            int baseDamage = critical ? CombatFormulas.CriticalDamage(factors, rng) : factors.Damage;
+            int damage = CombatFormulas.PhysicalDamage(attacker, target, baseDamage, CombatFormulas.IsMeleeWeapon(attacker.WeaponType));
             return new AttackResult(angle, hitChance, hit: true, blocked: false, critical, damage);
         }
     }

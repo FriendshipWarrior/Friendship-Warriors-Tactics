@@ -3,6 +3,7 @@ using FriendshipWarriors.Editor.Maps;
 using FriendshipWarriors.Units;
 using FriendshipWarriors.Units.Abilities;
 using FriendshipWarriors.Units.Equipment;
+using FriendshipWarriors.Units.Status;
 using UnityEditor;
 using UnityEngine;
 
@@ -67,6 +68,20 @@ namespace FriendshipWarriors.Editor.Units
             Teach(evoker, "Evocation");
             Teach(warder, "Warding");
 
+            // Status cures and reactions (added after the first abilities, so appended to existing jobs).
+            AlsoTeach(cadet, FirstAid(), Reaction("Counter Charge", 180, ReactionEffect.CounterStrike, // Counter Tackle, 180 JP
+                "When struck in melee range, charge back: P.Atk × 1–4 damage, may knock back. Triggers at Morale %.",
+                random: new Vector2Int(1, 4), knockback: true));
+            AlsoTeach(corpsman, CureItems());
+            AlsoTeach(corpsman, Reaction("Self-Dose", 400, ReactionEffect.AutoHeal, // Auto Potion, 400 JP
+                "When hurt, take the team's weakest tonic. Triggers at Morale %."));
+            AlsoTeach(vanguard, Reaction("Guard Stance", 200, ReactionEffect.Parry, // Parry / Weapon Guard, 200 JP
+                "Turn blows aside: your weapon's evasion counts against front and side attacks. Always on."));
+            AlsoTeach(marksman, Reaction("Adrenaline", 800, ReactionEffect.SpeedUp, // Speed Save, 800 JP
+                "When hurt, Speed +1 for the rest of the battle. Triggers at Morale %."));
+            AlsoTeach(warder, Reaction("Mending Ward", 400, ReactionEffect.GainRegen, // Regenerator, 400 JP
+                "When hurt, gain Regen. Triggers at Morale %."));
+
             // Which weapons each job wields, after its FFT counterpart (Marksman rifles use FFT's bow rules).
             Arm(cadet, false, WeaponType.Sword, WeaponType.Knife);
             Arm(corpsman, false, WeaponType.Knife);
@@ -106,11 +121,12 @@ namespace FriendshipWarriors.Editor.Units
             TestSceneBuilder.EnsureFolder(EquipmentFolder);
             return new[]
             {
-                Weapon("Service Saber", WeaponType.Sword, 4, 1, 1, 3, "Standard-issue officer's saber."),
-                Weapon("Field Knife", WeaponType.Knife, 3, 1, 1, 3, "Utility blade every corpsman carries."),
+                // W-Ev (only used by Parry-type reactions), recalled FFT values: Broad Sword 5, Dagger 5, Long Bow 0, Rod 20, Oak Staff 15.
+                WithWeaponEvasion(Weapon("Service Saber", WeaponType.Sword, 4, 1, 1, 3, "Standard-issue officer's saber."), 5),
+                WithWeaponEvasion(Weapon("Field Knife", WeaponType.Knife, 3, 1, 1, 3, "Utility blade every corpsman carries."), 5),
                 Weapon("Service Rifle", WeaponType.Rifle, 4, 1, 5, 99, "Bolt-action long rifle with brass sights.", twoHanded: true),
-                Weapon("Aether Rod", WeaponType.Rod, 3, 1, 1, 3, "Copper focus rod humming with aether."),
-                Weapon("Ward Staff", WeaponType.Staff, 3, 1, 1, 3, "Ironwood staff etched with warding glyphs."),
+                WithWeaponEvasion(Weapon("Aether Rod", WeaponType.Rod, 3, 1, 1, 3, "Copper focus rod humming with aether."), 20),
+                WithWeaponEvasion(Weapon("Ward Staff", WeaponType.Staff, 3, 1, 1, 3, "Ironwood staff etched with warding glyphs."), 15),
                 Armor("Buckler", EquipmentCategory.Shield, 10, "Riveted steel buckler."),
                 Gear("Steel Helm", EquipmentCategory.Head, ArmorType.Helmet, 10, 0, "Riveted helm with a brass crest."),
                 Gear("Field Cap", EquipmentCategory.Head, ArmorType.Hat, 8, 0, "Peaked cap with goggles."),
@@ -118,6 +134,16 @@ namespace FriendshipWarriors.Editor.Units
                 Gear("Aether Robe", EquipmentCategory.Body, ArmorType.Robe, 10, 10, "Robe stitched with aether-conductive thread."),
                 Gear("Fatigues", EquipmentCategory.Body, ArmorType.Clothing, 5, 0, "Standard-issue field uniform."),
             };
+        }
+
+        private static EquipmentDefinition WithWeaponEvasion(EquipmentDefinition weapon, int weaponEvasion)
+        {
+            if (weapon.WeaponEvasion == 0 && weaponEvasion != 0)
+            {
+                weapon.SetWeaponEvasion(weaponEvasion);
+                EditorUtility.SetDirty(weapon);
+            }
+            return weapon;
         }
 
         private static EquipmentDefinition Weapon(string displayName, WeaponType type, int power, int minRange, int maxRange,
@@ -184,6 +210,77 @@ namespace FriendshipWarriors.Editor.Units
             EditorUtility.SetDirty(job);
         }
 
+        /// <summary>Appends abilities a job doesn't teach yet, keeping its existing list and order.</summary>
+        private static void AlsoTeach(JobDefinition job, params AbilityDefinition[] abilities)
+        {
+            var list = new List<AbilityDefinition>(job.Abilities);
+            bool changed = false;
+            foreach (var ability in abilities)
+            {
+                if (ability != null && !list.Contains(ability))
+                {
+                    list.Add(ability);
+                    changed = true;
+                }
+            }
+            if (!changed)
+                return;
+            job.SetAbilities(job.CommandName, list.ToArray());
+            EditorUtility.SetDirty(job);
+        }
+
+        /// <summary>FFT Squire's Heal: cures Blind and Silence on the user or an adjacent unit (150 JP).</summary>
+        private static AbilityDefinition FirstAid()
+        {
+            var ability = Action("First Aid", 150, "Patch up yourself or an adjacent unit: cures Blind and Silence.",
+                AbilityEffect.CureStatus, AbilityTargeting.Standing, 0, 1, 3);
+            if (ability.Cures.Count == 0)
+            {
+                ability.SetCures(StatusEffect.Blind, StatusEffect.Silence);
+                EditorUtility.SetDirty(ability);
+            }
+            return ability;
+        }
+
+        /// <summary>
+        /// FFT Chemist status cures that matter while only our statuses exist (FFT name and JP in comments; Remedy's
+        /// cure list is cut down to the statuses we have).
+        /// </summary>
+        private static AbilityDefinition[] CureItems() => new[]
+        {
+            CureItem("Antitoxin", 70, "Cures Poison.", StatusEffect.Poison),                         // Antidote
+            CureItem("Eyewash", 80, "Cures Blind.", StatusEffect.Blind),                              // Eye Drops
+            CureItem("Throat Lozenge", 120, "Cures Silence.", StatusEffect.Silence),                  // Echo Herbs
+            CureItem("Field Remedy", 700, "Cures Poison, Blind, Silence and Sleep.",                  // Remedy
+                StatusEffect.Poison, StatusEffect.Blind, StatusEffect.Silence, StatusEffect.Sleep),
+        };
+
+        private static AbilityDefinition CureItem(string displayName, int cost, string description, params StatusEffect[] cures)
+        {
+            var item = Item(displayName, cost, description, AbilityEffect.CureStatus, 0);
+            if (item.Cures.Count == 0)
+            {
+                item.SetCures(cures);
+                EditorUtility.SetDirty(item);
+            }
+            return item;
+        }
+
+        /// <summary>A reaction ability. Counter strikes carry their damage like an action (range 1, 3h reach).</summary>
+        private static AbilityDefinition Reaction(string displayName, int cost, ReactionEffect effect, string description,
+            Vector2Int? random = null, bool knockback = false)
+        {
+            var ability = Ability(displayName, AbilityKind.Reaction, cost, TurnTrade.None, description);
+            if (ability.Reaction == ReactionEffect.None)
+            {
+                ability.SetReaction(effect);
+                if (effect == ReactionEffect.CounterStrike)
+                    ability.SetAction(AbilityEffect.Damage, AbilityTargeting.Standing, 1, 1, 3, randomMultiplier: random, knockback: knockback);
+                EditorUtility.SetDirty(ability);
+            }
+            return ability;
+        }
+
         /// <summary>Gives a job its command name and abilities, unless it already has abilities set.</summary>
         private static void Teach(JobDefinition job, string commandName, params AbilityDefinition[] abilities)
         {
@@ -244,6 +341,10 @@ namespace FriendshipWarriors.Editor.Units
             new Battle.Abilities.ItemStock(LoadAbility("Aether Flask"), 1),
             new Battle.Abilities.ItemStock(LoadAbility("Panacea"), 1),
             new Battle.Abilities.ItemStock(LoadAbility("Revival Salts"), 2),
+            new Battle.Abilities.ItemStock(LoadAbility("Antitoxin"), 2),
+            new Battle.Abilities.ItemStock(LoadAbility("Eyewash"), 2),
+            new Battle.Abilities.ItemStock(LoadAbility("Throat Lozenge"), 1),
+            new Battle.Abilities.ItemStock(LoadAbility("Field Remedy"), 1),
         };
 
         public static AbilityDefinition LoadAbility(string displayName) =>

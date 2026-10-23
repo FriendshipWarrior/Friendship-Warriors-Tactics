@@ -2,13 +2,15 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using FriendshipWarriors.Units;
+using FriendshipWarriors.Units.Status;
 
 namespace FriendshipWarriors.Battle
 {
     /// <summary>
     /// FFT's Charge Time (CT) clock. Every clock tick, each unit's CT rises by its Speed; a unit takes its turn once
     /// its CT reaches 100. When several are ready, the highest CT goes first and ties go to the earlier unit in the
-    /// roster. Ending a turn spends 60 CT, plus 20 for moving and 20 for acting.
+    /// roster. Ending a turn spends 60 CT, plus 20 for moving and 20 for acting. Haste fills CT at Speed × 3/2,
+    /// Slow at Speed / 2, Stop not at all (FFT). Every status timer counts down one per clock tick.
     /// </summary>
     public sealed class TurnOrder
     {
@@ -32,6 +34,19 @@ namespace FriendshipWarriors.Battle
         /// <summary>Clock ticks elapsed since the battle began.</summary>
         public int ClockTick { get; private set; }
 
+        /// <summary>CT a unit gains per clock tick: its Speed, adjusted by Haste, Slow and Stop.</summary>
+        public static int ChargeRate(Unit unit)
+        {
+            if (unit.HasStatus(StatusEffect.Stop))
+                return 0;
+            int speed = unit.Stats.Speed;
+            if (unit.HasStatus(StatusEffect.Haste))
+                return speed * 3 / 2;
+            if (unit.HasStatus(StatusEffect.Slow))
+                return speed / 2;
+            return speed;
+        }
+
         public void Remove(Unit unit) => _units.Remove(unit);
 
         /// <summary>Advances the clock until a unit is ready and returns it, or null if nobody can ever act.</summary>
@@ -46,7 +61,10 @@ namespace FriendshipWarriors.Battle
                 if (ready != null)
                     return ready;
                 foreach (var unit in _units)
-                    unit.ChargeTime += unit.Stats.Speed;
+                {
+                    unit.ChargeTime += ChargeRate(unit);
+                    unit.Statuses.Tick();
+                }
                 ClockTick++;
             }
         }
@@ -75,8 +93,11 @@ namespace FriendshipWarriors.Battle
                 var ready = ReadyUnit(_units, u => ct[u]);
                 if (ready == null)
                 {
+                    // Preview doesn't run status timers, so with everyone stopped CT would never fill: give up.
+                    if (_units.All(u => ChargeRate(u) <= 0))
+                        break;
                     foreach (var unit in _units)
-                        ct[unit] += unit.Stats.Speed;
+                        ct[unit] += ChargeRate(unit);
                     continue;
                 }
                 result.Add(ready);

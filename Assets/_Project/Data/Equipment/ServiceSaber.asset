@@ -14,10 +14,15 @@ MonoBehaviour:
   m_EditorClassIdentifier: FriendshipWarriors.Runtime::FriendshipWarriors.Units.Equipment.EquipmentDefinition
   _displayName: Service Saber
   _description: Standard-issue officer's saber.
-  _slot: 0
+  _category: 0
   _weaponType: 1
   _power: 4
   _minRange: 1
   _maxRange: 1
   _verticalReach: 3
+  _twoHanded: 0
+  _weaponEvasion: 5
   _evasion: 0
+  _armorType: 0
+  _hpBonus: 0
+  _mpBonus: 0

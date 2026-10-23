@@ -12,6 +12,9 @@ namespace FriendshipWarriors.Units
         private const int StartingPhysicalAttack = 81920;
         private const int StartingMagicAttack = 65536;
 
+        /// <summary>Range generic units roll Morale and Resonance in.</summary>
+        public const int SpiritMin = 45, SpiritMax = 74;
+
         /// <summary>
         /// Builds a unit at <paramref name="level"/> in <paramref name="job"/>, granting whatever job levels the job's
         /// unlock requirements need. Deterministic for a given <paramref name="rng"/> state.
@@ -25,7 +28,10 @@ namespace FriendshipWarriors.Units
                 StartingPhysicalAttack,
                 StartingMagicAttack);
 
-            var unit = new Unit(name, team, job, raw);
+            // Morale and Resonance (our Brave and Faith) roll like FFT generics' Brave and Faith, in a middling band.
+            int morale = rng.Next(SpiritMin, SpiritMax + 1);
+            int resonance = rng.Next(SpiritMin, SpiritMax + 1);
+            var unit = new Unit(name, team, job, raw, morale, resonance);
             unit.GainExperience(ExperienceCurve.TotalFor(Math.Clamp(level, 1, Unit.MaxLevel)));
             GrantRequirements(unit, job);
             return unit;

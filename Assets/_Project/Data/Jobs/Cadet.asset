@@ -36,6 +36,8 @@ MonoBehaviour:
   - {fileID: 11400000, guid: 8c9ad6607c8e74c7a94c335562a000f7, type: 2}
   - {fileID: 11400000, guid: 81b75328c1e044b94a1fa9e380a473c8, type: 2}
   - {fileID: 11400000, guid: 061c31d49b8924556a80ec366db2051c, type: 2}
+  - {fileID: 11400000, guid: 0de89fd4977e449f7ac2f23c7b909c59, type: 2}
+  - {fileID: 11400000, guid: 0bb0158777df2493a9bf0c65fb89c090, type: 2}
   _innateAbilities: []
   _weaponTypes: 0100000002000000i
   _canUseShields: 0

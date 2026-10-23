@@ -141,9 +141,11 @@ namespace FriendshipWarriors.UI
                 $"{unit.Job.DisplayName}  Lv {unit.Level}   Job Lv {unit.JobLevel(unit.Job)}   CT {unit.ChargeTime}\n" +
                 $"HP {unit.CurrentHp}/{s.MaxHp}   MP {unit.CurrentMp}/{s.MaxMp}\n" +
                 $"Speed {s.Speed}   P.Atk {s.PhysicalAttack}   M.Atk {s.MagicAttack}\n" +
+                $"Morale {unit.Morale}   Resonance {unit.Resonance}\n" +
                 $"Move {s.Move}   Jump {s.Jump}   C-Ev {s.ClassEvasion}%   Facing {unit.Facing}\n" +
                 $"EXP {unit.Experience}/{ExperienceCurve.ToNextLevel(unit.Level)}   Prof {unit.AvailableProficiency(unit.Job)}" +
                 (unit.IsKnockedOut ? $"   <color=#FF7070>KO ({unit.DeathCounter})</color>" : "") + "\n" +
+                (unit.Statuses.Count > 0 ? $"<color=#E8C25A>{StatusText(unit)}</color>\n" : "") +
                 $"<size=80%>{Gear(unit.Weapon, "Bare hands")} | {Gear(unit.Equipped(Units.Equipment.EquipmentSlot.OffHand), "-")}" +
                 $" | {Gear(unit.Head, "-")} | {Gear(unit.Body, "-")} | {Gear(unit.Accessory, "-")}</size>\n" +
                 $"<size=80%>Secondary {secondary} | Reaction {Name(unit.Reaction)} | Support {Name(unit.Support)} | Movement {Name(unit.Movement)}</size>";
@@ -189,6 +191,18 @@ namespace FriendshipWarriors.UI
         }
 
         private static string Name(Units.Abilities.AbilityDefinition ability) => ability != null ? ability.DisplayName : "-";
+
+        /// <summary>Statuses with the clock ticks they have left, e.g. "Poison (12), Blind".</summary>
+        private static string StatusText(Unit unit)
+        {
+            var parts = new List<string>();
+            foreach (var status in unit.Statuses.Active)
+            {
+                int left = unit.Statuses.Remaining(status);
+                parts.Add(left > 0 ? $"{status} ({left})" : status.ToString());
+            }
+            return string.Join(", ", parts);
+        }
 
         private static string Gear(Units.Equipment.EquipmentDefinition item, string empty) => item != null ? item.DisplayName : empty;
 

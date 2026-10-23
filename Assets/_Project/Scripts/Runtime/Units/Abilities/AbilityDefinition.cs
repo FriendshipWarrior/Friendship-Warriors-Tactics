@@ -1,3 +1,6 @@
+using System;
+using System.Collections.Generic;
+using FriendshipWarriors.Units.Status;
 using UnityEngine;
 
 namespace FriendshipWarriors.Units.Abilities
@@ -34,6 +37,11 @@ namespace FriendshipWarriors.Units.Abilities
         [Tooltip("Uses up one of the team's stock of this item; range comes from the user's item throwing.")]
         [SerializeField] private bool _isItem;
         [SerializeField, Min(0)] private int _mpCost;
+        [Tooltip("Cure Status only: the statuses removed.")]
+        [SerializeField] private StatusEffect[] _cures = Array.Empty<StatusEffect>();
+
+        [Header("Reaction")]
+        [SerializeField] private ReactionEffect _reaction;
 
         [Header("Passive")]
         [Tooltip("Movement abilities: extra Move.")]
@@ -58,6 +66,11 @@ namespace FriendshipWarriors.Units.Abilities
         public bool Knockback => _knockback;
         public bool IsItem => _isItem;
         public int MpCost => _mpCost;
+        public IReadOnlyList<StatusEffect> Cures => _cures;
+        public ReactionEffect Reaction => _reaction;
+
+        /// <summary>Damage abilities that only reach adjacent tiles count as melee (for Morale's melee bonus).</summary>
+        public bool IsMelee => _effect == AbilityEffect.Damage && _maxRange <= 1;
         public int MoveBonus => _moveBonus;
         public int ProficiencyBonusPercent => _proficiencyBonusPercent;
         public bool ThrowsItems => _throwsItems;
@@ -88,6 +101,18 @@ namespace FriendshipWarriors.Units.Abilities
             _knockback = knockback;
             _isItem = isItem;
             _mpCost = mpCost;
+        }
+
+        public void SetCures(params StatusEffect[] cures) => _cures = cures;
+
+        /// <summary>
+        /// Makes this a reaction ability. Counter strikes use the action fields for their damage (random multiplier and
+        /// knockback); set them with <see cref="SetAction"/>.
+        /// </summary>
+        public void SetReaction(ReactionEffect reaction)
+        {
+            _kind = AbilityKind.Reaction;
+            _reaction = reaction;
         }
 
         /// <summary>Sets a passive's bonuses; used by tooling and tests.</summary>

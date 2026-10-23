@@ -30,7 +30,8 @@ MonoBehaviour:
   _jump: 3
   _classEvasion: 5
   _commandName: Warding
-  _abilities: []
+  _abilities:
+  - {fileID: 11400000, guid: 1904359f26f774f248a51fc5c73da7ad, type: 2}
   _innateAbilities: []
   _weaponTypes: 05000000i
   _canUseShields: 0

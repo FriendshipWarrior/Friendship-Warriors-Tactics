@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using System.Linq;
 using FriendshipWarriors.Battle.Abilities;
 using FriendshipWarriors.Battle.Combat;
+using FriendshipWarriors.Battle.Reactions;
 using FriendshipWarriors.Cameras;
 using FriendshipWarriors.Controls;
 using FriendshipWarriors.Grid;
@@ -10,6 +11,7 @@ using FriendshipWarriors.Grid.View;
 using FriendshipWarriors.UI;
 using FriendshipWarriors.Units;
 using FriendshipWarriors.Units.Abilities;
+using FriendshipWarriors.Units.Status;
 using FriendshipWarriors.Units.View;
 using UnityEngine;
 using UnityEngine.InputSystem;
@@ -108,8 +110,12 @@ namespace FriendshipWarriors.Battle
             _hud.MenuItemClicked -= OnMenuClicked;
         }
 
-        /// <summary>Starts a battle with these units; everyone's CT starts at 0, as in FFT.</summary>
-        public void Begin(IReadOnlyList<UnitView> views)
+        /// <summary>
+        /// Starts a battle with these units; everyone's CT starts at 0, as in FFT, and last battle's boosts, Morale
+        /// swings and statuses are cleared. <paramref name="prepare"/> runs after that and before the first turn, for
+        /// anything a scenario starts with (statuses, Morale).
+        /// </summary>
+        public void Begin(IReadOnlyList<UnitView> views, System.Action<IReadOnlyList<Unit>> prepare = null)
         {
             _views = views.ToList();
             foreach (var unit in Units)
@@ -117,6 +123,7 @@ namespace FriendshipWarriors.Battle
                 unit.ChargeTime = 0;
                 unit.ClearBattleModifiers();
             }
+            prepare?.Invoke(Units.ToList());
             _order = new TurnOrder(Units);
             int seed = _battleSeed != 0 ? _battleSeed : System.Environment.TickCount;
             _rng = new System.Random(seed);
@@ -174,10 +181,30 @@ namespace FriendshipWarriors.Battle
             }
 
             var unit = _active.Unit;
-            _turn = new TurnState(unit.HasTurnTrade(TurnTrade.MoveForAct), unit.HasTurnTrade(TurnTrade.ActForMove));
+
+            // FFT Chicken: a panicking unit regains a little Morale each turn and recovers at 10.
+            if (unit.HasStatus(StatusEffect.Panic))
+            {
+                unit.AdjustMorale(MoraleRules.PanicRecoveryPerTurn);
+                if (!unit.HasStatus(StatusEffect.Panic))
+                    _hud.ShowBanner($"{unit.Name} steadies (Morale {unit.Morale}).");
+            }
+
+            _turn = new TurnState(unit.HasTurnTrade(TurnTrade.MoveForAct), unit.HasTurnTrade(TurnTrade.ActForMove),
+                moveBlocked: !unit.CanMove, actBlocked: !unit.CanAct);
             _cursor.SetCoord(unit.Coord, followCamera: true);
             _commandMenu.SetItems(System.Array.Empty<MenuItem>());
-            if (IsAiControlled(unit))
+
+            // Asleep (or otherwise unable to do anything): the turn passes, costing what a Wait costs.
+            if (!_turn.CanMove && !_turn.CanAct)
+            {
+                _hud.ShowBanner($"{unit.Name} can't act ({string.Join(", ", unit.Statuses.Active)}).");
+                Debug.Log($"[Battle] {unit.Name} loses its turn to {string.Join(", ", unit.Statuses.Active)}.", this);
+                EndTurn();
+                return;
+            }
+
+            if (IsAiDriven(unit))
                 BeginAiTurn();
             else
                 OpenCommandMenu();
@@ -282,11 +309,15 @@ namespace FriendshipWarriors.Battle
             if (target.Unit != user)
                 user.Facing = DirectionExtensions.Toward(user.Coord, coord);
 
+            bool wasDown = target.Unit.IsKnockedOut;
             var result = AbilityCommand.Execute(_ability, user, target.Unit, _gridView.Grid, Units, InventoryOf(user.Team), _rng);
             if (result.KnockedTo != null)
                 target.SyncPosition();
-            Debug.Log($"[Battle] {result.Message} ({result.Outcome.HitChance}% to hit).", this);
-            _hud.ShowBanner(result.Message);
+            string message = result.Message;
+            if (result.Outcome.Damage > 0)
+                message += AfterDamage(target.Unit, user, wasDown, result.Outcome.Damage);
+            Debug.Log($"[Battle] {message} ({result.Outcome.HitChance}% to hit).", this);
+            _hud.ShowBanner(message);
             _turn.RecordAct();
             if (CheckBattleOver())
                 return;
@@ -421,8 +452,10 @@ namespace FriendshipWarriors.Battle
                 outcome = "Blocked!";
             else
             {
-                target.TakeDamage(result.Damage);
+                bool wasDown = target.IsKnockedOut;
+                int dealt = target.TakeDamage(result.Damage);
                 outcome = $"{result.Damage} damage{(result.Critical ? " - critical!" : "")}{(target.IsKnockedOut ? $"  {target.Name} is down!" : "")}";
+                outcome += AfterDamage(target, attacker, wasDown, dealt);
             }
 
             // FFT rewards a successful action: EXP and Prof for the actor, a quarter of the Prof for allies.
@@ -479,7 +512,14 @@ namespace FriendshipWarriors.Battle
 
         private void AfterAction()
         {
-            if (IsAiControlled(_active.Unit))
+            // A counter-strike can knock out the unit whose turn it is: the turn ends there.
+            if (_active.Unit.IsKnockedOut)
+            {
+                ResetAiTurn();
+                EndTurn();
+                return;
+            }
+            if (IsAiDriven(_active.Unit))
             {
                 ResumeAiTurn();
                 return;
@@ -505,8 +545,57 @@ namespace FriendshipWarriors.Battle
 
         private void EndTurn()
         {
-            _order.EndTurn(_active.Unit, _turn.MoveSpent, _turn.ActSpent);
+            var unit = _active.Unit;
+            // FFT: Poison and Regen take effect at the end of the unit's turn, max HP / 8 each.
+            int tick = unit.Stats.MaxHp / StatusRules.PoisonRegenDivisor;
+            if (unit.HasStatus(StatusEffect.Poison) && !unit.IsKnockedOut)
+            {
+                int lost = unit.TakeDamage(System.Math.Max(1, tick));
+                _hud.ShowBanner($"{unit.Name}: Poison, -{lost} HP{(unit.IsKnockedOut ? $"  {unit.Name} is down!" : "")}");
+                if (unit.IsKnockedOut)
+                    OnKnockedOut(unit);
+            }
+            if (unit.HasStatus(StatusEffect.Regen) && !unit.IsKnockedOut)
+            {
+                int healed = unit.RestoreHp(System.Math.Max(1, tick));
+                if (healed > 0)
+                    _hud.ShowBanner($"{unit.Name}: Regen, +{healed} HP");
+            }
+            _order.EndTurn(unit, _turn.MoveSpent, _turn.ActSpent);
             StartNextTurn();
+        }
+
+        /// <summary>
+        /// Everything that follows damage from an action: the target's reaction, then Morale loss across the team if
+        /// the target (or a counter-struck attacker) went down. Returns text to add to the result banner.
+        /// </summary>
+        private string AfterDamage(Unit target, Unit attacker, bool targetWasDown, int damageTaken)
+        {
+            string extra = "";
+            if (!targetWasDown && target.IsKnockedOut)
+                OnKnockedOut(target);
+
+            bool attackerWasDown = attacker.IsKnockedOut;
+            var reaction = ReactionResolver.React(target, attacker, physical: true, damageTaken, _gridView.Grid,
+                Units.ToList(), InventoryOf(target.Team), _rng);
+            if (reaction.Triggered)
+            {
+                extra = $"   |   {reaction.Message}";
+                Debug.Log($"[Battle] Reaction: {reaction.Message}.", this);
+                var attackerView = _views.FirstOrDefault(v => v.Unit == attacker);
+                if (attackerView != null)
+                    attackerView.SyncPosition();
+                if (!attackerWasDown && attacker.IsKnockedOut)
+                    OnKnockedOut(attacker);
+            }
+            return extra;
+        }
+
+        /// <summary>A unit going down shakes its standing teammates (the user's Morale design).</summary>
+        private void OnKnockedOut(Unit unit)
+        {
+            foreach (var ally in Units.Where(u => u != unit && u.Team == unit.Team && !u.IsKnockedOut))
+                ally.AdjustMorale(-MoraleRules.AllyKnockedOutLoss);
         }
 
         // ------------------------------------------------------------------ Input
