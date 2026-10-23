@@ -27,6 +27,7 @@ Guidance for Claude Code when working in this repository.
 - **Remote:** `https://github.com/FriendshipWarrior/Friendship-Warriors-Tactics` (the remote is currently empty — nothing has been pushed yet)
 - **Workflow:** git and `gh` CLI only, driven from Claude Code (no GitKraken).
 - **Default branch:** `main`. Do feature work on branches (`feat/…`, `fix/…`, `chore/…`) and merge via PR.
+- **README:** `README.md` is the GitHub front page (features, controls, getting started, tools, roadmap). Update it in the same PR whenever a feature lands, a control changes or a roadmap item moves. Screenshots live in `docs/images/` (PNG, via Git LFS).
 - **Commits:** Conventional Commits style (`feat:`, `fix:`, `chore:`, `refactor:`, `test:`, `docs:`). Only commit or push when the user asks.
 - **Never commit** `Library/`, `Temp/`, `Logs/`, `UserSettings/`, `Obj/`, `Build(s)/` — already covered by `.gitignore`.
 - **Always commit `.meta` files** alongside their assets, and move/rename assets in a way that keeps the `.meta` (GUID) with them — a lost `.meta` breaks every reference to that asset.
