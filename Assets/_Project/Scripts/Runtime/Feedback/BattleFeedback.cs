@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using FriendshipWarriors.Audio;
 using FriendshipWarriors.Battle;
+using FriendshipWarriors.Battle.Drops;
 using FriendshipWarriors.Units;
 using FriendshipWarriors.Units.Status;
 using FriendshipWarriors.Units.View;
@@ -13,7 +14,8 @@ namespace FriendshipWarriors.Feedback
     /// FFT-style combat feedback, presentation only: floating numbers and words over units (damage, healing, MP,
     /// Miss, Guarded, Critical!, status names), a white hit flash and knock-shake on the struck sprite, a soft glow
     /// for healing, a short camera shake on criticals, a flash into the knocked-out pose with the death counter shown
-    /// over the unit, and a fading ghost plus a placeholder crystal when a unit is lost. Sounds play with them.
+    /// over the unit, a fading ghost when a unit is lost, the steel rod or chest it leaves (until someone takes it),
+    /// and what the taker got. Sounds play with them.
     /// <para>
     /// It listens rather than being told: <see cref="Unit.Changed"/> for HP and MP, the units' statuses (compared
     /// each frame), and <see cref="BattleController"/>'s cues for what the numbers can't show. Everything is timed
@@ -27,7 +29,6 @@ namespace FriendshipWarriors.Feedback
         private const float CanvasFontSize = 46f;
         private const float RowHeight = 46f;
         private const float GhostTime = 0.9f;
-        private const float CrystalTime = 3.5f;
 
         /// <summary>How long after an action its reactions' feedback starts (a counter follows the hit, FFT-style).</summary>
         public const float ReactionBeat = 0.45f;
@@ -54,7 +55,7 @@ namespace FriendshipWarriors.Feedback
         // Set when reactions start resolving; everything requested later in the same frame waits this long.
         private float _frameDelay;
         private Vector3 _appliedCameraShake;
-        private static Sprite _crystal;
+        private readonly List<DropMarker> _markers = new();
 
         /// <summary>Per-unit state: what it looked like last frame, pending effects and the flash overlay.</summary>
         private sealed class Tracker
@@ -89,14 +90,24 @@ namespace FriendshipWarriors.Feedback
             public System.Action OnStart;
         }
 
-        /// <summary>What's left on the tile of a lost unit: its fading ghost, then a crystal (FFT leaves one).</summary>
+        /// <summary>The fading ghost a lost unit leaves as it goes.</summary>
         private sealed class Remnant
         {
             public SpriteRenderer Ghost;
             public Vector3 GhostOrigin;
-            public SpriteRenderer Crystal;
+            public float Start;
+        }
+
+        /// <summary>A steel rod or chest on the field, shown until it's taken or the battle restarts.</summary>
+        private sealed class DropMarker
+        {
+            public BattleDrop Drop;
+            public GameObject Root;
+            public SpriteRenderer Body;
+            public SpriteRenderer Glow;
             public Vector3 Origin;
             public float Start;
+            public bool Announced;
         }
 
         private float Now => _battle.Clock.Now(Time.unscaledTime);
@@ -114,6 +125,8 @@ namespace FriendshipWarriors.Feedback
             _battle.Began += OnBegan;
             _battle.Cue += OnCue;
             _battle.UnitLost += OnUnitLost;
+            _battle.DropPlaced += OnDropPlaced;
+            _battle.DropTaken += OnDropTaken;
         }
 
         private void OnDisable()
@@ -121,6 +134,8 @@ namespace FriendshipWarriors.Feedback
             _battle.Began -= OnBegan;
             _battle.Cue -= OnCue;
             _battle.UnitLost -= OnUnitLost;
+            _battle.DropPlaced -= OnDropPlaced;
+            _battle.DropTaken -= OnDropTaken;
             RemoveShakes();
         }
 
@@ -159,6 +174,9 @@ namespace FriendshipWarriors.Feedback
             foreach (var remnant in _remnants)
                 DestroyRemnant(remnant);
             _remnants.Clear();
+            foreach (var marker in _markers)
+                Destroy(marker.Root);
+            _markers.Clear();
             Sync();
         }
 
@@ -231,7 +249,7 @@ namespace FriendshipWarriors.Feedback
             if (view == null)
                 return;
             var sprite = view.Sprite;
-            var remnant = new Remnant { Origin = view.transform.position, Start = Now };
+            var remnant = new Remnant { Start = Now };
             if (sprite != null && sprite.sprite != null)
             {
                 remnant.Ghost = new GameObject("Lost Ghost").AddComponent<SpriteRenderer>();
@@ -243,16 +261,60 @@ namespace FriendshipWarriors.Feedback
                 remnant.Ghost.color = sprite.color;
                 remnant.GhostOrigin = sprite.transform.position;
             }
-            remnant.Crystal = new GameObject("Lost Crystal").AddComponent<SpriteRenderer>();
-            remnant.Crystal.transform.SetParent(transform, false);
-            remnant.Crystal.sprite = CrystalSprite();
-            remnant.Crystal.color = new Color(0.55f, 0.95f, 1f, 0f);
-            _remnants.Add(remnant);
+            if (remnant.Ghost != null)
+                _remnants.Add(remnant);
             if (_trackers.TryGetValue(view.Unit, out var tracker))
             {
                 Forget(tracker);
                 _trackers.Remove(view.Unit);
             }
+        }
+
+        private void OnDropPlaced(BattleDrop drop)
+        {
+            var grid = _battle.GridView;
+            var marker = new DropMarker
+            {
+                Drop = drop,
+                Root = new GameObject(drop.Kind == DropKind.SteelRod ? "Steel Rod" : "Treasure Chest"),
+                Origin = grid != null ? grid.SurfaceCenter(drop.Coord) : Vector3.zero,
+                Start = Now,
+            };
+            marker.Root.transform.SetParent(transform, false);
+            marker.Root.transform.localScale = Vector3.one * UnitView.SpriteScale; // drawn at the units' pixel size
+            if (drop.Kind == DropKind.SteelRod)
+            {
+                // The glow sits behind the rod and breathes; both stay upright and face the camera.
+                marker.Glow = NewSprite("Glow", marker.Root.transform, DropSprites.Glow);
+                marker.Glow.sortingOrder = -1;
+            }
+            marker.Body = NewSprite("Body", marker.Root.transform,
+                drop.Kind == DropKind.SteelRod ? DropSprites.Rod : DropSprites.Chest);
+            _markers.Add(marker);
+            UpdateMarker(marker, Now);
+        }
+
+        private void OnDropTaken(PickupResult result)
+        {
+            for (int i = _markers.Count - 1; i >= 0; i--)
+            {
+                if (_markers[i].Drop != result.Drop)
+                    continue;
+                Destroy(_markers[i].Root);
+                _markers.RemoveAt(i);
+            }
+            SoundPlayer.Play(FeedbackStyle.PickupSound(result.Drop.Kind));
+            // HP and MP restored show as their own numbers (Unit.Changed); the words say what else came of it.
+            if (result.Choice != PickupChoice.Restore)
+                Show(Track(result.Picker), FeedbackStyle.Popup(PopupKind.Pickup, text: result.PopupText), SoundCue.None);
+        }
+
+        private SpriteRenderer NewSprite(string spriteName, Transform parent, Sprite sprite)
+        {
+            var renderer = new GameObject(spriteName).AddComponent<SpriteRenderer>();
+            renderer.transform.SetParent(parent, false);
+            renderer.sprite = sprite;
+            return renderer;
         }
 
         // ------------------------------------------------------------------ Tracking
@@ -334,7 +396,10 @@ namespace FriendshipWarriors.Feedback
             return tracker.View.transform.position + Vector3.up * height;
         }
 
-        private void Show(Tracker tracker, PopupKind kind, int amount = 0, StatusEffect status = default, System.Action onStart = null)
+        private void Show(Tracker tracker, PopupKind kind, int amount = 0, StatusEffect status = default, System.Action onStart = null) =>
+            Show(tracker, FeedbackStyle.Popup(kind, amount, status), FeedbackStyle.Sound(kind), onStart);
+
+        private void Show(Tracker tracker, PopupStyle style, SoundCue sound, System.Action onStart = null)
         {
             var (start, row) = _schedule.Add(tracker.Unit.GetHashCode(), Now + _frameDelay);
             var popup = new Popup
@@ -343,8 +408,8 @@ namespace FriendshipWarriors.Feedback
                 Anchor = Anchor(tracker),
                 Start = start,
                 Row = row,
-                Style = FeedbackStyle.Popup(kind, amount, status),
-                Sound = FeedbackStyle.Sound(kind),
+                Style = style,
+                Sound = sound,
                 OnStart = onStart,
                 Text = Acquire(),
             };
@@ -401,6 +466,8 @@ namespace FriendshipWarriors.Feedback
 
             UpdatePopups(now);
             UpdateRemnants(now);
+            foreach (var marker in _markers)
+                UpdateMarker(marker, now);
             UpdateCameraShake(now);
             _frameDelay = 0f;
         }
@@ -554,23 +621,35 @@ namespace FriendshipWarriors.Feedback
                         remnant.Ghost = null;
                     }
                 }
-                if (remnant.Crystal != null)
-                {
-                    float appear = Mathf.Clamp01((t - 0.3f) / 0.3f);
-                    float fade = Mathf.Clamp01((CrystalTime - t) / 0.5f);
-                    var c = remnant.Crystal.color;
-                    c.a = appear * fade;
-                    remnant.Crystal.color = c;
-                    float bob = 0.08f * Mathf.Sin(t * 3f);
-                    remnant.Crystal.transform.position = remnant.Origin + Vector3.up * (0.45f + bob);
-                    if (_camera != null)
-                        remnant.Crystal.transform.rotation = Quaternion.Euler(0f, _camera.transform.eulerAngles.y, 0f);
-                }
-                if (t >= CrystalTime)
+                if (remnant.Ghost == null)
                 {
                     DestroyRemnant(remnant);
                     _remnants.RemoveAt(i);
                 }
+            }
+        }
+
+        /// <summary>Fades the drop in after its unit's ghost, bobs and pulses the rod, and keeps both facing the camera.</summary>
+        private void UpdateMarker(DropMarker marker, float now)
+        {
+            float t = now - marker.Start;
+            float alpha = FeedbackCurves.DropAppear(t);
+            if (alpha > 0f && !marker.Announced)
+            {
+                marker.Announced = true;
+                SoundPlayer.Play(SoundCue.DropAppears);
+            }
+            bool rod = marker.Drop.Kind == DropKind.SteelRod;
+            float lift = rod ? 0.5f + FeedbackCurves.RodBob(t) : 0f;
+            marker.Root.transform.position = marker.Origin + Vector3.up * lift;
+            if (_camera != null)
+                marker.Root.transform.rotation = Quaternion.Euler(0f, _camera.transform.eulerAngles.y, 0f);
+            marker.Body.color = new Color(1f, 1f, 1f, alpha);
+            if (marker.Glow != null)
+            {
+                float glow = FeedbackCurves.RodGlow(t);
+                marker.Glow.color = new Color(0.55f, 0.85f, 1f, alpha * glow * 0.8f);
+                marker.Glow.transform.localScale = Vector3.one * (0.85f + 0.25f * glow);
             }
         }
 
@@ -638,40 +717,12 @@ namespace FriendshipWarriors.Feedback
         {
             if (remnant.Ghost != null)
                 Destroy(remnant.Ghost.gameObject);
-            if (remnant.Crystal != null)
-                Destroy(remnant.Crystal.gameObject);
         }
 
         private static Color WithAlpha(Color color, float alpha)
         {
             color.a = alpha;
             return color;
-        }
-
-        /// <summary>
-        /// Placeholder for FFT's crystal: a small pale diamond. Swap for real art later (and, like FFT, a crystal or
-        /// a treasure chest the other units can pick up, once that's designed).
-        /// </summary>
-        private static Sprite CrystalSprite()
-        {
-            if (_crystal != null)
-                return _crystal;
-            const int w = 9, h = 15;
-            var texture = new Texture2D(w, h, TextureFormat.RGBA32, false) { filterMode = FilterMode.Point, wrapMode = TextureWrapMode.Clamp };
-            var pixels = new Color[w * h];
-            for (int y = 0; y < h; y++)
-            for (int x = 0; x < w; x++)
-            {
-                float dx = Mathf.Abs(x - 4) / 4.5f, dy = Mathf.Abs(y - 7) / 7.5f;
-                bool inside = dx + dy <= 1f;
-                bool edge = inside && dx + dy > 0.78f;
-                float shade = x < 4 ? 1f : 0.78f;
-                pixels[y * w + x] = !inside ? Color.clear : edge ? new Color(0.15f, 0.25f, 0.4f) : new Color(shade, shade, shade);
-            }
-            texture.SetPixels(pixels);
-            texture.Apply();
-            _crystal = Sprite.Create(texture, new Rect(0, 0, w, h), new Vector2(0.5f, 0f), 14f);
-            return _crystal;
         }
     }
 }

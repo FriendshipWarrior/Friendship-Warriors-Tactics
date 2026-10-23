@@ -38,6 +38,10 @@ namespace FriendshipWarriors.Units
         [SerializeField] private bool _canUseShields;
         [SerializeField] private ArmorType[] _armorTypes = Array.Empty<ArmorType>();
 
+        [Header("Kind")]
+        [Tooltip("Monsters leave an item scaled to their level in their treasure chest, and their steel rod only restores (FFT).")]
+        [SerializeField] private bool _isMonster;
+
         [Header("Unlock")]
         [SerializeField] private JobRequirement[] _requirements = Array.Empty<JobRequirement>();
 
@@ -64,6 +68,11 @@ namespace FriendshipWarriors.Units
         public IReadOnlyList<AbilityDefinition> InnateAbilities => _innateAbilities;
 
         public void SetInnateAbilities(AbilityDefinition[] abilities) => _innateAbilities = abilities;
+
+        /// <summary>Whether units of this job are monsters rather than people (no monsters exist yet).</summary>
+        public bool IsMonster => _isMonster;
+
+        public void SetMonster(bool isMonster) => _isMonster = isMonster;
         public Color PlaceholderColor => _placeholderColor;
         public Sprite FrontSprite => _frontSprite;
         public Sprite BackSprite => _backSprite;

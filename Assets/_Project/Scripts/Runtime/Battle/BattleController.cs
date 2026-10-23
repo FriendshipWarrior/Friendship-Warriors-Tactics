@@ -35,7 +35,7 @@ namespace FriendshipWarriors.Battle
     /// </summary>
     public sealed partial class BattleController : MonoBehaviour
     {
-        private enum Phase { Idle, Command, ActMenu, ChooseDestination, ChooseTarget, TimedPress, ChooseFacing, BattleOver, AiTurn, AbilityMenu, ChooseAbilityTarget, SpellResolving, Moving }
+        private enum Phase { Idle, Command, ActMenu, ChooseDestination, ChooseTarget, TimedPress, ChooseFacing, BattleOver, AiTurn, AbilityMenu, ChooseAbilityTarget, SpellResolving, Moving, PickupMenu }
         private enum PressRole { None, Offense, Defense }
 
         private const string MoveId = "move", ActId = "act", WaitId = "wait", AttackId = "attack", PrimaryId = "primary", SecondaryId = "secondary";
@@ -190,6 +190,7 @@ namespace FriendshipWarriors.Battle
             _phase = Phase.Idle; // a previous battle may have ended in BattleOver
             _afterWalk = null;
             _walkFollow = null;
+            ResetDrops();
             foreach (var unit in Units)
             {
                 unit.ChargeTime = 0;
@@ -224,6 +225,7 @@ namespace FriendshipWarriors.Battle
                 case Phase.Command:
                 case Phase.ActMenu:
                 case Phase.AbilityMenu:
+                case Phase.PickupMenu:
                     ReadMenuNavigation();
                     break;
                 case Phase.ChooseFacing:
@@ -371,6 +373,10 @@ namespace FriendshipWarriors.Battle
                 case AttackId: BeginTarget(); break;
                 case PrimaryId: OpenAbilityMenu(_active.Unit.Job); break;
                 case SecondaryId: OpenAbilityMenu(_active.Unit.SecondaryJob); break;
+                case InheritId:
+                case RestoreId:
+                    ChoosePickup(id);
+                    break;
                 default:
                     var ability = _abilities.Listed(id);
                     if (ability != null)
@@ -593,7 +599,8 @@ namespace FriendshipWarriors.Battle
             unit.Facing = DirectionExtensions.Toward(lastFrom, coord);
             _turn.RecordMove();
             _active.Walk(walk);
-            WaitForWalks(AfterAction, follow: _active);
+            // Ending the move on a rod or chest takes it (FFT); then the turn carries on.
+            WaitForWalks(() => TakeDropsAfterMove(AfterAction), follow: _active);
         }
 
         /// <summary>Targets within the equipped weapon's range and vertical reach.</summary>
@@ -734,19 +741,21 @@ namespace FriendshipWarriors.Battle
             _hud.HideTimingPrompt();
             Refresh(); // bring the turn order and unit panel up to date (a just-lost unit leaves the list)
             _gridView.ClearHighlights();
-            _hud.ShowBanner(outcome.Kind == BattleOutcomeKind.Victory ? $"Victory! {outcome.Reason}" : $"Defeat... {outcome.Reason}", seconds: 0f);
+            _hud.ShowBanner((outcome.Kind == BattleOutcomeKind.Victory ? $"Victory! {outcome.Reason}" : $"Defeat... {outcome.Reason}")
+                            + SpoilsText(), seconds: 0f);
             Debug.Log($"[Battle] {outcome}.", this);
             _hud.SetHint("R / Select: new map");
             BattleEnded?.Invoke(outcome.Kind == BattleOutcomeKind.Victory);
             return true;
         }
 
-        /// <summary>A knocked-out unit whose counter ran out leaves the battle (FFT turns it into a crystal or chest).</summary>
+        /// <summary>A knocked-out unit whose counter ran out leaves the battle, and a steel rod or chest in its place (FFT).</summary>
         private void RemoveLostUnit(Unit unit)
         {
             var view = _views.FirstOrDefault(v => v.Unit == unit);
             _order.Remove(unit);
             _lost.Add(unit);
+            LeaveDrop(unit);
             if (view != null)
             {
                 _views.Remove(view);
@@ -914,7 +923,7 @@ namespace FriendshipWarriors.Battle
 
         private void OnConfirm(InputAction.CallbackContext _)
         {
-            if (_phase is Phase.Command or Phase.ActMenu or Phase.AbilityMenu or Phase.ChooseAbilityTarget
+            if (_phase is Phase.Command or Phase.ActMenu or Phase.AbilityMenu or Phase.PickupMenu or Phase.ChooseAbilityTarget
                 or Phase.ChooseDestination or Phase.ChooseTarget or Phase.ChooseFacing)
                 Cue?.Invoke(null, BattleCue.MenuConfirm);
             switch (_phase)
@@ -922,6 +931,7 @@ namespace FriendshipWarriors.Battle
                 case Phase.Command when _commandMenu.Selected is { Enabled: true } item: Activate(item.Id); break;
                 case Phase.ActMenu when _actMenu.Selected is { Enabled: true } item: Activate(item.Id); break;
                 case Phase.AbilityMenu when _abilityMenu.Selected is { Enabled: true } item: Activate(item.Id); break;
+                case Phase.PickupMenu when _pickupMenu.Selected is { Enabled: true } item: Activate(item.Id); break;
                 case Phase.ChooseAbilityTarget: TryAbilityTarget(_cursor.Coord); break;
                 case Phase.ChooseDestination: TryMoveTo(_cursor.Coord); break;
                 case Phase.ChooseTarget: TryTarget(_cursor.Coord); break;
@@ -986,6 +996,7 @@ namespace FriendshipWarriors.Battle
             Phase.Command => _commandMenu,
             Phase.ActMenu => _actMenu,
             Phase.AbilityMenu => _abilityMenu,
+            Phase.PickupMenu => _pickupMenu,
             _ => null,
         };
 
@@ -1058,6 +1069,9 @@ namespace FriendshipWarriors.Battle
                         foreach (var step in _path)
                             _gridView.SetHighlight(step, TileHighlight.Path);
                     }
+                    _hud.SetHint(_drops.At(_cursor.Coord) is { } drop
+                        ? $"{drop.FallenName}'s {drop.DisplayName.ToLowerInvariant()}: end the move here to take it   A / click: move   B / Esc: back"
+                        : "Choose where to move   A / click: move   B / Esc: back");
                     break;
                 case Phase.ChooseTarget:
                     foreach (var coord in _targets)

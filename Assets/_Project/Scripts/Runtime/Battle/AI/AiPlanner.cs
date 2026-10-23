@@ -92,7 +92,7 @@ namespace FriendshipWarriors.Battle.AI
                         foreach (var tile in AbilityRules.TargetTiles(grid, spell, actor))
                         {
                             double score = SpellScore(grid, actor, spell, tile, units) - Threat(position, actor, enemies) * threatCost
-                                           + rng.NextDouble() * 0.01;
+                                           + PickupValue(position) + rng.NextDouble() * 0.01;
                             if (score > bestScore && score > 0.5)
                             {
                                 bestScore = score;
@@ -112,7 +112,8 @@ namespace FriendshipWarriors.Battle.AI
                         double attack = AttackScore(actor, enemy);
                         if (attack > 0 && hints.IsPriority(enemy))
                             attack *= AiHints.PriorityTargetWeight;
-                        double score = attack - Threat(position, actor, enemies) * threatCost + rng.NextDouble() * 0.01;
+                        double score = attack - Threat(position, actor, enemies) * threatCost + PickupValue(position)
+                                       + rng.NextDouble() * 0.01;
                         if (score > bestScore)
                         {
                             bestScore = score;
@@ -147,14 +148,16 @@ namespace FriendshipWarriors.Battle.AI
                 else
                 {
                     // Attacking from where it stands leaves the Move free: fall back somewhere safer if there is one.
-                    var retreat = SafestPosition(positions, origin, actor, enemies, rng);
+                    var retreat = SafestPosition(positions, origin, actor, enemies, rng, hints, threatCost);
                     if (retreat != origin)
                         plan.MoveAfter = retreat;
                 }
             }
             else
             {
-                var approach = ClosestToEnemies(grid, positions, origin, actor, units, enemies, rules, rng);
+                // Nothing to hit: a drop within reach beats closing in, if it's worth the danger of standing there.
+                var pickup = BestPickup(positions, origin, actor, enemies, hints, threatCost);
+                var approach = pickup ?? ClosestToEnemies(grid, positions, origin, actor, units, enemies, rules, rng);
                 if (approach != origin)
                     plan.MoveBefore = approach;
             }
@@ -162,6 +165,9 @@ namespace FriendshipWarriors.Battle.AI
             var final = plan.MoveAfter ?? plan.MoveBefore ?? origin;
             plan.Facing = FacingTowardNearest(final, enemies, actor.Facing);
             return plan;
+
+            // A drop is only taken by moving onto it, so standing on one already is worth nothing.
+            double PickupValue(GridCoord position) => position != origin ? hints.TileValue(position) : 0.0;
         }
 
         /// <summary>Learned spells (current job and secondary) the unit has the MP and the voice to cast now.</summary>
@@ -317,16 +323,43 @@ namespace FriendshipWarriors.Battle.AI
             return threat;
         }
 
-        private static GridCoord SafestPosition(List<GridCoord> positions, GridCoord origin, Unit actor, List<Unit> enemies, Random rng)
+        /// <summary>Where to step after attacking in place: the least threatened tile, counting drops worth picking up.</summary>
+        private static GridCoord SafestPosition(List<GridCoord> positions, GridCoord origin, Unit actor, List<Unit> enemies, Random rng,
+            AiHints hints, double threatCost)
         {
+            // Costs in score units: threat × its weight, less what a drop on the tile is worth.
             var best = origin;
-            double bestThreat = Threat(origin, actor, enemies);
+            double bestCost = Threat(origin, actor, enemies) * threatCost;
             foreach (var position in positions)
             {
-                double threat = Threat(position, actor, enemies) + rng.NextDouble() * 0.01;
-                if (threat < bestThreat - 0.5)
+                double cost = (Threat(position, actor, enemies) + rng.NextDouble() * 0.01) * threatCost
+                              - (position != origin ? hints.TileValue(position) : 0.0);
+                if (cost < bestCost - 0.5 * threatCost)
                 {
-                    bestThreat = threat;
+                    bestCost = cost;
+                    best = position;
+                }
+            }
+            return best;
+        }
+
+        /// <summary>The reachable drop tile worth the most after the danger of standing on it, or null if none is worth it.</summary>
+        private static GridCoord? BestPickup(List<GridCoord> positions, GridCoord origin, Unit actor, List<Unit> enemies,
+            AiHints hints, double threatCost)
+        {
+            if (hints.TileValues.Count == 0)
+                return null;
+            GridCoord? best = null;
+            double bestScore = 0.0;
+            foreach (var position in positions)
+            {
+                double value = hints.TileValue(position);
+                if (value <= 0.0 || position == origin)
+                    continue;
+                double score = value - Threat(position, actor, enemies) * threatCost;
+                if (score > bestScore)
+                {
+                    bestScore = score;
                     best = position;
                 }
             }

@@ -48,6 +48,19 @@ namespace FriendshipWarriors.Feedback
             return 1f - t / KnockOutFlashTime;
         }
 
+        /// <summary>A drop fades in this long after its unit's ghost starts rising.</summary>
+        public const float DropDelay = 0.6f, DropFadeIn = 0.35f;
+
+        /// <summary>How visible a new drop is, 0–1, <paramref name="t"/> seconds after its unit was lost.</summary>
+        public static float DropAppear(float t) =>
+            t <= DropDelay ? 0f : System.Math.Min(1f, (t - DropDelay) / DropFadeIn);
+
+        /// <summary>The steel rod hovers: a slow bob in world units.</summary>
+        public static float RodBob(float t) => 0.06f * System.MathF.Sin(t * 2.2f);
+
+        /// <summary>The rod's glow breathes between 0.45 and 1 about once every two seconds.</summary>
+        public static float RodGlow(float t) => 0.725f + 0.275f * System.MathF.Sin(t * 3.1f);
+
         /// <summary>
         /// Camera shake offset (x, y in camera space, world units) <paramref name="t"/> seconds into a shake lasting
         /// <paramref name="duration"/>. Two detuned sines rather than random noise, so it's repeatable.

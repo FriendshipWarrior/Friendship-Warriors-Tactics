@@ -13,5 +13,8 @@ namespace FriendshipWarriors.Feedback
         StatusGained,
         StatusLifted,
         Revived,
+
+        /// <summary>What a unit got from a steel rod or chest ("Learned: Grit", "Obtained: Iron Saber").</summary>
+        Pickup,
     }
 }
