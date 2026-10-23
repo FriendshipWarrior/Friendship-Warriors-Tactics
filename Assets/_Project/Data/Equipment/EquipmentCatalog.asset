@@ -1,0 +1,26 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 2e60c0cf88e4d40099569e1ffbd06c44, type: 3}
+  m_Name: EquipmentCatalog
+  m_EditorClassIdentifier: FriendshipWarriors.Runtime::FriendshipWarriors.Units.Equipment.EquipmentCatalog
+  _items:
+  - {fileID: 11400000, guid: f061f01ff753f47489a5e4bc20ff6103, type: 2}
+  - {fileID: 11400000, guid: 37c9f276dce8a4ae7ab6fbd0a5fd0230, type: 2}
+  - {fileID: 11400000, guid: 964b58f45f6f34565b17cbf28f62eaef, type: 2}
+  - {fileID: 11400000, guid: 2a4ca9a1012844d0db0b88909fbc4dfc, type: 2}
+  - {fileID: 11400000, guid: b0863baeff92e4025b72269908c501dd, type: 2}
+  - {fileID: 11400000, guid: 268639f7671154c84b16e4ee37b68906, type: 2}
+  - {fileID: 11400000, guid: e42b6eed66fcd4263b4d662d13f95f41, type: 2}
+  - {fileID: 11400000, guid: bb4bad882bc6e484ea2f7c341e3cccc3, type: 2}
+  - {fileID: 11400000, guid: c4b4ecd7ab1704c829d17853957bd3f9, type: 2}
+  - {fileID: 11400000, guid: a9b8226914a8f4a6f983689c06a39705, type: 2}
+  - {fileID: 11400000, guid: 0c1a5e9e26cd84026b4f6a09bd810a04, type: 2}

@@ -72,7 +72,7 @@ Assets/
         Units/            # Unit, JobDefinition, stats/EXP/Prof/Commendations, facing rules, UnitFactory
           Abilities/      # AbilityDefinition, AbilityKind (action/reaction/support/movement), ReactionEffect, TurnTrade
           Status/         # StatusEffect, StatusRules (FFT durations and effects), StatusSet
-          Equipment/      # EquipmentDefinition, slots (main/off hand, head, body, accessory), weapon & armor types
+          Equipment/      # EquipmentDefinition, EquipmentCatalog, slots (main/off hand, head, body, accessory), weapon & armor types
           View/           # UnitView (billboard sprite), SpriteViewMath, PlaceholderSprites
         Battle/           # TurnOrder (CT), TurnState (Move/Act/Wait), BattleController (turn flow; .Ai.cs partial runs AI turns)
           AI/             # AiPlanner, AiPlan, AiHints (objective-aware weights; pure, deterministic per seed)
@@ -81,16 +81,18 @@ Assets/
           Magic/          # MagicFormulas, SpellArea, ChargingAction, SpellResolver (spells, Counter Magic)
           Reactions/      # ReactionResolver (Morale-chance reactions after damage)
           Objectives/     # BattleSetup (team sizes, rosters, objective), RosterEntry, BattleObjective, ObjectiveEvaluator, BattleSetupValidator
-        UI/               # BattleHud (uGUI + TextMeshPro, built in code), MenuModel
-        Controls/         # BattleInput, TileCursor, CursorMath (gamepad + mouse/keyboard)
+        UI/               # BattleHud (uGUI + TextMeshPro, built in code), MenuModel, MenuScreen (front-end menus), UiFactory
+        Controls/         # BattleInput, MenuInput ("Menu" map: menus + Pause), TileCursor, CursorMath (gamepad + mouse/keyboard)
+        Menus/            # MainMenuController (page stack), MenuBackdrop (orbiting random map behind the title)
+        QuickPlay/        # RandomRoster (pure, seeded random teams), QuickPlayDirector (match setup, pause, battle end)
         Camera/           # IsoCameraRig (namespace FriendshipWarriors.Cameras)
         Dev/              # BattleSandbox and other test-scene drivers
         Core/             # planned
-      Editor/             # FriendshipWarriors.Editor.asmdef — MapEditorWindow, MapPreview, TestMapFactory, TestSceneBuilder, StartingJobsBuilder; Setups/BattleSetupBuilder (prebuilt setups)
-    Data/                 # ScriptableObject assets: maps, props, terrain palette, generator settings, jobs, abilities, equipment; Setups/ (Battle Setup assets)
+      Editor/             # FriendshipWarriors.Editor.asmdef — MapEditorWindow, MapPreview, TestMapFactory, TestSceneBuilder, StartingJobsBuilder, Scenes/GameScenesBuilder; Setups/BattleSetupBuilder (prebuilt setups)
+    Data/                 # ScriptableObject assets: maps, props, terrain palette, generator settings, jobs, abilities, equipment (EquipmentCatalog); Setups/ (Battle Setup assets)
     Input/                # BattleControls.inputactions (control schemes: Keyboard&Mouse, Gamepad)
     Materials/            # Terrain.mat (URP Lit, cloned per terrain look), Highlight.mat (transparent unlit)
-    Scenes/               # Battle_Test.unity (the only scene in Build Settings)
+    Scenes/               # MainMenu.unity (first in Build Settings), QuickPlay.unity, Battle_Test.unity (dev sandbox)
     Prefabs/ Art/ Audio/  # planned
   Tests/
     EditMode/             # FriendshipWarriors.Tests.EditMode.asmdef — pure logic tests
@@ -126,6 +128,8 @@ Root namespace: `FriendshipWarriors`; namespaces follow folders (e.g. `Friendshi
 - **Map editor:** *Friendship Warriors → Map Editor*, or double-click a Battle Map asset. Paints height (in halves), terrain, slopes, water depth, props and deployment zones on a top-down grid; live 3D preview; validation via `MapValidator` (also used by the random generator). Left-click paints, right-click copies the tile's value (erases for props/deployment), each stroke is one undo step. When testing it from scripts, work on a copy of a map: the window is on the user's screen and real clicks edit the open map.
 - **Random maps:** `MapGenerator.Generate(settings, seed, map)` fills a `BattleMapData` (works at runtime for quick play). Deterministic per seed, validated with `MapValidator`, retried on errors. Tune via `MapGeneratorSettings` assets (`Data/Generation/MapGenerator_Default.asset`). In the map editor use the Generate row; in `Battle_Test` press R / Select (the seed is logged so maps can be reproduced).
 - Rebuild the test scene and its placeholder assets from code with **Friendship Warriors → Dev → Rebuild Battle Test Scene** (`TestSceneBuilder.Rebuild()`); don't hand-wire it.
+- Rebuild `MainMenu` and `QuickPlay` (and the `EquipmentCatalog` asset) with **Friendship Warriors → Dev → Rebuild Game Scenes** (`GameScenesBuilder`). It also sets Build Settings to MainMenu, QuickPlay, Battle_Test; both builders go through `GameScenesBuilder.ApplyBuildSettings()`.
+- To play the game end to end, open `MainMenu` and press Play. Quick Play logs its seed (`[QuickPlay] Seed …`); set `QuickPlayDirector._fixedSeed` to rebuild a reported match.
 - When scripting a virtual gamepad, each `script eval` takes long enough that a held D-pad press triggers key-repeat (cursor and menus repeat after 0.3–0.35 s). Place the cursor with `TileCursor.SetCoord` and pick menu items via `MenuModel.Select`, and use the pad only for buttons.
 - Gamepad paths can be tested without hardware: in Play mode, `InputSystem.AddDevice<Gamepad>()` and `InputSystem.QueueStateEvent(pad, new GamepadState().WithButton(...))` through `script eval`, then remove the device.
 - After code changes, confirm the project compiles with no console errors before reporting work as done. If verification wasn't possible, say so.
@@ -241,4 +245,9 @@ Record decisions here as they are made (date — decision — rationale).
   - **AI awareness** (`AiHints`): enemies weight attacks on protected player units ×1.5 (attacks only, not spells), and an enemy target plays cautiously (threat cost ×2 when choosing tiles). Tunable constants.
   - **User decisions (2026-10-24):** the target is defeated on KO; a protected unit only counts when permanently lost; winning beats everything when events coincide; the red TARGET and green PROTECT tags are approved; the AI weights (×1.5 on protected units, the target counting danger ×2) are approved.
   - Prebuilt setups (*Friendship Warriors → Data → Create Battle Setups*, `Data/Setups/`): **Standard (5 v 5)**, **Defeat the Commander** (enemy Vanguard "Commander Vael", Lv 7, key `commander`) and **Escort** (player Warder "Escort Lira", key `escort`, protected). Each side fields all six jobs between them. The test scene's `BattleSandbox` takes a setup; swap it to try each objective.
+- 2026-10-22 — **Front end:** `MainMenu` is the first scene: title, then Quick Play, Campaign (greyed, not selectable yet), Options (greyed). `MenuModel` skips disabled items. `MainMenuController` keeps a page stack, so the planned Quick Play submenu (online, army building) is one more page: Quick Play goes straight into a match for now. Menus read a separate **"Menu"** action map (`MenuInput`), so they keep working while battle input is switched off.
+- 2026-10-22 — **Quick play:** a random map and 5 random Player (human) vs 5 random Enemy (AI) units, all from one seed shown in the top-left corner and logged. Each unit gets a random job from the `JobCatalog`, the same level for everyone (5), random legal gear in every slot (no shield with a two-handed weapon), every ability of its job line (the job and its requirement jobs) learned, a random reaction, support and movement ability equipped, and a random secondary command from its line. Names are unique and drawn from a military-steampunk pool. Both teams get the same item stock. Master seed → map seed, then the player roster, then the enemy roster, so one seed rebuilds the whole match. Once the battle-objectives work lands, quick play should use the Standard 5 v 5 setup and its objective.
+- 2026-10-22 — **Pause:** gamepad Start or keyboard P opens Resume / Quit to Main Menu, and B / Esc resumes. Pausing switches off `BattleController` and `BattleInput`, which freezes turn flow, AI turns and input. A timed press that's open when you pause times out as a miss: the bar runs on real time.
+- 2026-10-22 — **Quick play battle end:** victory or defeat shows the result banner, then goes back to the main menu. Confirm (or a click) after 1 s returns, and so does a 6 s timeout. There's no Play Again choice: another match is Quick Play again, with a new seed.
+- 2026-10-22 — **Campaign losses (planned, not built):** losing a campaign battle is **not** game over, and the campaign carries on after a loss. This is a deliberate difference from FFT, where losing a story battle is game over.
 - Open questions: save system scope; AI difficulty levels; whether to add FFT's multi-layer tiles (bridges, walking under things).

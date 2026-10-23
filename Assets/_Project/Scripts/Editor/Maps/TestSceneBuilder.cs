@@ -53,7 +53,8 @@ namespace FriendshipWarriors.Editor.Maps
             var scene = EditorSceneManager.NewScene(NewSceneSetup.DefaultGameObjects, NewSceneMode.Single);
             BuildScene();
             EditorSceneManager.SaveScene(scene, ScenePath);
-            EditorBuildSettings.scenes = new[] { new EditorBuildSettingsScene(ScenePath, true) };
+            // Keep the game's own scene order (MainMenu, QuickPlay, then this sandbox).
+            Scenes.GameScenesBuilder.ApplyBuildSettings();
         }
 
         private static void BuildScene()

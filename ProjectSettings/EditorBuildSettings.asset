@@ -6,6 +6,12 @@ EditorBuildSettings:
   serializedVersion: 2
   m_Scenes:
   - enabled: 1
+    path: Assets/_Project/Scenes/MainMenu.unity
+    guid: de85669519fcf4d9e8b6c36d18749a50
+  - enabled: 1
+    path: Assets/_Project/Scenes/QuickPlay.unity
+    guid: c75f9b849abde47ecb8034532832bb6f
+  - enabled: 1
     path: Assets/_Project/Scenes/Battle_Test.unity
     guid: d5ac30a342d274bf8b341334138f3d2c
   m_configObjects:

@@ -93,6 +93,9 @@ namespace FriendshipWarriors.Battle
         private readonly List<GridCoord> _spellArea = new();
         private float _spellContinueAt;
 
+        /// <summary>The battle is over; true when the Player team won. Raised once, after the result banner is shown.</summary>
+        public event System.Action<bool> BattleEnded;
+
         public Unit ActiveUnit => _active != null ? _active.Unit : null;
         public TurnState Turn => _turn;
         public TurnOrder Order => _order;
@@ -678,6 +681,7 @@ namespace FriendshipWarriors.Battle
             _hud.ShowBanner(outcome.Kind == BattleOutcomeKind.Victory ? $"Victory! {outcome.Reason}" : $"Defeat... {outcome.Reason}", seconds: 0f);
             Debug.Log($"[Battle] {outcome}.", this);
             _hud.SetHint("R / Select: new map");
+            BattleEnded?.Invoke(playersStanding);
             return true;
         }
 
