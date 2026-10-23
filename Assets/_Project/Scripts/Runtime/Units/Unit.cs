@@ -109,6 +109,12 @@ namespace FriendshipWarriors.Units
 
         public bool IsKnockedOut => CurrentHp <= 0;
 
+        /// <summary>
+        /// HP and MP changes as they happen (damage, healing, MP restored, revival), in order, for presentation only:
+        /// rules never listen to it. Spending MP on an ability isn't raised.
+        /// </summary>
+        public event Action<UnitChange> Changed;
+
         /// <summary>P.Atk added by in-battle effects (e.g. the Squire-style Accumulate). Cleared when a battle ends.</summary>
         public int PhysicalAttackBonus { get; private set; }
 
@@ -222,6 +228,8 @@ namespace FriendshipWarriors.Units
                 return 0;
             int restored = Math.Min(amount, Stats.MaxHp - CurrentHp);
             CurrentHp += restored;
+            if (restored > 0)
+                Changed?.Invoke(new UnitChange(UnitChangeKind.HpRestored, restored));
             return restored;
         }
 
@@ -232,6 +240,8 @@ namespace FriendshipWarriors.Units
                 return 0;
             int restored = Math.Min(amount, Stats.MaxMp - CurrentMp);
             CurrentMp += restored;
+            if (restored > 0)
+                Changed?.Invoke(new UnitChange(UnitChangeKind.MpRestored, restored));
             return restored;
         }
 
@@ -252,6 +262,7 @@ namespace FriendshipWarriors.Units
             CurrentHp = Math.Clamp(hp, 1, Stats.MaxHp);
             DeathCounter = 0;
             UpdatePanic();
+            Changed?.Invoke(new UnitChange(UnitChangeKind.Revived, CurrentHp));
             return true;
         }
 
@@ -340,6 +351,8 @@ namespace FriendshipWarriors.Units
             {
                 _statuses.Remove(Status.StatusEffect.Sleep); // Any damage wakes a sleeping unit (user decision).
             }
+            if (dealt > 0)
+                Changed?.Invoke(new UnitChange(UnitChangeKind.HpLost, dealt));
             return dealt;
         }
 

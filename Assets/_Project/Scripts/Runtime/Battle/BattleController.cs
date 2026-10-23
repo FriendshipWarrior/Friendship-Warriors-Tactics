@@ -109,6 +109,21 @@ namespace FriendshipWarriors.Battle
         /// <summary>The battle is over; true when the Player team won. Raised once, after the result banner is shown.</summary>
         public event System.Action<bool> BattleEnded;
 
+        /// <summary>A battle started with a fresh set of units (raised by <see cref="Begin"/> before the first turn).</summary>
+        public event System.Action Began;
+
+        /// <summary>Presentation moments the units' own state doesn't show (misses, criticals, casts, menu sounds).</summary>
+        public event System.Action<Unit, BattleCue> Cue;
+
+        /// <summary>A unit's death counter ran out; raised just before its view is destroyed.</summary>
+        public event System.Action<UnitView> UnitLost;
+
+        /// <summary>Battle time; pausing the battle stops it.</summary>
+        public BattleClock Clock => _clock;
+
+        public IReadOnlyList<UnitView> Views => _views;
+        public IsoCameraRig CameraRig => _cameraRig;
+
         public Unit ActiveUnit => _active != null ? _active.Unit : null;
         public TurnState Turn => _turn;
         public TurnOrder Order => _order;
@@ -131,6 +146,13 @@ namespace FriendshipWarriors.Battle
         public void SetInventory(Team team, Inventory inventory) => _inventories[team] = inventory;
 
         public Inventory InventoryOf(Team team) => _inventories.TryGetValue(team, out var inventory) ? inventory : null;
+
+        private void Awake()
+        {
+            // Hit numbers, flashes and sounds listen to this controller, so scenes don't need to wire them.
+            if (!TryGetComponent<Feedback.BattleFeedback>(out _))
+                gameObject.AddComponent<Feedback.BattleFeedback>();
+        }
 
         private void OnEnable()
         {
@@ -181,6 +203,7 @@ namespace FriendshipWarriors.Battle
             _hud.HideTimingPrompt();
             ResetAiTurn();
             ShowObjective();
+            Began?.Invoke();
             StartNextTurn();
         }
 
@@ -409,6 +432,8 @@ namespace FriendshipWarriors.Battle
             bool wasDown = target.Unit.IsKnockedOut;
             _active.PlayAttack();
             var result = AbilityCommand.Execute(_ability, user, target.Unit, _gridView.Grid, Units, InventoryOf(user.Team), _rng);
+            if (!result.Outcome.Hit)
+                Cue?.Invoke(target.Unit, BattleCue.Miss);
             string message = result.Message;
             if (result.Outcome.Damage > 0)
                 message += AfterDamage(target.Unit, user, wasDown, result.Outcome.Damage);
@@ -434,6 +459,7 @@ namespace FriendshipWarriors.Battle
                 caster.Facing = DirectionExtensions.Toward(caster.Coord, tile);
             _turn.RecordAct();
             _active.PlayCast();
+            Cue?.Invoke(caster, BattleCue.CastStarted);
 
             var result = SpellCasting.Begin(caster, spell, tile, _order, _gridView.Grid, Units.ToList(), _rng, out var charge);
             if (charge == null)
@@ -480,6 +506,10 @@ namespace FriendshipWarriors.Battle
         {
             string extra = "";
             var units = Units.ToList();
+            Cue?.Invoke(result.Caster, BattleCue.SpellResolved);
+            foreach (var missed in result.Targets.Where(t => !t.Hit))
+                Cue?.Invoke(missed.Target, BattleCue.Miss);
+            Cue?.Invoke(null, BattleCue.Reactions);
             foreach (var hit in result.Targets.Where(t => t.Hit))
             {
                 if (hit.WasKnockedOut)
@@ -627,7 +657,10 @@ namespace FriendshipWarriors.Battle
             _pendingResult = result;
 
             if (_pressRole != PressRole.None)
+            {
                 _hud.StopTimingPrompt(accuracy, pressed);
+                Cue?.Invoke(attacker, pressed && accuracy > 0f ? BattleCue.TimedPressSuccess : BattleCue.TimedPressFail);
+            }
             // Hold the frozen bar briefly so the player sees how the press went.
             _resolveAt = BattleNow + (_pressRole != PressRole.None ? 0.6f : 0f);
             if (_pressRole == PressRole.None)
@@ -645,12 +678,20 @@ namespace FriendshipWarriors.Battle
 
             string outcome;
             if (!result.Hit)
+            {
                 outcome = "Miss!";
+                Cue?.Invoke(target, BattleCue.Miss);
+            }
             else if (result.Blocked)
+            {
                 outcome = "Blocked!";
+                Cue?.Invoke(target, BattleCue.Guarded);
+            }
             else
             {
                 bool wasDown = target.IsKnockedOut;
+                if (result.Critical)
+                    Cue?.Invoke(target, BattleCue.Critical);
                 int dealt = target.TakeDamage(result.Damage);
                 outcome = $"{result.Damage} damage{(result.Critical ? " - critical!" : "")}{(target.IsKnockedOut ? $"  {target.Name} is down!" : "")}";
                 outcome += AfterDamage(target, attacker, wasDown, dealt);
@@ -709,6 +750,7 @@ namespace FriendshipWarriors.Battle
             if (view != null)
             {
                 _views.Remove(view);
+                UnitLost?.Invoke(view);
                 Destroy(view.gameObject);
             }
             _hud.ShowBanner($"{unit.Name} is lost.");
@@ -782,6 +824,7 @@ namespace FriendshipWarriors.Battle
                 OnKnockedOut(target);
 
             bool attackerWasDown = attacker.IsKnockedOut;
+            Cue?.Invoke(null, BattleCue.Reactions);
             var reaction = ReactionResolver.React(target, attacker, physical: true, damageTaken, _gridView.Grid,
                 Units.ToList(), InventoryOf(target.Team), _rng);
             if (reaction.Triggered)
@@ -871,6 +914,9 @@ namespace FriendshipWarriors.Battle
 
         private void OnConfirm(InputAction.CallbackContext _)
         {
+            if (_phase is Phase.Command or Phase.ActMenu or Phase.AbilityMenu or Phase.ChooseAbilityTarget
+                or Phase.ChooseDestination or Phase.ChooseTarget or Phase.ChooseFacing)
+                Cue?.Invoke(null, BattleCue.MenuConfirm);
             switch (_phase)
             {
                 case Phase.Command when _commandMenu.Selected is { Enabled: true } item: Activate(item.Id); break;
@@ -889,6 +935,9 @@ namespace FriendshipWarriors.Battle
 
         private void OnCancel(InputAction.CallbackContext _)
         {
+            if (_phase is Phase.ActMenu or Phase.ChooseDestination or Phase.ChooseTarget or Phase.AbilityMenu
+                    or Phase.ChooseAbilityTarget || (_phase == Phase.ChooseFacing && !_turn.IsFinished))
+                Cue?.Invoke(null, BattleCue.MenuCancel);
             switch (_phase)
             {
                 case Phase.ActMenu:
@@ -915,7 +964,10 @@ namespace FriendshipWarriors.Battle
         {
             var menu = OpenMenu;
             if (menu != null && index < menu.Items.Count && menu.Items[index].Enabled)
+            {
+                Cue?.Invoke(null, BattleCue.MenuConfirm);
                 Activate(menu.Items[index].Id);
+            }
         }
 
         private void OnTileClicked(GridCoord coord)
@@ -966,11 +1018,13 @@ namespace FriendshipWarriors.Battle
                 _heldMenuDirection = direction;
                 _nextMenuRepeat = now + _menuRepeatDelay;
                 menu.MoveSelection(direction);
+                Cue?.Invoke(null, BattleCue.MenuMove);
             }
             else if (now >= _nextMenuRepeat)
             {
                 _nextMenuRepeat = now + _menuRepeatInterval;
                 menu.MoveSelection(direction);
+                Cue?.Invoke(null, BattleCue.MenuMove);
             }
         }
 
