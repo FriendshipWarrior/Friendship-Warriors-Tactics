@@ -28,11 +28,13 @@ stay transparent.
 
 - **Both poses face screen-right.** The game mirrors them for the other two camera views.
 - **Feet stand on row 39** of the frame, centred around x 20. The sprite's pivot is the bottom-centre of the frame,
-  at 32 pixels per world unit, so a unit is about 1¼ tiles tall.
+  at 32 pixels per world unit. The game shows unit art 25% larger (`UnitView.SpriteScale` = 1.25), so a unit is
+  about 1⅓ tiles tall. The scale is applied on the sprite's transform, so draw at the normal pixel size.
 - **The KO frame lies along the ground**, with the head on the left.
 - **Timing** (seconds per frame): idle 0.55, walk 0.15, attack 0.12, cast 0.25 (looped while charging a spell),
   hurt 0.35. Idle and cast loop. Attack and hurt play once and then return to idle.
-- **Walk frames aren't shown in the game yet.** Units move instantly, so the walk frames are only drawn ahead of time.
+- **Walk frames aren't shown in the game yet.** Units move instantly for now, so the walk frames are drawn ahead of
+  time. Animating movement tile by tile is the next art task.
 
 Frames are 40 × 40 rather than 32 × 40 so that the lying KO pose fits inside one frame.
 

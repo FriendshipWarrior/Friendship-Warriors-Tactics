@@ -14,6 +14,15 @@ namespace FriendshipWarriors.Units.View
     /// </summary>
     public sealed class UnitView : MonoBehaviour
     {
+        /// <summary>
+        /// World scale of unit art. Sprites are authored at 32 px per unit and shown 25% larger (user decision), so the
+        /// pixel grid and frame layout stay the same.
+        /// </summary>
+        public const float SpriteScale = 1.25f;
+
+        /// <summary>Height of the status codes above the unit's feet, scaled with the art so they clear the head.</summary>
+        public const float StatusLabelHeight = 1.45f * SpriteScale;
+
         private static readonly Color PlayerColor = new(0.35f, 0.65f, 1f);
         private static readonly Color EnemyColor = new(1f, 0.35f, 0.35f);
 
@@ -51,6 +60,7 @@ namespace FriendshipWarriors.Units.View
 
             _sprite = new GameObject("Sprite").AddComponent<SpriteRenderer>();
             _sprite.transform.SetParent(transform, false);
+            _sprite.transform.localScale = new Vector3(SpriteScale, SpriteScale, 1f);
 
             _marker = new GameObject("Team Marker").AddComponent<SpriteRenderer>();
             _marker.transform.SetParent(transform, false);
@@ -63,7 +73,7 @@ namespace FriendshipWarriors.Units.View
             // Placeholder status indicator: short codes floating above the unit (PSN, HST...).
             _statusLabel = new GameObject("Statuses").AddComponent<TMPro.TextMeshPro>();
             _statusLabel.transform.SetParent(transform, false);
-            _statusLabel.transform.localPosition = new Vector3(0f, 1.45f, 0f);
+            _statusLabel.transform.localPosition = new Vector3(0f, StatusLabelHeight, 0f);
             _statusLabel.fontSize = 2.2f;
             _statusLabel.alignment = TMPro.TextAlignmentOptions.Center;
             _statusLabel.color = new Color(1f, 0.85f, 0.35f);

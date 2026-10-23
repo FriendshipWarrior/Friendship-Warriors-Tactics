@@ -226,6 +226,7 @@ CLAUDE.md              Design decisions, conventions and project notes
 - [x] Battle setups and objectives (5 v 5 standard, defeat a target, protect a character)
 - [x] Main menu, Quick Play (random 5 v 5 from a seed), pause menu
 - [x] Paper-doll unit sprites (first drafts drawn by code, ready for hand editing)
+- [ ] **Next:** animated movement: units walk along their path tile by tile, as in FFT, with walk frames and leaps
 - [ ] Hand-drawn character art and terrain art
 - [ ] Battle prep, party management, campaign and story. Losing a campaign battle won't be game over: the campaign carries on, unlike FFT.
 - [ ] Quick Play options: online matches, army building
